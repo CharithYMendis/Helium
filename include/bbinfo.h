@@ -1,0 +1,39 @@
+#ifndef CBW_H
+#define CBW_H
+
+#include "dr_api.h"
+#include "moduleinfo.h"
+#include "drmgr.h"
+#include <stdio.h>
+
+/*instrumentation routines*/
+void bbinfo_init(client_id_t id, 
+				const char * arguments);
+void bbinfo_exit_event(void);
+dr_emit_flags_t bbinfo_bb_instrumentation(void *drcontext, void *tag, instrlist_t *bb,
+                instr_t *instr_current, bool for_trace, bool translating,
+                void *user_data);
+dr_emit_flags_t
+bbinfo_bb_analysis(void *drcontext, void *tag, instrlist_t *bb,
+                  bool for_trace, bool translating,
+                  OUT void **user_data);
+void bbinfo_thread_init(void *drcontext);
+void bbinfo_thread_exit(void *drcontext);
+dr_emit_flags_t
+bbinfo_bb_app2app(void *drcontext, void *tag, instrlist_t *bb,
+                 bool for_trace, bool translating);
+
+
+typedef struct _client_arg_t {
+
+	uint mode;
+	uint threshold;
+	char folder[MAX_STRING_LENGTH];
+	char in_filename[MAX_STRING_LENGTH];
+	char out_filename[MAX_STRING_LENGTH];
+	char summary_filename[MAX_STRING_LENGTH];
+	
+
+} client_arg_t;
+
+#endif
