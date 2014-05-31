@@ -1,14 +1,17 @@
 #include "bbinfo.h"
+#include "utilities.h"
+#include "defines.h"
 
 
 /* 
-	client for bb information tracking for seperate modules
+	client for bb information tracking
 	Is extensible and not optimized
 
 	filters - 
 	1. Read from a file the bbs to track 
-	2. Give out a set of modules to keep track of - need to recompile as it is encoded in main_modules array
-	3. Track of them all
+	2. Read from a file the modules to track
+	3. Read from a file the range within a modules to track
+	4. No filters
 
 	tracked info 
 	1. bb execution frequencies 
@@ -37,10 +40,7 @@
 /* defines */
 #define MAX_STRING_POINTERS 1000000
 
-/* modes */
-#define FILTER_FROM_FILE		1
-#define FILTER_FROM_ARRAY_MOD	2
-#define FILTER_NONE				3
+/* filter modes - refer to utilities (common filtering mode for all files) */
 
 /* macros */
 #define TESTALL(mask, var) (((mask) & (var)) == (mask))
@@ -56,22 +56,34 @@ typedef struct _per_thread_data_t {
 
 } per_thread_data_t;
 
+typedef struct _client_arg_t {
+
+	uint filter_mode;
+	uint threshold;
+	char folder[MAX_STRING_LENGTH];
+	char in_filename[MAX_STRING_LENGTH];
+	char out_filename[MAX_STRING_LENGTH];
+	char summary_filename[MAX_STRING_LENGTH];
+	
+
+} client_arg_t;
+
 
 /*analysis clean calls*/
 static void clean_call(void* bb,int offset,const char * module,uint is_call,uint call_addr);
 
 /*debug and auxiliary prototypes*/
-void print_commandline_args (client_arg_t * args);
-bool parse_commandline_args (const char * args);
-void get_full_filename_with_process(char * fileName,char * dest,uint processId);
-void get_full_filename(char * fileName, char * dest);
+static void print_commandline_args (client_arg_t * args);
+static bool parse_commandline_args (const char * args);
+static void get_full_filename_with_process(char * fileName,char * dest,uint processId);
+static void get_full_filename(char * fileName, char * dest);
 static void process_output();
 
 /*global dr variables - not thread safe*/
 file_t in_file;
 file_t out_file;
 file_t summary_file;
-module_t * head;
+static module_t * head;
 static void *stats_mutex; /* for multithread support */
 static int tls_index;
 
@@ -79,14 +91,7 @@ char ** string_pointers;   /* global list of string pointers */
 int string_pointer_index = 0;
 
 /* client arguments */
-client_arg_t * client_arg;
-
-/* constant values for module names */
-static const char * main_modules[] = {"C:\\Program Files (x86)\\Adobe\\Adobe Photoshop CS6\\Required\\Plug-Ins\\Extensions\\MMXCore.8BX",
-							"C:\\Program Files (x86)\\Adobe\\Adobe Photoshop CS6\\Required\\Plug-Ins\\Filters\\Standard MultiPlugin.8BF"};
-static const int main_modules_length = 2;
-
-
+static client_arg_t * client_arg;
 
 
 void bbinfo_init(client_id_t id, 
@@ -119,7 +124,7 @@ void bbinfo_init(client_id_t id,
 
 	summary_file = dr_open_file(filename,DR_FILE_WRITE_OVERWRITE);
 
-	if(client_arg->mode == FILTER_FROM_FILE){
+	if(client_arg->filter_mode != FILTER_NONE){
 		get_full_filename(client_arg->in_filename,filename);
 
 		if(dr_file_exists(filename)){
@@ -128,7 +133,7 @@ void bbinfo_init(client_id_t id,
 
 		in_file = dr_open_file(filename,DR_FILE_READ);
 
-		md_read_from_file(head,in_file);
+		md_read_from_file(head,in_file,true);
 
 	}
 
@@ -138,6 +143,33 @@ void bbinfo_init(client_id_t id,
 	stats_mutex = dr_mutex_create();
 		
 	tls_index = drmgr_register_tls_field();
+
+}
+
+void bbinfo_exit_event(void){
+
+	int i=0;
+
+	process_output();
+	md_delete_list(head);
+
+	for(i=0;i<string_pointer_index;i++){
+		dr_global_free(string_pointers[i],sizeof(char)*MAX_STRING_LENGTH);
+	}
+
+	dr_global_free(string_pointers,sizeof(char *)*MAX_STRING_POINTERS);
+
+	drmgr_unregister_tls_field(tls_index);
+	dr_mutex_destroy(stats_mutex);
+	dr_close_file(summary_file);
+	dr_close_file(out_file);
+	if(client_arg->filter_mode != FILTER_NONE){
+		dr_close_file(in_file);
+	}
+
+	dr_global_free(client_arg,sizeof(client_arg_t));
+	drmgr_exit();
+
 
 }
 
@@ -155,7 +187,6 @@ bbinfo_thread_init(void *drcontext){
 
 }
 
-
 void 
 bbinfo_thread_exit(void *drcontext){
 
@@ -163,11 +194,12 @@ bbinfo_thread_exit(void *drcontext){
 	
 	/* clean up memory */
 	dr_thread_free(drcontext,data,sizeof(per_thread_data_t));
-	
 
 }
 
-//need to change
+
+
+/* TODO - need to change */
 static void process_output(){
 
 	module_t * local_head = head->next;
@@ -227,27 +259,7 @@ static void process_output(){
 
 }
 
-void bbinfo_exit_event(void){
 
-	int i=0;
-
-	process_output();
-	dr_global_free(client_arg,sizeof(client_arg_t));
-	md_delete_list(head);
-
-	for(i=0;i<string_pointer_index;i++){
-		dr_global_free(string_pointers[i],sizeof(char)*MAX_STRING_LENGTH);
-	}
-
-	dr_global_free(string_pointers,sizeof(char *)*MAX_STRING_POINTERS);
-
-	drmgr_unregister_tls_field(tls_index);
-	dr_mutex_destroy(stats_mutex);
-	dr_close_file(summary_file);
-	dr_close_file(out_file);
-
-	drmgr_exit();
-}
 
 
 
@@ -349,9 +361,6 @@ bbinfo_bb_instrumentation(void *drcontext, void *tag, instrlist_t *bb,
 		bbinfo_t * bbinfo;
 		int offset;
 
-		int i = 0;
-		bool wanted = false;
-
 		uint is_call;
 		uint call_addr;
 		
@@ -372,18 +381,13 @@ bbinfo_bb_instrumentation(void *drcontext, void *tag, instrlist_t *bb,
 		offset = (int)instr_get_app_pc(first) - (int)module_data->start;
 		bbinfo = md_lookup_bb_in_module(head,module_data->full_path,offset);
 
-		//module is present
-		if(client_arg->mode == FILTER_FROM_ARRAY_MOD){
-			for(i=0;i<main_modules_length;i++){
-				if(strcmp(module_data->full_path,main_modules[i]) == 0){
-					wanted = true;
-					break;
-				}
-			}
-			if(wanted){
+		/* populate and filter the bbs if true go ahead and do instrumentation */
+		/* range filtering is not supported as we changing the data structure in place */
+		if(client_arg->filter_mode == FILTER_MODULE){
+			if(filter_module_level_from_list(head,instr)){
 				//addr or the module is not present from what we read from file
 				if(bbinfo == NULL){
-					bbinfo = md_add_bb_to_module(head,module_data->full_path,offset,MAX_BBS_PER_MODULE);
+					bbinfo = md_add_bb_to_module(head,module_data->full_path,offset,MAX_BBS_PER_MODULE,true);
 				}
 				DR_ASSERT(bbinfo != NULL);
 			}
@@ -392,9 +396,9 @@ bbinfo_bb_instrumentation(void *drcontext, void *tag, instrlist_t *bb,
 				dr_global_free(module_name,sizeof(char)*MAX_STRING_LENGTH);
 				return DR_EMIT_DEFAULT;
 			}
+			
 		}
-		else if(client_arg->mode == FILTER_FROM_FILE){
-
+		else if(client_arg->filter_mode == FILTER_BB){
 			//addr or the module is not present from what we read from file
 			if(bbinfo == NULL){
 				dr_free_module_data(module_data);
@@ -402,6 +406,13 @@ bbinfo_bb_instrumentation(void *drcontext, void *tag, instrlist_t *bb,
 				return DR_EMIT_DEFAULT;
 			}
 		}
+		else if(client_arg->filter_mode == FILTER_NONE){
+			if(bbinfo == NULL){
+				bbinfo = md_add_bb_to_module(head,module_data->full_path,offset,MAX_BBS_PER_MODULE,true);
+			}
+			DR_ASSERT(bbinfo != NULL);
+		}
+
 
 		//check whether this bb has a call at the end
 		instr = instrlist_last(bb);
@@ -429,13 +440,13 @@ bbinfo_bb_instrumentation(void *drcontext, void *tag, instrlist_t *bb,
 
 /* debug and auxiliary functions */
 
-void print_commandline_args (client_arg_t * args){
+static void print_commandline_args (client_arg_t * args){
 	
 	dr_printf("%s - %s - %s - %s\n",args->folder,args->in_filename,args->out_filename,client_arg->summary_filename);
 }
 
 
-bool parse_commandline_args (const char * args) {
+static bool parse_commandline_args (const char * args) {
 
 	client_arg = (client_arg_t *)dr_global_alloc(sizeof(client_arg_t));
 	if(dr_sscanf(args,"%s %s %s %s %u %u",
@@ -444,7 +455,7 @@ bool parse_commandline_args (const char * args) {
 									   &client_arg->out_filename,
 									   &client_arg->summary_filename,
 									   &client_arg->threshold,
-									   &client_arg->mode)!=6){
+									   &client_arg->filter_mode)!=6){
 		return false;
 	}
 
@@ -452,7 +463,7 @@ bool parse_commandline_args (const char * args) {
 	return true;
 }
 
-void get_full_filename_with_process(char * fileName,char * dest,uint processId) {
+static void get_full_filename_with_process(char * fileName,char * dest,uint processId) {
 
 	char filenamel[MAX_STRING_LENGTH];
 	char number[MAX_STRING_LENGTH];
@@ -478,7 +489,7 @@ void get_full_filename_with_process(char * fileName,char * dest,uint processId) 
 
 }
 
-void get_full_filename(char * fileName,char * dest){
+static void get_full_filename(char * fileName,char * dest){
 
 	//folder
 	strncpy(dest,client_arg->folder,MAX_STRING_LENGTH);

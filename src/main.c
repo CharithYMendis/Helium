@@ -7,7 +7,10 @@
 #include "cpuid.h"
 #include "memtrace.h"
 #include "inscount.h"
+#include "instrace.h"
+#include "defines.h"
 
+#define DEBUG_MAIN
 #define NO_OF_INS_PASSES 10
 
 typedef void (*thread_func_t) (void * drcontext);
@@ -236,8 +239,19 @@ static void setupInsPasses(){
 	ins_pass[3].process_exit = inscount_exit_event;
 
 	//ins pass 5 - instrace
+	ins_pass[4].name = "instrace";	
+	ins_pass[4].priority = priority;
+	ins_pass[4].priority.name = ins_pass[4].name;
+	ins_pass[4].priority.priority = 0;
+	ins_pass[4].init_func = instrace_init;
+	ins_pass[4].app2app_bb = instrace_bb_app2app;
+	ins_pass[4].analysis_bb = instrace_bb_analysis;
+	ins_pass[4].instrumentation_bb = instrace_bb_instrumentation;
+	ins_pass[4].thread_init = instrace_thread_init;
+	ins_pass[4].thread_exit = instrace_thread_exit;
+	ins_pass[4].process_exit = instrace_exit_event;
 
-	pass_length = 4;
+	pass_length = 5;
 
 	 
 	

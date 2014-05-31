@@ -4,6 +4,9 @@
 #include "drmgr.h"
 #include "drutil.h"
 #include "memtrace.h"
+#include "utilities.h"
+#include "moduleinfo.h"
+#include "defines.h"
 
 #ifdef WINDOWS
 # define DISPLAY_STRING(msg) dr_messagebox(msg)
@@ -51,10 +54,6 @@ static void  *mutex;    /* for multithread support */
 static uint64 num_refs; /* keep a global memory reference count */
 static int tls_index;
 
-//my variables
-static const char * main_modules[] = {"C:\\Program Files (x86)\\Adobe\\Adobe Photoshop CS6\\Required\\Plug-Ins\\Extensions\\MMXCore.8BX",
-							"C:\\Program Files (x86)\\Adobe\\Adobe Photoshop CS6\\Required\\Plug-Ins\\Filters\\Standard MultiPlugin.8BF"};
-
 static void clean_call(void);
 static void memtrace(void *drcontext);
 static void code_cache_init(void);
@@ -64,14 +63,47 @@ static void instrument_mem(void        *drcontext,
                            instr_t     *where,
                            int          pos,
                            bool         write);
+static bool parse_commandline_args (const char * args);
 
-void memtrace_init(client_id_t id,char * arguments)
+
+typedef struct _client_arg_t{
+	char in_filename[MAX_STRING_LENGTH];
+	uint filter_mode;
+} client_arg_t;
+
+static client_arg_t * client_arg;
+static module_t * head;
+
+static bool parse_commandline_args (const char * args) {
+
+	client_arg = (client_arg_t *)dr_global_alloc(sizeof(client_arg_t));
+	if(dr_sscanf(args,"%s %d",&client_arg->in_filename,
+						   client_arg->filter_mode)!=2){
+		return false;
+	}
+
+	
+	return true;
+}
+
+void memtrace_init(client_id_t id,const char * arguments)
 {
 
-    drmgr_init();
+	file_t in_file;
+
+	drmgr_init();
     drutil_init();
     client_id = id;
     mutex = dr_mutex_create();
+
+	DR_ASSERT(parse_commandline_args(arguments) == true);
+	head = md_initialize();
+
+	if(client_arg->filter_mode != FILTER_NONE){
+		in_file = dr_open_file(client_arg->in_filename,DR_FILE_READ);
+		md_read_from_file(head,in_file,false);
+		dr_close_file(in_file);
+	}
     
     tls_index = drmgr_register_tls_field();
     DR_ASSERT(tls_index != -1);
@@ -104,6 +136,8 @@ void memtrace_exit_event()
     NULL_TERMINATE(msg);
     DISPLAY_STRING(msg);
 #endif /* SHOW_RESULTS */
+	md_delete_list(head);
+
     code_cache_exit();
     drmgr_unregister_tls_field(tls_index);
     dr_mutex_destroy(mutex);
@@ -212,51 +246,31 @@ memtrace_bb_instrumentation(void *drcontext, void *tag, instrlist_t *bb,
                 void *user_data)
 {
     int i;
-	module_data_t * module_data;
 	reg_id_t reg;
-	uint offset;
+	
 
-	//filtering based on module
-	module_data = dr_lookup_module(instr_get_app_pc(instr));
-	if(module_data == NULL){
-		return DR_EMIT_DEFAULT;
-	}
-
-	if(strcmp(module_data->full_path,main_modules[0]) == 0){ //if it is the module we want; change it to modules
-
-		//now filter based on address
-		offset = instr_get_app_pc(instr) - module_data->start;
-		//hard coded
-		if(offset >= 0xe85f && offset <= 0xeb61){  //the loop this should have been automatically generated
-			if (instr_get_app_pc(instr) == NULL)
-				return DR_EMIT_DEFAULT;
-			if (instr_reads_memory(instr)) {
-				for (i = 0; i < instr_num_srcs(instr); i++) {
-					if (opnd_is_base_disp(instr_get_src(instr, i))) {  //removing absolute memory refs
-
-						//filtering based on esp and ebp modules
-						reg = opnd_get_base(instr_get_src(instr,i));
-						if(reg == DR_REG_ESP || reg == DR_REG_EBP) continue;
-						instrument_mem(drcontext, bb, instr, i, false);
-					}
+	if(filter_from_list(head,instrlist_first(bb),client_arg->filter_mode)){
+		if (instr_reads_memory(instr)) {
+			for (i = 0; i < instr_num_srcs(instr); i++) {
+				if (opnd_is_base_disp(instr_get_src(instr, i))) {  //removing absolute memory refs
+					//filtering based on esp and ebp modules
+					reg = opnd_get_base(instr_get_src(instr,i));
+					if(reg == DR_REG_ESP || reg == DR_REG_EBP) continue;
+					instrument_mem(drcontext, bb, instr, i, false);
 				}
 			}
-			if (instr_writes_memory(instr)) {
-				for (i = 0; i < instr_num_dsts(instr); i++) {   //removing absolute memory refs
-					if (opnd_is_base_disp(instr_get_dst(instr, i))) {
-
-						//filtering based on esp and ebp modules
-						reg = opnd_get_base(instr_get_dst(instr,i));
-						if(reg == DR_REG_ESP || reg == DR_REG_EBP) continue;
-						instrument_mem(drcontext, bb, instr, i, true);
-					}
+		}
+		if (instr_writes_memory(instr)) {
+			for (i = 0; i < instr_num_dsts(instr); i++) {   //removing absolute memory refs
+				if (opnd_is_base_disp(instr_get_dst(instr, i))) {
+					//filtering based on esp and ebp modules
+					reg = opnd_get_base(instr_get_dst(instr,i));
+					if(reg == DR_REG_ESP || reg == DR_REG_EBP) continue;
+					instrument_mem(drcontext, bb, instr, i, true);
 				}
 			}
 		}
 	}
-
-	//free module data
-	dr_free_module_data(module_data);
 
     return DR_EMIT_DEFAULT;
 }
@@ -484,6 +498,9 @@ instrument_mem(void *drcontext, instrlist_t *ilist, instr_t *where,
     dr_restore_reg(drcontext, ilist, where, reg1, SPILL_SLOT_2);
     dr_restore_reg(drcontext, ilist, where, reg2, SPILL_SLOT_3);
 }
+
+
+
 
 
 

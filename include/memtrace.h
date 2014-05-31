@@ -12,11 +12,12 @@ dr_emit_flags_t
 memtrace_bb_analysis(void *drcontext, void *tag, instrlist_t *bb,
                   bool for_trace, bool translating,
                   OUT void **user_data);
-void memtrace_thread_init(void *drcontext);
-void memtrace_thread_exit(void *drcontext);
 dr_emit_flags_t
 memtrace_bb_app2app(void *drcontext, void *tag, instrlist_t *bb,
                  bool for_trace, bool translating);
+void memtrace_thread_init(void *drcontext);
+void memtrace_thread_exit(void *drcontext);
+
  
  
  

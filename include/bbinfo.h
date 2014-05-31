@@ -24,16 +24,4 @@ bbinfo_bb_app2app(void *drcontext, void *tag, instrlist_t *bb,
                  bool for_trace, bool translating);
 
 
-typedef struct _client_arg_t {
-
-	uint mode;
-	uint threshold;
-	char folder[MAX_STRING_LENGTH];
-	char in_filename[MAX_STRING_LENGTH];
-	char out_filename[MAX_STRING_LENGTH];
-	char summary_filename[MAX_STRING_LENGTH];
-	
-
-} client_arg_t;
-
 #endif

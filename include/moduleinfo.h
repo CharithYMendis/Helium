@@ -5,7 +5,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define MAX_STRING_LENGTH 250
 #define MAX_TARGETS	100
 #define MAX_BBS_PER_MODULE 10000
 
@@ -45,6 +44,7 @@ typedef struct _bbinfo_t {
 	call_bb_info_t * from_bbs;
 	call_bb_info_t * to_bbs;
 	call_target_info_t * called_from;
+	bool printable;
 } bbinfo_t;
 
 
@@ -58,8 +58,6 @@ typedef struct _module_t {
 } module_t;
 
 
-
-
 /* get the head - handle */
 module_t * md_initialize();
 
@@ -69,18 +67,18 @@ module_t * md_lookup_module (module_t * head,char * name);
 bbinfo_t * md_lookup_bb_in_module (module_t * head, char * name, unsigned int addr);
 
 /* add an element */
-bbinfo_t * md_add_bb_to_module (module_t * head,char * name, unsigned int addr,  unsigned int length_list_bbs);
+bbinfo_t * md_add_bb_to_module(module_t * head, char * name, unsigned int addr, unsigned int length_list_bbs, bool extra_info);
 
 /* parse the file and fill the linked list */
-void md_read_from_file (module_t * head, file_t file);
+void md_read_from_file (module_t * head, file_t file, bool extra_info);
 /* print the addresses according to the protocol */
 void md_print_to_file (module_t * head, file_t file);
 
 /* deletes the linked list */
 void md_delete_list (module_t * head);
+
+/* operations on the data structure */
 /* sorts the elements stored in individual lists of the linked list */
 void md_sort_bb_list_in_module (module_t * head);
-
-
 
 #endif

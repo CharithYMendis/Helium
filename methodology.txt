@@ -1,0 +1,77 @@
+code localization
+-----------------
+
+0. create an action for the filter
+
+1. First get the coverage for the filter 
+For that run code_cov m32 -> this will dump a file in logs with coverage
+We must also have the base coverage (but remove the optimized paths - 1. remove the files 2. change the code coverage tool to include cpuid)
+
+Now, the diff -> additional codes that were executed in filter
+
+2. Get the diff in a proper manner with DGC/invalid modules/duplicate addresses removed. Use mydiff tool.
+
+run.bat <filter> <base> <output>
+
+3. Now we have gotten a diff or the additional BBs we have executed in a proper way. Now, we need to get the freq and calling patterns for 
+those bbs under the filter.
+use photo.dll client
+run m32 <threshold>
+
+This will dump calling freq of bbs + a summary file of bbs whose freq was above the threshold. 
+
+Now, we have narrowed down the problem to main bbs which execute more number of times when only the filter is run.
+
+Narrowing down
+1) execute only when filter run
+2) executes more number of times (freq)
+3) Hot loops which jump back to themselves -> we are now left with a handful of bbs to look at.
+
+Other criteria
+1) for the same filter but with different images (input) - higher confidence level of the found bbs. Can still narrow based on diff and similarities.
+If loops there iterations should change based on dimensions of the image.
+
+filter format
+
+
+algorithm extraction
+--------------------
+
+1. instruction trace 
+
+
+filtering 
+---------
+
+instrumentation filter + file format for filtering -> can have a single filtering file
+
+file format
+
+number of modules
+<module name>
+number of addresses
+addresses
+<module name>
+number of addresses
+addresses
+....
+
+fill up a data structure to represent this -> done in moduleinfo.c (can be used for rawe creation of module lists or reading from a file)
+extra_info -> carry call from/to bb targets and call targets -> not needed for certain applications.
+limitations - call targets should be from the same module
+
+make a universal function for filtering which can be used easily.
+
+
+
+
+todo
+
+get the different types of instructions present in the list 
+get the size of the instruction list
+get functional boundaries to keep track of
+
+write another client to get the entry points to the functions. input -> bbfreq summary output -> function entry points to keep track of 
+This would be used by the instruction trace -> same as instrace with bbs. (this makes sense as to get all the memory dependancies)
+keep a stack to get the call current call target -> when come into scope populate the stack -> ret with zero stack elements (or current stack level) -> now switch off instrumenting.
+

@@ -1,0 +1,13 @@
+Instrumentation passes
+1. code localization - based on diff
+2. bbfreq based on localized code
+3. cpuid - MMX disable
+4. memtrace
+5. dynamic instruction count trace
+6. instrace
+
+
+Utilities
+1. get PEB data / get TEB data
+
+

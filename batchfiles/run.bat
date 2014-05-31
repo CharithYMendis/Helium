@@ -31,7 +31,8 @@ set PHOTOSHOP="C:\Program Files (x86)\Adobe\Adobe Photoshop CS6\Photoshop.exe"
 )
 
 :: various runs based on options
+set BASIC_TEST="C:\Charith\Dropbox\Research\development\exalgo\tests\basic_1.exe"
 
-%DR_PATH% -debug -root %DYNAMORIO_HOME% -c exalgo.dll -inscount -- %PHOTOSHOP%
+%DR_PATH% -debug -root %DYNAMORIO_HOME% -syntax_intel -c exalgo.dll -instrace 4 %LOG_DIR% hello.txt 300000 -- %BASIC_TEST%
 
 cd %CURRENT_DIR%

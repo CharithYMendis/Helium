@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "defines.h"
 
 
 /* private functions */
@@ -36,22 +37,25 @@ static module_t * get_tail (module_t * head){
 }
 
 /* adds an address to the linear list with addresses */
-static bbinfo_t * add_bb_to_list (bbinfo_t * bb_list, unsigned int addr){
+static bbinfo_t * add_bb_to_list (bbinfo_t * bb_list, unsigned int addr, bool extra_info){
 
 	bb_list[0].start_addr++;  //first element of the start address will have the length
 	bb_list[bb_list[0].start_addr].start_addr = addr;
 	bb_list[bb_list[0].start_addr].freq = 0;
+	bb_list[bb_list[0].start_addr].printable = true;
 
-	//initialize from and to bbs
-	bb_list[bb_list[0].start_addr].from_bbs = (call_bb_info_t *)dr_global_alloc(sizeof(call_bb_info_t)*MAX_TARGETS);
-	bb_list[bb_list[0].start_addr].from_bbs[0].start_addr = 0;
+	if(extra_info){
+		//initialize from and to bbs
+		bb_list[bb_list[0].start_addr].from_bbs = (call_bb_info_t *)dr_global_alloc(sizeof(call_bb_info_t)*MAX_TARGETS);
+		bb_list[bb_list[0].start_addr].from_bbs[0].start_addr = 0;
 
-	bb_list[bb_list[0].start_addr].to_bbs = (call_bb_info_t *)dr_global_alloc(sizeof(call_bb_info_t)*MAX_TARGETS);
-	bb_list[bb_list[0].start_addr].to_bbs[0].start_addr = 0;
+		bb_list[bb_list[0].start_addr].to_bbs = (call_bb_info_t *)dr_global_alloc(sizeof(call_bb_info_t)*MAX_TARGETS);
+		bb_list[bb_list[0].start_addr].to_bbs[0].start_addr = 0;
 
-	//initialize call target
-	bb_list[bb_list[0].start_addr].called_from = (call_target_info_t *)dr_global_alloc(sizeof(call_target_info_t)*MAX_TARGETS);
-	bb_list[bb_list[0].start_addr].called_from[0].bb_addr = 0;
+		//initialize call target
+		bb_list[bb_list[0].start_addr].called_from = (call_target_info_t *)dr_global_alloc(sizeof(call_target_info_t)*MAX_TARGETS);
+		bb_list[bb_list[0].start_addr].called_from[0].bb_addr = 0;
+	}
 
 	return &bb_list[bb_list[0].start_addr];
 
@@ -116,18 +120,19 @@ module_t * md_lookup_module (module_t * head,char * name){
 bbinfo_t * md_add_bb_to_module(module_t * head,
 								char * name,
 								unsigned int addr,
-								unsigned int length_list_bbs){
+								unsigned int length_list_bbs,
+								bool extra_info){
 
 	module_t * module = md_lookup_module(head,name);
 	module_t * new_module;
 	if(module != NULL){
-		return add_bb_to_list(module->bbs,addr);
+		return add_bb_to_list(module->bbs,addr,extra_info);
 	}
 	else{
 		module = get_tail (head);
 		new_module = new_elem(name,length_list_bbs);
 		module->next = new_module;
-		return add_bb_to_list(new_module->bbs,addr);
+		return add_bb_to_list(new_module->bbs,addr,extra_info);
 	}
 }
 
@@ -189,7 +194,7 @@ bbinfo_t* md_lookup_bb_in_module(module_t * head, char * name, unsigned int addr
 
 
 /* file I/O */
-void md_read_from_file (module_t * head, file_t file){
+void md_read_from_file (module_t * head, file_t file, bool extra_info){
 	 
 	uint64 map_size;
 	size_t actual_size;
@@ -250,7 +255,7 @@ void md_read_from_file (module_t * head, file_t file){
 			line++; //start of the next line
 			dr_sscanf(line,"%u\n",&addr);
 			//dr_printf(line,"%x\n",addr); //debug
-			add_bb_to_list(head->bbs,addr);
+			add_bb_to_list(head->bbs,addr, extra_info);
 		}
 
 	}
