@@ -3,8 +3,10 @@
 #include "dr_api.h"
 #include "drmgr.h"
 #include "drutil.h"
-#include "defines.h"
 #include "utilities.h"
+#include "instrace.h"
+#include "debug.h"
+#include "inops.h"
 
 #ifdef WINDOWS
 # define DISPLAY_STRING(msg) dr_messagebox(msg)
@@ -20,86 +22,9 @@
 
 #define NULL_TERMINATE(buf) buf[(sizeof(buf)/sizeof(buf[0])) - 1] = '\0'
 
-/* modes for filtering the instructions */
-#define NO_FILTERING			1
-#define PROFILED_FILTERING		2
-#define MODULE_FILTERING		3
-
-
-/*
-	destination and source encoding
-	
-	seperate field to signify reg or mem
-
-	reg (type & 0b11 = 0)
-	---
-	eax,...,edi - set according to the reg number (reg_id I think)
-	register width - is encoded in the type information
-	8 bit high - 8th bit high
-	8 bit low - 7th bit high
-	16 bit - 6th bit high
-	32 bit - 5th bit high
-	64 bit - 4th bit high
-
-	mem  (type & 0b11 = 1)
-	---
-	absolute mem address (virtual) - assuming we are only tracking one process's dependancies - aliasing??
-	memory width - will be stored in the location position -> actual location will not be updated statically.
-	mem_addr will not be stored statically, but will be carried dynamically in instr_trace_t data structure
-
-	immediate  (type & 0b11 = 2)
-	---------
-	the location field will have the value of it
-
-*/
-
-#define WIDTH_8L				(1<<7)
-#define WIDTH_8H				(1<<6)
-#define WIDTH_16				(1<<5)
-#define WIDTH_32				(1<<4)
-#define WIDTH_64				(1<<3)
-
-#define GET_TYPE(x)				( x & 0x3 )
-#define SET_TYPE(x,type)		x = ( x | type ) 
-#define REG_TYPE				0
-#define MEM_TYPE				1
-#define IMM_TYPE				2
-
-typedef struct _operand_t {
-
-	unsigned char type;
-	unsigned char location;
-
-} operand_t;
-
-/*
-	destination struct - contains the operands as well as the operation performed on the value stored at this destination.
-*/
-
-typedef struct _dst_t {
-	
-	operand_t opnd;
-	unsigned short operation;
-
-} dst_t;
-
-typedef operand_t src_t;
-
-#define MAX_SRCS 2
-
-/*
- info that can be statically determined - will assume a canonical form 2/1 srcs and 1 dest
-*/
-
-typedef struct _static_info_t {
-    
-	unsigned char src_num;
-	unsigned char dest_num;
-	src_t src[MAX_SRCS];
-	dst_t dst;
-	app_pc pc;
-
-} static_info_t;
+#define SRC_OPND 1
+#define DST_OPND 2
+#define NO_OPND  3
 
 /* 
 	instrace main structure  
@@ -108,8 +33,8 @@ typedef struct _static_info_t {
 typedef struct _instr_trace_t {
 
 	static_info_t * static_info_instr;
-	uint mem_addr;						//mem_addr if it has a memory reference
-	uint size;
+	uint mem_addr_src;						//src memory address
+	uint mem_addr_dst;						//dst memory address
 
 } instr_trace_t;
 
@@ -146,6 +71,8 @@ static void  *mutex;    /* for multithread support */
 static uint64 num_refs; /* keep a global memory reference count */
 static int tls_index;
 
+static bool opcode_missed[OPCODE_COUNT];
+
 typedef struct _client_arg_t {
 
 	uint filter_mode;
@@ -162,11 +89,11 @@ static void clean_call(void);
 static void print_trace(void *drcontext);
 static void code_cache_init(void);
 static void code_cache_exit(void);
-static static_info_t * static_info_instrumentation(void * drcontext, instr_t* instr, unsigned char * done, uint * phase,
-								uint * dest_no, uint * src_no);
+static static_info_t * static_info_instrumentation(void * drcontext, instr_t* instr, uchar * done, uchar * phase,
+								char * position);
 static void dynamic_info_instrumentation(void *drcontext, instrlist_t *ilist, instr_t *where,
-               static_info_t * static_info, uint * dest_no, uint * src_no);
-static void debug_static_info(void * drcontext,instr_t * instr);
+               static_info_t * static_info, char * position);
+
 bool parse_commandline_args (const char * args);
 
 /* function implementation */
@@ -182,9 +109,7 @@ bool parse_commandline_args (const char * args) {
 		return false;
 	}
 
-	dr_printf("enter %s\n",args);
 	dr_printf("%d %s %s %d\n",client_arg->filter_mode,client_arg->folder,client_arg->in_filename,client_arg->static_info_size);
-	dr_printf("exit\n",args);
 
 	return true;
 }
@@ -193,6 +118,7 @@ void instrace_init(client_id_t id, char * arguments)
 {
 
 	file_t in_file;
+	int i;
 
     drmgr_init();
     drutil_init();
@@ -216,10 +142,24 @@ void instrace_init(client_id_t id, char * arguments)
     DR_ASSERT(tls_index != -1);
     code_cache_init();
 
+	for(i=OP_FIRST;i<=OP_LAST; i++){
+		opcode_missed[i] = false;
+	}
+	
+
 }
 
 void instrace_exit_event()
 {
+
+	int i;
+
+	for(i=OP_FIRST; i<=OP_LAST; i++){
+		if(opcode_missed[i]){
+			dr_printf("%s\n",decode_opcode_name(i));
+		}
+	}
+
 	dr_global_free(global_static_info,sizeof(static_info_t)*global_static_array_size);
 	md_delete_list(head);
 	dr_global_free(client_arg,sizeof(client_arg_t));
@@ -253,12 +193,10 @@ void instrace_thread_init(void *drcontext)
      */
     len = dr_snprintf(logname, sizeof(logname)/sizeof(logname[0]),
 		"%s", client_arg->folder);
-	dr_printf("%d\n",len);
     DR_ASSERT(len > 0);
     len += dr_snprintf(logname + len,
                       (sizeof(logname) - len)/sizeof(logname[0]),
-                      "instrace.%d.log", dr_get_thread_id(drcontext));
-    dr_printf("%d\n",len);
+                      "%s.instrace.%d.log", dr_get_application_name(),dr_get_thread_id(drcontext));
 	DR_ASSERT(len > 0);
     logname[len] = '\0';
 	dr_printf("name - %s\n",logname);
@@ -327,111 +265,165 @@ instrace_bb_instrumentation(void *drcontext, void *tag, instrlist_t *bb,
 	static_info_t * instr_info;
 
 	/* these are for the use of the caller */
-	unsigned char * done;
-	uint * phase;
-	uint * dest_no;
-	uint * src_no;
+	uchar * done;
+	uchar * phase;
+	uchar * dest_src;
+	char * pos;
 
-	done = (unsigned char *)dr_global_alloc(sizeof(unsigned char));
-	phase = (uint *)dr_global_alloc(sizeof(uint));
-	dest_no = (uint *)dr_global_alloc(sizeof(uint));
-	src_no = (uint *)dr_global_alloc(sizeof(uint)*MAX_SRCS);
+	done = (uchar *)dr_global_alloc(sizeof(unsigned char));
+	phase = (uchar *)dr_global_alloc(sizeof(uchar));
+	//dest_src = (uchar *)dr_global_alloc(sizeof(uchar)*2);
+	pos = (char *)dr_global_alloc(sizeof(char)*2);
 
 	DR_ASSERT(done != NULL);
 	DR_ASSERT(phase != NULL);
-	DR_ASSERT(dest_no != NULL);
-	DR_ASSERT(src_no != NULL);
+	//DR_ASSERT(dest_src != NULL);
+	DR_ASSERT(pos != NULL);
+
+	//dest_src[0] = NO_OPND;
+	//dest_src[1] = NO_OPND;
+	pos[0] = -1;
+	pos[1] = -1;
+
 
 	*done = false;
 	*phase = 0;
 
 	if(filter_from_list(head,instrlist_first(bb),client_arg->filter_mode)){
 		while(*done == false){
-			instr_info = static_info_instrumentation(drcontext, instr, done, phase, dest_no, src_no);
+			//dr_printf("entering static instrumentation\n");
+			instr_info = static_info_instrumentation(drcontext, instr, done, phase, pos);
 			if(instr_info != NULL){ /* we may filter out the branch instructions */
-				//dynamic_info_instrumentation(drcontext,bb,instr,instr_info, dest_no, src_no);		
+#ifndef DEBUG_STATIC
+				dynamic_info_instrumentation(drcontext,bb,instr,instr_info, pos);		
+#endif
 			}
 		}
 	}
 
-	dr_global_free(done,sizeof(unsigned char));
-	dr_global_free(phase,sizeof(uint));
-	dr_global_free(dest_no,sizeof(uint));
-	dr_global_free(src_no,sizeof(uint)*MAX_SRCS);
+
+	dr_global_free(done,sizeof(uchar));
+	dr_global_free(phase,sizeof(uchar));
+	//dr_global_free(dest_src,sizeof(uchar)*2);
+	dr_global_free(pos,sizeof(char)*2);
+
 
 	return DR_EMIT_DEFAULT;
 			
 }
 
-static void debug_static_info(void * drcontext,instr_t * instr){
+void opnd_populator(void * drcontext, opnd_t opnd,operand_t * static_info, instr_t * instr, uchar * is_memory){
 
-	char string_storage[MAX_STRING_LENGTH];
-	opnd_t operand;
-	per_thread_t * data;
-	int i;
+
+	reg_id_t reg;
+	uint reg_size;
+
+	*is_memory = false;
+
+	if(opnd_is_reg(opnd)){
+		
+		reg = opnd_get_reg(opnd);
+		reg_size = opnd_size_in_bytes(reg_get_size(reg));
+		static_info->width = reg_size;
+
+		SET_TYPE(static_info->type,REG_TYPE);
+		static_info->location = reg;
+		
 	
-	data      = drmgr_get_tls_field(drcontext, tls_index);
-	
-	instr_disassemble_to_buffer(drcontext,instr,string_storage,MAX_STRING_LENGTH);
-	dr_fprintf(data->log,"%s\n",string_storage);
-	dr_fprintf(data->log,"srcs - %d\n",instr_num_srcs(instr));
-	dr_fprintf(data->log,"dests - %d\n",instr_num_dsts(instr));
+	}
+	else if(opnd_is_immed(opnd)){
+		
+		DR_ASSERT(opnd_is_immed_float(opnd) == false);
 
-	for(i=0; i<instr_num_srcs(instr); i++){
-
-		dr_fprintf(data->log,"srcs(%d)-",i);
-		operand = instr_get_src(instr,i);
-		if(opnd_is_immed_int(operand)){
-			dr_fprintf(data->log,"imm-%d\n",opnd_get_immed_int(operand));
-		}
-		else if(opnd_is_immed_float(operand)){
-			dr_fprintf(data->log,"imm-%f\n",opnd_get_immed_float(operand));
-		}
-		else if(opnd_is_memory_reference(operand)){
-			dr_fprintf(data->log,"mem\n");
-		}
-		else if(opnd_is_reg(operand)){
-			opnd_disassemble_to_buffer(drcontext,operand,string_storage,MAX_STRING_LENGTH);
-			dr_fprintf(data->log,"reg-%s-width-%d\n",string_storage,opnd_size_in_bytes(reg_get_size(opnd_get_reg(operand))));
-		}
+		/* floating point immediates can be supported by having a byte array with memcpy - not currently supported */
+		SET_TYPE(static_info->type,IMM_TYPE);
+		static_info->location = opnd_get_immed_int(opnd);
+		static_info->width = opnd_size_in_bytes(opnd_get_size(opnd));
 
 	}
+	else if(opnd_is_memory_reference(opnd)){
 
-	for(i=0; i<instr_num_dsts(instr); i++){
-
-		dr_fprintf(data->log,"dest(%d)-",i);
-		operand = instr_get_dst(instr,i);
-		if(opnd_is_immed_int(operand)){
-			dr_fprintf(data->log,"imm-%d\n",opnd_get_immed_int(operand));
-		}
-		else if(opnd_is_immed_float(operand)){
-			dr_fprintf(data->log,"imm-%f\n",opnd_get_immed_float(operand));
-		}
-		else if(opnd_is_memory_reference(operand)){
-			dr_fprintf(data->log,"mem\n");
-		}
-		else if(opnd_is_reg(operand)){
-			opnd_disassemble_to_buffer(drcontext,operand,string_storage,MAX_STRING_LENGTH);
-			dr_fprintf(data->log,"reg-%s-width-%d\n",string_storage,opnd_size_in_bytes(reg_get_size(opnd_get_reg(operand))));
-		}
-
+		SET_TYPE(static_info->type,MEM_TYPE);
+		static_info->width = drutil_opnd_mem_size_in_bytes(opnd,instr);
+		*is_memory = true;
 
 	}
 
 }
 
-static static_info_t * static_info_instrumentation(void * drcontext, instr_t* instr, unsigned char * done, uint * phase,
-								uint * dest_no, uint * src_no){
+
+static static_info_t * static_info_instrumentation(void * drcontext, instr_t* instr, uchar * done, uchar * phase,
+								 char * position){
 	/*
 		for each src and dest add the information accordingly
 		this should return canonicalized static info about an instruction; breaking down any complex instructions if necessary
+
+		1) check whether this instruction needs to be instrumented
+		2) if yes, then get a location and then proceed to instrument -> return the struct
+		3) if no, return null
+
 	*/
-	int i;
-	static_info_t * static_info;
+
+	/* main variables */
+	static_info_t * static_info = NULL;
+	per_thread_t * data = drmgr_get_tls_field(drcontext,tls_index);
+
+	/* working variables - need for intermediate computations */
 	opnd_t operand;
 	reg_id_t reg;
-
 	uint reg_size;
+	int opcode;
+	uchar is_memory;
+	
+	/* loop variables */
+	int i;
+
+	//dr_printf("static instrumentation\n");
+
+	/* 1) */
+
+
+
+	opcode = instr_get_opcode(instr);
+
+	/* check whether this instr needs instrumentation - check for ones to skip and skip if */
+	/*switch(opcode){
+	case OP_jmp:
+		*done = true;
+		return static_info;
+	default:
+	}*/
+
+	/* reverse filter - check for once to instrument proceed if */
+	switch(opcode){
+#ifndef DEBUG_STATIC
+	case OP_push:
+	case OP_pop:
+	case OP_add:
+	case OP_or:
+	case OP_and:
+	case OP_xor:
+#else
+	//case OP_inc:
+#endif
+	//	break;
+	default:
+		opcode_missed[opcode] = true;
+		*done = true;
+		return static_info;
+	}
+
+
+#ifdef DEBUG_STATIC
+	//debug_static_info(drcontext,instr,data->log);
+	*done = true;
+	return static_info;
+#endif
+	
+	
+
+
+	/* 2) */
 
 	/* acquire the global array ptr for storing static information for the given instruction */
 	dr_mutex_lock(mutex);
@@ -441,83 +433,114 @@ static static_info_t * static_info_instrumentation(void * drcontext, instr_t* in
 	static_info = &global_static_info[global_static_ptr];
 
 	dr_mutex_unlock(mutex);
-	debug_static_info(drcontext,instr);
 
-	*done = 1;
-	return static_info;
+#ifdef DEBUG_INSTRACE
+	/* we will disassemble the instruction here */
+	instr_disassemble_to_buffer(drcontext,instr,static_info->disassembly,SHORT_STRING_LENGTH);
+	static_info->phase = *phase;
+#endif
 
-	/* setup the srcs */ 
-	//static_info->src_num = instr_num_srcs(instr);
+	/* we will only be instrumentating certain instructions */
+	opcode = instr_get_opcode(instr);
 
-	//DR_ASSERT(static_info->src_num <= 2);
+	switch(opcode){
+	
+	case OP_push:
+		{
+			/* this is like a mov - we only need to store the memory update that is happening */
+			/* here the 2nd destination holds the memory location; and the 1st source holds the value to be stored which can also be a memory reference */
+			DR_ASSERT(instr_num_dsts(instr) == 2);
+			DR_ASSERT(instr_num_srcs(instr) == 2);
+			DR_ASSERT(opnd_is_memory_reference(instr_get_dst(instr,1)) == true);
 
-	//dr_log(drcontext,LOG_ALL,1,"");
+			static_info->dest_num = 1;
+			static_info->src_num = 1;
+			static_info->operation = OP_MOV;
+		
+			/* fill up the destination */
+			opnd_populator(drcontext,instr_get_dst(instr,1),&(static_info->dst),instr,&is_memory);
+			DR_ASSERT(is_memory == true);
+			position[0] = 1;
+			
+			/* fill up the src */
+			opnd_populator(drcontext,instr_get_src(instr,0),&(static_info->src[0]),instr,&is_memory);
+			if(is_memory)   position[1] = 0;
+			*done = true;
+			break;
+		
+		}
+	case OP_pop:
+		{
+			DR_ASSERT(instr_num_dsts(instr) == 2);
+			DR_ASSERT(instr_num_srcs(instr) == 2);
+			DR_ASSERT(opnd_is_memory_reference(instr_get_src(instr,1)) == true);
 
-	/*for(i=0; i<instr_num_srcs(instr);i++){
-		operand = instr_get_src(instr,i);
-		if(opnd_is_reg(operand)){
+			static_info->dest_num = 1;
+			static_info->src_num = 1;
+			static_info->operation = OP_MOV;
+
+			/* fill up the destination */
+			opnd_populator(drcontext,instr_get_dst(instr,0),&(static_info->dst),instr,&is_memory);
+			if(is_memory) position[0] = 0;
+
+			/* fill up srcs */
+			opnd_populator(drcontext,instr_get_src(instr,1),&(static_info->src[0]),instr,&is_memory);
+			DR_ASSERT(is_memory == true);
+			position[1] = 1;
+			*done = true;
+			break;
+		}
+	case OP_add:
+	case OP_or:
+	case OP_and:
+	case OP_xor:
+	case OP_inc:
+	case OP_dec:
+		{
+			DR_ASSERT(instr_num_dsts(instr) == 1);
+			DR_ASSERT(instr_num_srcs(instr) == 2);
+		
+			static_info->dest_num = instr_num_dsts(instr);
+			static_info->src_num = instr_num_srcs(instr);
+			static_info->operation = OP_ADD;  /* FIXME */
+
+			/* dst */
+			opnd_populator(drcontext,instr_get_dst(instr,0),&(static_info->dst),instr,&is_memory);
+			if(is_memory) position[0] = 0;
+
+			/* src */
+			for(i=0; i<instr_num_srcs(instr); i++){
+				opnd_populator(drcontext,instr_get_src(instr,i),&(static_info->src[i]),instr,&is_memory);
+				if(is_memory){
+					DR_ASSERT(position[1] < 0);
+					position[1] = i;
+				}
+			}
+			*done = true;
+			break;
+
+		} 
+	
 
 	
-			reg = opnd_get_reg(operand);
-			reg_size = opnd_size_in_bytes(reg_get_size(reg));
-
-			SET_TYPE(static_info->src[i].type,REG_TYPE);
-			static_info->src[i].location = reg;
-			switch(reg_size){
-				case 1: 
-					{
-						if(reg <= DR_REG_BL){
-							static_info->src[i].type |= WIDTH_8L;
-						}
-						else{
-							static_info->src[i].type |= WIDTH_8H;
-						}
-					}
-				case 2:
-					static_info->src[i].type |= WIDTH_16;
-				case 4:
-					static_info->src[i].type |= WIDTH_32;
-				case 8:
-					static_info->src[i].type |= WIDTH_64;
-				default:
-			}
-
-		}
-		else if(opnd_is_immed(operand)){  //can be floating point operand or int operand
-			SET_TYPE(static_info->src[i].type,IMM_TYPE);
-			if(opnd_is_immed_int(operand)){
-				static_info->src[i].location = opnd_get_immed_int(operand);
-			}
-			else if(opnd_is_immed_float(operand)){
-				static_info->src[i].location = 0;
-				//static_info->src[i].location = opnd_get_immed_float(operand);
-			}
-		}
-		else if(opnd_is_memory_reference(operand)){
-			SET_TYPE(static_info->src[i].type,MEM_TYPE);
-			static_info->src[i].type |= (drutil_opnd_mem_size_in_bytes(operand,instr)) << 5;
-		}
-		else{
-		}
-	}*/
-
-	/* setup the destinations - only a single destination should be processed 
-	   we need to specialize based on the instructions for multi-destination instructions.
-	   for single destination instruction we need not specialize */
-
-	/* fill up assuming single destination or less */
-	/*static_info->dest_num = 0;
-	if(instr_num_dsts(instr) > 0){
-		static_info->dest_num = 1;
-		operand = instr_get_dst(instr,0);
 	}
-	static_info->dst.operation = instr_get_opcode(instr);*/ /* just use dr's enum encoding; we will keep using until it is ready to pretty print */
 
+		return static_info;
+
+	
+
+}
+
+void debug_dymem_addr(){
+
+	per_thread_t * data = drmgr_get_tls_field(dr_get_current_drcontext(),tls_index);
+	instr_trace_t * trace = (instr_trace_t *)data->buf_base;
+	dr_printf("%u %u\n",trace->mem_addr_dst,trace->mem_addr_src);
 
 }
 
 static void dynamic_info_instrumentation(void *drcontext, instrlist_t *ilist, instr_t *where,
-               static_info_t * static_info, uint * dest_no, uint * src_no)
+               static_info_t * static_info, char * pos)
 {
 
 	/*
@@ -555,17 +578,15 @@ static void dynamic_info_instrumentation(void *drcontext, instrlist_t *ilist, in
 		In x86 an instruction can have only one memory reference.
 		So, we can safely iterate and get the latest memory reference. (dst, src mem -> dst = src)
 	*/
+
+	/* get the stack address */
 	ref = opnd_create_null();
-	for(i=0; i < static_info->src_num; i++){
-		if(opnd_is_memory_reference(instr_get_src(where,src_no[i]))){
-			ref = instr_get_src(where,src_no[i]);
-		}
+
+	if(pos[0] >= 0){
+		ref = instr_get_dst(where,pos[0]);
+		DR_ASSERT(opnd_is_memory_reference(ref) == true);
 	}
-	for(i=0; i< static_info->dest_num; i++){
-		if(opnd_is_memory_reference(instr_get_dst(where,dest_no[i]))){
-			ref = instr_get_dst(where,src_no[i]);
-		}
-	}
+	
 	
 	if(!opnd_is_null(ref)){ /* we have a memory reference */
 		drutil_insert_get_mem_addr(drcontext, ilist, where, ref, reg1, reg2);
@@ -573,7 +594,8 @@ static void dynamic_info_instrumentation(void *drcontext, instrlist_t *ilist, in
 
     /* The following assembly performs the following instructions
      * buf_ptr->static_info_instr = static_info;
-     * buf_ptr->mem_addr = addr;
+     * buf_ptr->mem_addr_stack = ?;
+	 * buf_ptr->mem_addr_value = ?;
      * buf_ptr++;
      * if (buf_ptr >= buf_end_ptr)
      *    clean_call();
@@ -595,14 +617,59 @@ static void dynamic_info_instrumentation(void *drcontext, instrlist_t *ilist, in
 
 	if(!opnd_is_null(ref)){ /* only bother to store address if there was a memory reference */
 		
-		/* buf_ptr->mem_addr = addr; */
-		/* Store address in memory ref */
-		opnd1 = OPND_CREATE_MEMPTR(reg2, offsetof(instr_trace_t, mem_addr));
+		/* buf_ptr->mem_addr_stack = addr; */
+		opnd1 = OPND_CREATE_MEMPTR(reg2, offsetof(instr_trace_t, mem_addr_dst));
 		opnd2 = opnd_create_reg(reg1);
 		instr = INSTR_CREATE_mov_st(drcontext, opnd1, opnd2);
 		instrlist_meta_preinsert(ilist, where, instr);
 
 	}
+	else{
+	
+		opnd1 = OPND_CREATE_MEMPTR(reg2, offsetof(instr_trace_t, mem_addr_dst));
+		opnd2 = OPND_CREATE_INT32(0);
+		instr = INSTR_CREATE_mov_imm(drcontext, opnd1, opnd2);
+		instrlist_meta_preinsert(ilist, where, instr);
+
+	}
+
+	/* actual memory operand */
+	ref = opnd_create_null();
+
+	if(pos[1] >= 0){	
+		ref = instr_get_src(where,pos[1]);
+		DR_ASSERT(opnd_is_memory_reference(ref) == true);
+	}
+
+	if(!opnd_is_null(ref)){
+		drutil_insert_get_mem_addr(drcontext, ilist, where, ref, reg1, reg2);
+
+		/* again get the buf ptr */
+		drmgr_insert_read_tls_field(drcontext, tls_index, ilist, where, reg2);
+		/* Load data->buf_ptr into reg2 */
+		opnd1 = opnd_create_reg(reg2);
+		opnd2 = OPND_CREATE_MEMPTR(reg2, offsetof(per_thread_t, buf_ptr));
+		instr = INSTR_CREATE_mov_ld(drcontext, opnd1, opnd2);
+		instrlist_meta_preinsert(ilist, where, instr);
+
+		/* buf_ptr->mem_addr_value = addr; */
+		opnd1 = OPND_CREATE_MEMPTR(reg2, offsetof(instr_trace_t, mem_addr_src));
+		opnd2 = opnd_create_reg(reg1);
+		instr = INSTR_CREATE_mov_st(drcontext, opnd1, opnd2);
+		instrlist_meta_preinsert(ilist, where, instr);
+
+	}
+	else{
+
+		/* buf_ptr->mem_addr_value = addr; */
+		opnd1 = OPND_CREATE_MEMPTR(reg2, offsetof(instr_trace_t, mem_addr_src));
+		opnd2 = OPND_CREATE_INT32(0);
+		instr = INSTR_CREATE_mov_imm(drcontext, opnd1, opnd2);
+		instrlist_meta_preinsert(ilist, where, instr);
+
+	}
+
+	//dr_insert_clean_call(drcontext,ilist,where,debug_dymem_addr,false,0);
 
 	/* buf_ptr++; */
     /* Increment reg value by pointer size using lea instr */
@@ -674,11 +741,13 @@ static void dynamic_info_instrumentation(void *drcontext, instrlist_t *ilist, in
 /* prints the trace and empties the instruction buffer */
 static void print_trace(void *drcontext)
 {
-    /*per_thread_t *data;
+    per_thread_t *data;
     int num_refs;
 	instr_trace_t *instr_trace;
+	static_info_t * static_info;
 #ifdef READABLE_TRACE
     int i;
+	int j;
 #endif
 
     data      = drmgr_get_tls_field(drcontext, tls_index);
@@ -688,8 +757,31 @@ static void print_trace(void *drcontext)
 #ifdef READABLE_TRACE
 	//TODO
     for (i = 0; i < num_refs; i++) {
-        dr_fprintf(data->log, PFX",%c,%d,"PFX"\n",
-                   instr_ref->pc, mem_ref->write ? 'w' : 'r', mem_ref->size, mem_ref->addr);
+		/* print it */
+		/* print destination */
+		static_info = instr_trace->static_info_instr;
+		dr_fprintf(data->log,"%s\n",static_info->disassembly);
+		dr_fprintf(data->log,"<%u,",static_info->operation);
+		//dr_fprintf(data->log,"%u,%u,",static_info->dst.opnd.width,instr_trace->mem_addr_stack);
+		if(static_info->dest_num > 0){
+			if(GET_TYPE(static_info->dst.type) == MEM_TYPE){
+				dr_fprintf(data->log,"%u,%u,",static_info->dst.width,instr_trace->mem_addr_dst);
+			}
+			else{
+				dr_fprintf(data->log,"%u,%u,",static_info->dst.width,static_info->dst.location);
+			}
+		}
+
+		for(j = 0; j<static_info->src_num; j++){
+			if(GET_TYPE(static_info->src[j].type) == MEM_TYPE){
+				dr_fprintf(data->log,"%u,%u,",static_info->src[j].width,instr_trace->mem_addr_src);
+			}
+			else{
+				dr_fprintf(data->log,"%u,%u,",static_info->src[j].width,static_info->src[j].location);
+			}
+		}
+		dr_fprintf(data->log,">\n");
+
         ++instr_trace;
     }
 #else
@@ -700,7 +792,7 @@ static void print_trace(void *drcontext)
     memset(data->buf_base, 0, INSTR_BUF_SIZE);
     data->num_refs += num_refs;
     data->buf_ptr   = data->buf_base;
-	*/
+	
 }
 
 /* clean_call dumps the memory reference info to the log file */

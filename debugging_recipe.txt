@@ -1,0 +1,12 @@
+1. build and run DR's debug build
+drrun.exe -debug -msgbox_mask 0xf -c your_client -- your_app
+
+2. there should be a message box, use windbg to attach that process. F6, select process, attach.
+
+3. in windbg, set breakpoint at instrument_init, bp instrument_init, then continue
+
+4. at stop of instrument_init (there might be some message box, click through), use the load_sym script, $>< ...
+
+5. Now you should have debug symbol of the client, try set breakpoint at dr_init: bp dr_init.
+
+6. start debugging.
