@@ -7,6 +7,7 @@
 #include "instrace.h"
 #include "debug.h"
 #include "inops.h"
+#include "output.h"
 
 #ifdef WINDOWS
 # define DISPLAY_STRING(msg) dr_messagebox(msg)
@@ -24,12 +25,12 @@
 
 #define MAX_MEM_OPNDS 10
 
-#define DST_MEM 1
-#define SRC_MEM 2
+#define DST_TYPE 1
+#define SRC_TYPE 2
 
 #define VERBOSE_INSTRACE
 //#define OPCODE_TRACE
-#define DISASSEMBLY_TRACE
+//#define DISASSEMBLY_TRACE
 #define OUTPUT_TO_FILE_TRACE
 
 
@@ -58,6 +59,8 @@ typedef struct _instr_trace_t {
  * we dump data from the buffer to the file.
  */
 #define INSTR_BUF_SIZE (sizeof(instr_trace_t) * MAX_NUM_INSTR_TRACES)
+#define OUTPUT_BUF_SIZE (sizeof(output_t) * MAX_NUM_INSTR_TRACES)
+
 
 /* thread private log file and counter */
 typedef struct {
@@ -66,6 +69,7 @@ typedef struct {
     /* buf_end holds the negative value of real address of buffer end. */
     ptr_int_t buf_end;
     void   *cache;
+	output_t * output_array;
 	
 	/* array to keep static instructions */
 	instr_t ** static_array;
@@ -123,7 +127,7 @@ bool parse_commandline_args (const char * args) {
 	return true;
 }
 
-void instrace_init(client_id_t id, char * arguments)
+void instrace_init(client_id_t id,const char * arguments)
 {
 
 	file_t in_file;
@@ -221,6 +225,8 @@ void instrace_thread_init(void *drcontext)
 	data->static_array_size = client_arg->static_info_size;
 	data->static_ptr = 0;
 
+	data->output_array = (output_t *)dr_thread_alloc(drcontext,OUTPUT_BUF_SIZE);
+
 }
 
 
@@ -237,6 +243,7 @@ instrace_thread_exit(void *drcontext)
     dr_mutex_unlock(mutex);
     dr_close_file(data->log);
     dr_thread_free(drcontext, data->buf_base, INSTR_BUF_SIZE);
+	dr_thread_free(drcontext, data->output_array, OUTPUT_BUF_SIZE);
 
 #ifdef VERBOSE_INSTRACE
 	dr_printf("thread id : %d, cloned instructions freeing now - %d\n",dr_get_thread_id(drcontext),data->static_ptr);
@@ -550,7 +557,7 @@ static void dynamic_info_instrumentation(void *drcontext, instrlist_t *ilist, in
 			DR_ASSERT(opnd_is_null(ref) == false);
 		
 			drutil_insert_get_mem_addr(drcontext, ilist, where, ref, reg1, reg2);
-			dr_insert_clean_call(drcontext,ilist,where,clean_call_populate_mem,false,3,OPND_CREATE_INT32(reg1),OPND_CREATE_INT32(i),OPND_CREATE_INT32(DST_MEM));
+			dr_insert_clean_call(drcontext,ilist,where,clean_call_populate_mem,false,3,OPND_CREATE_INT32(reg1),OPND_CREATE_INT32(i),OPND_CREATE_INT32(DST_TYPE));
 		
 		}
 	}
@@ -560,7 +567,7 @@ static void dynamic_info_instrumentation(void *drcontext, instrlist_t *ilist, in
 			ref =  instr_get_src(where,i);
 		
 			drutil_insert_get_mem_addr(drcontext, ilist, where, ref, reg1, reg2);
-			dr_insert_clean_call(drcontext,ilist,where,clean_call_populate_mem,false,3,OPND_CREATE_INT32(reg1),OPND_CREATE_INT32(i),OPND_CREATE_INT32(SRC_MEM));
+			dr_insert_clean_call(drcontext,ilist,where,clean_call_populate_mem,false,3,OPND_CREATE_INT32(reg1),OPND_CREATE_INT32(i),OPND_CREATE_INT32(SRC_TYPE));
 		
 		}
 	}
@@ -653,11 +660,12 @@ static void dynamic_info_instrumentation(void *drcontext, instrlist_t *ilist, in
 
 }
 
-void print_readable_instr(void * drcontext, opnd_t opnd, instr_t * instr, uint addr){
+void output_populator_printer(void * drcontext, opnd_t opnd, instr_t * instr, uint addr, operand_t * output){
 
 
-	reg_id_t reg;
-	uint reg_size;
+	uint value;
+	float float_value;
+	uint width;
 	int i;
 
 	per_thread_t * data = drmgr_get_tls_field(drcontext,tls_index);
@@ -665,10 +673,16 @@ void print_readable_instr(void * drcontext, opnd_t opnd, instr_t * instr, uint a
 
 	if(opnd_is_reg(opnd)){
 		
-		reg = opnd_get_reg(opnd);
-		reg_size = opnd_size_in_bytes(reg_get_size(reg));
-		dr_fprintf(data->log,"r,%d,%d,",reg_size, reg);
-		
+		value = opnd_get_reg(opnd);
+		width = opnd_size_in_bytes(reg_get_size(value));
+#ifdef READABLE_TRACE
+		dr_fprintf(data->log,",r,%d,%d",width, value);
+#else	
+		output->type = REG_TYPE; 
+		output->width = width;
+		output->value = value;
+
+#endif
 	
 	}
 	else if(opnd_is_immed(opnd)){
@@ -676,17 +690,45 @@ void print_readable_instr(void * drcontext, opnd_t opnd, instr_t * instr, uint a
 		//DR_ASSERT(opnd_is_immed_float(opnd) == false);
 
 		if(opnd_is_immed_float(opnd)){
-			dr_fprintf(data->log,"i,%d,%.4f,",opnd_size_in_bytes(opnd_get_size(opnd)),opnd_get_immed_float(opnd));
+
+			width = opnd_size_in_bytes(opnd_get_size(opnd));
+			float_value = opnd_get_immed_float(opnd);
+
+#ifdef READABLE_TRACE
+			dr_fprintf(data->log,",f,%d,%.4f",width,float_value);
+#else
+			output->type = IMM_FLOAT_TYPE;
+			output->width = width;
+			output->float_value = float_value;
+#endif
+
 		}
 		
 		if(opnd_is_immed_int(opnd)){
-			dr_fprintf(data->log,"i,%d,%d,",opnd_size_in_bytes(opnd_get_size(opnd)),opnd_get_immed_int(opnd));
+
+			width = opnd_size_in_bytes(opnd_get_size(opnd));
+			value = opnd_get_immed_int(opnd);
+#ifdef READABLE_TRACE
+			dr_fprintf(data->log,",i,%d,%d",width,value);
+#else
+			output->type = IMM_INT_TYPE;
+			output->width = width;
+			output->value = value;
+#endif
 		}
 
 	}
 	else if(opnd_is_memory_reference(opnd)){
 
-		dr_fprintf(data->log, "m,%d,%d,", drutil_opnd_mem_size_in_bytes(opnd,instr), addr);
+		width = drutil_opnd_mem_size_in_bytes(opnd,instr);
+		value = addr;
+#ifdef READABLE_TRACE
+		dr_fprintf(data->log, ",m,%d,%d",width ,value);
+#else
+		output->type = MEM_STACK_TYPE;
+		output->width = width;
+		output->float_value = value;
+#endif
 
 	}
 	
@@ -715,10 +757,12 @@ static void print_trace(void *drcontext)
     int num_refs;
 	instr_trace_t *instr_trace;
 	instr_t * instr;
-#ifdef READABLE_TRACE
-    int i;
+	int i;
 	int j;
+#ifdef READABLE_TRACE
 	char disassembly[SHORT_STRING_LENGTH];
+#else
+	output_t * output;
 #endif
 
     data      = drmgr_get_tls_field(drcontext, tls_index);
@@ -733,26 +777,56 @@ static void print_trace(void *drcontext)
     for (i = 0; i < num_refs; i++) {
 		
 		instr = instr_trace->static_info_instr;
-		instr_disassemble_to_buffer(drcontext,instr,disassembly,SHORT_STRING_LENGTH);
-		dr_fprintf(data->log,"%s\n",disassembly);
-		dr_fprintf(data->log,"<%d,",instr_get_opcode(instr));
+		//instr_disassemble_to_buffer(drcontext,instr,disassembly,SHORT_STRING_LENGTH);
+		//dr_fprintf(data->log,"%s\n",disassembly);
+		dr_fprintf(data->log,"<%d",instr_get_opcode(instr));
 
-		dr_fprintf(data->log,"dest,");
+		dr_fprintf(data->log,",d");
 		for(j=0; j<instr_num_dsts(instr); j++){
 
-			print_readable_instr(drcontext,instr_get_dst(instr,j),instr,get_address(instr_trace,j,DST_MEM));
+			output_populator_printer(drcontext,instr_get_dst(instr,j),instr,get_address(instr_trace,j,DST_TYPE),NULL);
+		}
+
+		dr_fprintf(data->log,",s");
+		for(j=0; j<instr_num_srcs(instr); j++){
+			output_populator_printer(drcontext,instr_get_src(instr,j),instr,get_address(instr_trace,j,SRC_TYPE),NULL);
+		}
+		dr_fprintf(data->log,",e,%x>\n",instr_trace->eflags);
+        ++instr_trace;
+    }
+#else
+
+	/* we need to fill up the output array here */
+
+	for(i = 0; i< num_refs; i++){
+		instr = instr_trace->static_info_instr;
+		output = &data->output_array[i];
+		
+		//opcode 
+		output->opcode = instr_get_opcode(instr);
+		output->num_dsts = 0;
+		output->num_srcs = 0;
+
+		for(j=0; j<instr_num_dsts(instr); j++){
+
+			output_populator_printer(drcontext,instr_get_dst(instr,j),instr,get_address(instr_trace,j,DST_TYPE),&output->dsts[output->num_dsts]);
+			output->num_dsts++;
 		}
 
 		dr_fprintf(data->log,"src,");
 		for(j=0; j<instr_num_srcs(instr); j++){
-			print_readable_instr(drcontext,instr_get_src(instr,j),instr,get_address(instr_trace,j,SRC_MEM));
+			output_populator_printer(drcontext,instr_get_src(instr,j),instr,get_address(instr_trace,j,SRC_TYPE),&output->srcs[output->num_srcs]);
+			output->num_srcs++;
 		}
-		dr_fprintf(data->log,"e,%x>\n",instr_trace->eflags);
-        ++instr_trace;
-    }
-#else
-    dr_write_file(data->log, data->buf_base,
-                  (size_t)(data->buf_ptr - data->buf_base));
+		
+		output->eflags = instr_trace->eflags;
+
+		++instr_trace;
+
+	}
+
+
+	dr_write_file(data->log,data->output_array,num_refs * sizeof(output_t));
 #endif
 
 	
