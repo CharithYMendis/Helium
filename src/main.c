@@ -10,7 +10,7 @@
 #include "instrace.h"
 #include "defines.h"
 
-//#define DEBUG_MAIN
+#define DEBUG_MAIN
 #define NO_OF_INS_PASSES 10
 
 typedef void (*thread_func_t) (void * drcontext);

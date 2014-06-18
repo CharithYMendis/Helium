@@ -87,6 +87,7 @@ bool filter_range_from_list (module_t * head, instr_t * instr){
 
 	for(i = 1; i<size; i+=2){
 		if((offset >= mdinfo->bbs[i].start_addr) && (offset <= mdinfo->bbs[i+1].start_addr)){
+			//dr_printf("%d %d\n",size,offset);
 			return true;
 		}
 	}

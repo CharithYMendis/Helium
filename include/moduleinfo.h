@@ -75,7 +75,7 @@ void md_read_from_file (module_t * head, file_t file, bool extra_info);
 void md_print_to_file (module_t * head, file_t file);
 
 /* deletes the linked list */
-void md_delete_list (module_t * head);
+void md_delete_list (module_t * head, bool extra_info);
 
 /* operations on the data structure */
 /* sorts the elements stored in individual lists of the linked list */

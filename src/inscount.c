@@ -81,7 +81,7 @@ void inscount_exit_event(void)
     DISPLAY_STRING(msg);
 #endif /* SHOW_RESULTS */
 	
-	md_delete_list(head);
+	md_delete_list(head,false);
 
 	drmgr_exit();
 

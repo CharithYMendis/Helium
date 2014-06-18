@@ -12,6 +12,7 @@
 #define IMM_FLOAT_TYPE	3
 #define IMM_INT_TYPE	4
 
+typedef unsigned int uint;
 	
 typedef struct _operand_t {
 

@@ -151,7 +151,7 @@ void bbinfo_exit_event(void){
 	int i=0;
 
 	process_output();
-	md_delete_list(head);
+	md_delete_list(head,true);
 
 	for(i=0;i<string_pointer_index;i++){
 		dr_global_free(string_pointers[i],sizeof(char)*MAX_STRING_LENGTH);

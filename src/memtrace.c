@@ -136,7 +136,7 @@ void memtrace_exit_event()
     NULL_TERMINATE(msg);
     DISPLAY_STRING(msg);
 #endif /* SHOW_RESULTS */
-	md_delete_list(head);
+	md_delete_list(head,false);
 
     code_cache_exit();
     drmgr_unregister_tls_field(tls_index);

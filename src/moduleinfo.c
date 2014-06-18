@@ -145,7 +145,7 @@ void md_sort_bb_list_in_module (module_t * head){
 }
 
 /* frees memory of the stored list */
-void md_delete_list (module_t * head){
+void md_delete_list (module_t * head, bool extra_info){
 	
 	module_t * prev;
 	int i = 0;
@@ -153,10 +153,12 @@ void md_delete_list (module_t * head){
 
 	while(head != NULL){
 		dr_global_free(head->module,sizeof(char)*MAX_STRING_LENGTH);
-		for(i=1;i<=head->bbs[0].start_addr;i++){
-			dr_global_free(head->bbs[i].from_bbs,sizeof(call_bb_info_t)*MAX_TARGETS);
-			dr_global_free(head->bbs[i].to_bbs,sizeof(call_bb_info_t)*MAX_TARGETS);
-			dr_global_free(head->bbs[i].called_from,sizeof(call_target_info_t)*MAX_TARGETS);
+		if(extra_info){
+			for(i=1;i<=head->bbs[0].start_addr;i++){
+				dr_global_free(head->bbs[i].from_bbs,sizeof(call_bb_info_t)*MAX_TARGETS);
+				dr_global_free(head->bbs[i].to_bbs,sizeof(call_bb_info_t)*MAX_TARGETS);
+				dr_global_free(head->bbs[i].called_from,sizeof(call_target_info_t)*MAX_TARGETS);
+			}
 		}
 		dr_global_free(head->bbs,sizeof(bbinfo_t)*head->size_bbs);
 		prev = head;
