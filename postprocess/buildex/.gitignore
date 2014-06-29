@@ -1,3 +1,4 @@
 build_32/
+build/
 tests/
 *.exe
