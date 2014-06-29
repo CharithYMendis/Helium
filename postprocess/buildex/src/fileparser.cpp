@@ -5,7 +5,10 @@
 #include <fstream>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string>
+#include <string.h>
 #include "canonicalize.h"
+#include "defines.h"
 
 #define MAX_STRING_LENGTH 100
 
@@ -26,6 +29,7 @@ std::vector<std::string> split(const std::string &s, char delim) {
     return elems;
 }
  
+
 cinstr_t * get_next_from_ascii_file(ifstream &file){
  
 	cinstr_t * instr;
@@ -36,7 +40,11 @@ cinstr_t * get_next_from_ascii_file(ifstream &file){
 	
 	string string_cpp(string_ins);
 
+#ifdef DEBUG
+#if DEBUG_LEVEL >= 2
 	cout << string_cpp << endl;
+#endif
+#endif
 
 	instr = NULL;
 
@@ -65,8 +73,11 @@ cinstr_t * get_next_from_ascii_file(ifstream &file){
 
 			}
 			else{
-				instr->dsts[index_op++].value = atoi(tokens[i+2].c_str());
-
+#ifndef __GNUG__
+				instr->dsts[index_op++].value = stoull(tokens[i+2].c_str());
+#else
+				instr->dsts[index_op++].value = strtoull(tokens[i+2].c_str(),NULL,10);	
+#endif
 			}
 		}
 		
@@ -83,17 +94,30 @@ cinstr_t * get_next_from_ascii_file(ifstream &file){
 				instr->srcs[index_op++].float_value = atof(tokens[i+2].c_str());
 			}
 			else{
-				instr->srcs[index_op++].value = atoi(tokens[i+2].c_str());
+#ifndef __GNUG__
+				instr->srcs[index_op++].value = stoull(tokens[i+2].c_str());
+#else
+				instr->srcs[index_op++].value = strtoull(tokens[i+2].c_str(),NULL,10);
+#endif
 			}
 		}
 		
-		instr->eflags = atoi(tokens[i].c_str());
+		instr->eflags = atoi(tokens[i++].c_str());
+		instr->pc = atoi(tokens[i].c_str());
 	
 	}
-	
+
+#ifdef DEBUG
+#if DEBUG_LEVEL >= 2
+	if (instr != NULL)
+		print_cinstr(instr);
+#endif
+#endif
 	return instr;
  
  }
+
+
  
 void go_forward_line(ifstream &file){
 	
@@ -167,5 +191,6 @@ void print_cinstr(cinstr_t * instr){
 		 cout << instr->srcs[i].width << ",";
 		 cout << instr->srcs[i].value << ",";
 	 }
-	 cout << instr->eflags << endl;
+	 cout << instr->eflags << ",";
+	 cout << instr->pc << endl;
  }

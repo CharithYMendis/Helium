@@ -6,6 +6,8 @@ Node::Node(operand_t * symbol){
 	this->left = NULL;
 	this->right = NULL;
 	this->operation = -1;
+	this->prev = NULL;
+	this->lr = NODE_NONE;
 }
 
 Node::~Node(){

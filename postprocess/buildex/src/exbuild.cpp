@@ -2,6 +2,8 @@
 #include <assert.h>
 #include <fstream>
 #include <iostream>
+#include "defines.h"
+#include "plainprint.h"
 
 #define MAX_FRONTIERS		1000
 #define SIZE_PER_FRONTIER	5
@@ -94,9 +96,12 @@ void Expression_tree::add_to_frontier(int hash, Node * node){
 		
 void Expression_tree::update_frontier(rinstr_t * instr){
 
+
+	//TODO: have precomputed nodes for immediate integers -> can we do it for floats as well? -> just need to point to them in future (space optimization)
+
 	if(head == NULL){
 		head = new Node(&instr->dst);
-		head->operation = op_assign;
+		//head->operation = op_assign;
 		int hash = generate_hash(&instr->dst);
 
 		//we cannot have a -1 here! - give out an error in future
@@ -107,26 +112,25 @@ void Expression_tree::update_frontier(rinstr_t * instr){
 		}
 	}
 
-	//TODO : optimization for assigns which would lead imbalanced trees -> space optimization
-
 	//first get the destination
 	int hash_dst = generate_hash(&instr->dst);
 
-	cout << "dst hash: " << hash_dst << endl;
+	DEBUG_PRINT(("dst_hash - %d\n", hash_dst), 3);
 
 	Node * dst = search_node(hash_dst,instr->dst.value);
 
 	if(dst == NULL){
-		cout << "not interested" << endl;
+		DEBUG_PRINT(("not affecting the frontier\n"), 3);
 		return;  //this instruction does not affect the slice
 	}
 	else{
-		cout << "interested" << endl;
+		DEBUG_PRINT(("affecting the frontier\n"), 3);
 	}
 
 	//update operation
 	dst->operation = instr->operation;
-	cout << "operation:" << dst->operation << endl;
+	DEBUG_PRINT(("operation - %d\n", dst->operation), 3);
+
 
 	//ok now to remove the destination from the frontiers
 	remove_from_frontier(hash_dst,instr->dst.value);
@@ -139,7 +143,7 @@ void Expression_tree::update_frontier(rinstr_t * instr){
 		//creating a new node -> space and time efficient
 		int hash_src = generate_hash(&instr->srcs[i]);
 
-		cout << "src hash: " << hash_src << endl;
+		DEBUG_PRINT(("src hash - %d\n", hash_src), 3);
 
 		bool add_node = false;
 		Node * src;  //now the node can be imme or another 
@@ -156,17 +160,64 @@ void Expression_tree::update_frontier(rinstr_t * instr){
 		if( (src == NULL) || (src == dst) ){  //I think now we can remove the src == dst check -> keeping for sanity purposes
 			src = new Node(&instr->srcs[i]);
 			add_node = true;
-			cout << "added node" << endl;
+			DEBUG_PRINT(("node added\n"), 3);
 		}
 
-			
 
-		//update the node information
-		if(i==0) dst->left = src;
-		else	 dst->right = src;
+		/* assign operation optimization - space */
+		bool assign_opt = false;
+		
+		if ( (instr->num_srcs == 1) && (instr->operation == op_assign) ){  //this is just an assign then remove the current node and place the new src node -> compiler didn't optimize for this?
+			if (dst->lr == NODE_RIGHT){
+				dst->prev->right = src;
+				src->prev = dst->prev;
+				src->lr = NODE_RIGHT;
+				assign_opt = true;
+			}
+			else if (dst->lr == NODE_LEFT) {
+				dst->prev->left = src;
+				src->prev = dst->prev;
+				src->lr = NODE_LEFT;
+				assign_opt = true;
+			}
+			else{
+				//can only come when dst is the head
+				ASSERT_MSG((head == dst), ("ERROR: can only be reached when head == dst\n"));
+				//the condition of reaching this stage
+				ASSERT_MSG((dst->prev == NULL) && (dst->lr == NODE_NONE), ("ERROR: information incomplete for this node\n"));
+				//actually we do not need to do anything
+			}
+		}
 
-		flatten_to_expression(cout);
+		/* update the tree */
+
+		if (!assign_opt){
+			if (instr->num_srcs == 1){   //unary operation so place the operand to the right
+				ASSERT_MSG(i == 0, ("ERROR: not the first source in a single source instruction\n"));
+				dst->right = src;
+				src->prev = dst;
+				src->lr = NODE_RIGHT;
+			}
+			else{
+				if (i == 0){
+					dst->left = src;
+					src->prev = dst;
+					src->lr = NODE_LEFT;
+				}
+				else{
+					dst->right = src;
+					src->prev = dst;
+					src->lr = NODE_RIGHT;
+				}
+			}
+		}
+
+#ifdef DEBUG
+#if DEBUG_LEVEL >= 3
+		flatten_to_expression(head,cout);
 		cout << endl;
+#endif
+#endif
 
 		//update the frontiers - include the sources to the frontier if new nodes created
 		if(add_node) add_to_frontier(hash_src,src);
@@ -177,83 +228,6 @@ void Expression_tree::update_frontier(rinstr_t * instr){
 
 }
 
-//printing out the final expression - these should be changed when the application evolves 
-//should add support for printing to other formats when application evolves
-
-void Expression_tree::flatten_to_expression(std::ostream &file){
-
-	//first print the head
-	print_operand(head->symbol,file);
-	//print operation of =
-	print_operation(head->operation,file);
-
-	//now print the tree
-	print_tree(head->left,file);
-
-}
-
-void Expression_tree::print_tree(Node * node, std::ostream &file){
-	
-	//print the values only if the current node is a leaf
-	if(  (node->right == NULL) && (node->left == NULL) ){
-		print_operand(node->symbol,file);
-		return;
-	}
-
-
-	file << " ( ";
-	if(node->left != NULL){
-		print_tree(node->left,file);
-	}
-
-	//if mov operation then don't print it; others print the operation
-	if( (node->operation != op_assign) && (node->operation != -1) ){
-		print_operation(node->operation,file);
-	}
-
-	if(node->right != NULL){
-		print_tree(node->right,file);
-	}
-
-	file << " ) ";
-
-
-
-}
-
-void Expression_tree::print_operation(int operation, std::ostream &file){
-
-	switch(operation){
-	case op_assign : file << "="; break;
-	case op_add : file << "+"; break;
-	case op_sub : file << "-"; break;
-	case op_mul : file << "*"; break;
-	case op_div : file << "/"; break;
-	case op_mod : file << "%"; break;
-	case op_lsh : file << "<<"; break;
-	case op_rsh : file << ">>"; break;
-	case op_not : file << "~"; break;
-	case op_xor : file << "^"; break;
-	case op_and : file << "&"; break;
-	case op_or : file << "|" ; break;
-	default : file << "__" ; break;
-	}
-
-}
-
-void Expression_tree::print_operand(operand_t * opnd, std::ostream &file){
-
-	if(opnd->type == REG_TYPE){
-		file << "r[" << opnd->value << "]" ;
-	}
-	else if( (opnd->type == MEM_HEAP_TYPE) || (opnd->type == MEM_STACK_TYPE) ){
-		file << "m[" << opnd->value << "]" ;
-	}
-	else if(opnd->type == IMM_INT_TYPE){
-		file << opnd->value ;
-	}
-	else if(opnd->type == IMM_FLOAT_TYPE){
-		file << opnd->float_value ;
-	}
-
+Node* Expression_tree::get_head(){
+	return head;
 }

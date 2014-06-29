@@ -32,14 +32,19 @@ set PHOTOSHOP="C:\Program Files (x86)\Adobe\Adobe Photoshop CS6\Photoshop.exe"
 )
 
 :: various runs based on options
-set BASIC_TEST="C:\Charith\Dropbox\Research\development\exalgo\tests\c_tests\loop_1.exe"
+set BASIC_TEST="C:\Charith\Dropbox\Research\development\exalgo\tests\c_tests\data_parallel.exe"
 set ASM_TEST="C:\Charith\Dropbox\Research\development\exalgo\tests\asm_1.exe"
+set HALIDE_TEST="C:\Charith\Dropbox\Research\development\exalgo\tests\halide_tests\test.exe"
+set FILTER_FILE="C:\Charith\Dropbox\Research\development\exalgo\tests\c_tests\data_parallel_filter.txt"
 
-set FILTER_FILE="C:\Charith\Dropbox\Research\development\exalgo\tests\c_tests\loop_1_filter.txt"
+set HALIDE_FILTER_FILE="C:\Charith\Dropbox\Research\development\exalgo\tests\halide_tests\filter.txt"
 
 :: %DR_PATH% -debug -root %DYNAMORIO_HOME% -syntax_intel -c exalgo.dll -instrace 4 %LOG_DIR% hello.txt 300000 -- %ASM_TEST%
-
+:: -loglevel 3 -logdir %LOG_DIR_DR%
 %DR_PATH% -debug -root %DYNAMORIO_HOME% -syntax_intel -c exalgo.dll -instrace 3 %LOG_DIR% %FILTER_FILE% 300000 -- %BASIC_TEST%
+
+
+:: -syntax_intel -c exalgo.dll -instrace 3 %LOG_DIR% %FILTER_FILE% 300000 -- %BASIC_TEST%
 
 :: %DR_PATH% -debug -root %DYNAMORIO_HOME% -logdir %LOG_DIR_DR% -msgbox_mask 0xf -- %BASIC_TEST%
 

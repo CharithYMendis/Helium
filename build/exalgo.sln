@@ -1,0 +1,33 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2013
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ALL_BUILD", "ALL_BUILD.vcxproj", "{915CABDD-AEAE-49F0-88A7-E8DEBD1243FF}"
+	ProjectSection(ProjectDependencies) = postProject
+		{CF00F512-26D1-40E0-80BE-D008A0867868} = {CF00F512-26D1-40E0-80BE-D008A0867868}
+		{7D12FF86-1630-4F97-876F-EA2B67C3590E} = {7D12FF86-1630-4F97-876F-EA2B67C3590E}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ZERO_CHECK", "ZERO_CHECK.vcxproj", "{CF00F512-26D1-40E0-80BE-D008A0867868}"
+	ProjectSection(ProjectDependencies) = postProject
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "exalgo", "exalgo.vcxproj", "{7D12FF86-1630-4F97-876F-EA2B67C3590E}"
+	ProjectSection(ProjectDependencies) = postProject
+		{CF00F512-26D1-40E0-80BE-D008A0867868} = {CF00F512-26D1-40E0-80BE-D008A0867868}
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{915CABDD-AEAE-49F0-88A7-E8DEBD1243FF}.Debug|x64.ActiveCfg = Debug|x64
+		{CF00F512-26D1-40E0-80BE-D008A0867868}.Debug|x64.ActiveCfg = Debug|x64
+		{CF00F512-26D1-40E0-80BE-D008A0867868}.Debug|x64.Build.0 = Debug|x64
+		{7D12FF86-1630-4F97-876F-EA2B67C3590E}.Debug|x64.ActiveCfg = Debug|x64
+		{7D12FF86-1630-4F97-876F-EA2B67C3590E}.Debug|x64.Build.0 = Debug|x64
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+	EndGlobalSection
+	GlobalSection(ExtensibilityAddIns) = postSolution
+	EndGlobalSection
+EndGlobal

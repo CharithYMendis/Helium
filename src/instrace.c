@@ -28,11 +28,28 @@
 #define DST_TYPE 1
 #define SRC_TYPE 2
 
+/*
+defines which control the compilation
+VERBOSE_INSTRACE - just gives out general information about the client's execution
+OPCODE_TRACE - gives out the opcodes you missed (here used to track all the opcodes used in the program) - only static information is gathered (dynamic instrumentation - not called)
+OUTPUT_TO_FILE_TRACE - outputs the trace to a file as determined by the thread
+DISASSEMBLY_TRACE - prints out the disassembly of the current executing instructions to stdout
+OPERAND_TRACE - prints out the static information in a readable manner - (dynamic instrumentation - not called)
+DISASSEMBLY_TO_FILE - prints out the disassembly of the dynamic instructions
+*/
+
+
 #define VERBOSE_INSTRACE
 //#define OPCODE_TRACE
 //#define DISASSEMBLY_TRACE
 #define OUTPUT_TO_FILE_TRACE
+//#define DISASSEMBLY_TO_FILE
 //#define OPERAND_TRACE
+
+
+//debug prints
+//#define DEBUG_MEM_REGS
+#define DEBUG_MEM_STATS
 
 
 
@@ -46,8 +63,10 @@ typedef struct _instr_trace_t {
 	uint num_mem;
 	uint pos[MAX_MEM_OPNDS];
 	uint dst_or_src[MAX_MEM_OPNDS];
-	uint mem_opnds[MAX_MEM_OPNDS];
+	uint mem_type[MAX_MEM_OPNDS];
+	uint64 mem_opnds[MAX_MEM_OPNDS];
 	uint eflags;
+	uint pc;
 
 } instr_trace_t;
 
@@ -65,11 +84,12 @@ typedef struct _instr_trace_t {
 
 /* thread private log file and counter */
 typedef struct {
-    char   *buf_ptr;
-    char   *buf_base;
+
+    char  * buf_ptr;
+    char  * buf_base;
     /* buf_end holds the negative value of real address of buffer end. */
     ptr_int_t buf_end;
-    void   *cache;
+    void  * cache;
 	output_t * output_array;
 	
 	/* array to keep static instructions */
@@ -79,6 +99,11 @@ typedef struct {
 
     file_t  log;
     uint64  num_refs;
+
+	/* thread stack limits */
+	uint stack_base;
+	uint deallocation_stack;
+
 } per_thread_t;
 
 
@@ -90,6 +115,7 @@ static uint64 num_refs; /* keep a global memory reference count */
 static int tls_index;
 
 static bool opcode_missed[OPCODE_COUNT];
+
 
 typedef struct _client_arg_t {
 
@@ -112,6 +138,9 @@ static void dynamic_info_instrumentation(void *drcontext, instrlist_t *ilist, in
 static instr_t * static_info_instrumentation(void * drcontext, instr_t* instr);
 bool parse_commandline_args (const char * args);
 void operand_trace(instr_t * instr,void * drcontext);
+
+/* teb information */
+void clean_call_teb_info(uint * stack_base, uint * stack_limit, uint * deallocation_stack);
 
 /* function implementation */
 
@@ -202,6 +231,9 @@ void instrace_thread_init(void *drcontext)
     int len;
     per_thread_t *data;
 
+	uint * stack_base;
+	uint * deallocation_stack;
+
     /* allocate thread private data */
     data = dr_thread_alloc(drcontext, sizeof(per_thread_t));
     drmgr_set_tls_field(drcontext, tls_index, data);
@@ -237,6 +269,23 @@ void instrace_thread_init(void *drcontext)
 	data->static_ptr = 0;
 
 	data->output_array = (output_t *)dr_thread_alloc(drcontext,OUTPUT_BUF_SIZE);
+
+	deallocation_stack = &data->deallocation_stack;
+	stack_base = &data->stack_base;
+
+	__asm{
+		mov EAX, FS : [0x04]
+		mov EBX, stack_base
+		mov [EBX], EAX
+		mov EAX, FS : [0xE0C]
+		mov EBX, deallocation_stack
+		mov [EBX], EAX
+	}
+
+#ifdef VERBOSE_INSTRACE
+	dr_printf("thread %d stack information - stack_base %u stack_reserve %u\n",dr_get_thread_id(drcontext), data->stack_base, data->deallocation_stack);
+#endif
+
 
 }
 
@@ -438,40 +487,126 @@ static instr_t * static_info_instrumentation(void * drcontext, instr_t* instr){
 
 }
 
-void disassembly_trace(){
+void clean_call_disassembly_trace(){
 
 	char disassembly[SHORT_STRING_LENGTH];
 
 	per_thread_t * data = drmgr_get_tls_field(dr_get_current_drcontext(),tls_index);
 	instr_trace_t * trace = (instr_trace_t *)data->buf_ptr;
+	module_data_t * md;
+
+	md = dr_lookup_module(instr_get_app_pc(trace->static_info_instr));
+
 	instr_disassemble_to_buffer(dr_get_current_drcontext(),trace->static_info_instr,disassembly,SHORT_STRING_LENGTH);
-	dr_printf("%s\n",disassembly);
+
+	dr_printf("%s ",disassembly);
+
+	if (md != NULL){
+		dr_printf("%x", instr_get_app_pc(trace->static_info_instr) - md->start);
+		dr_free_module_data(md);
+	}
+	dr_printf("\n");
 }
 
+void clean_call_populate_mem(reg_t regvalue, uint pos, uint dest_or_src){
 
-void clean_call_populate_mem(reg_id_t reg, uint pos, uint dest_or_src){
 
-	uint addr;
+	char string_ins[MAX_STRING_LENGTH];
 	per_thread_t * data;
-	dr_mcontext_t mc = {sizeof(mc),DR_MC_ALL};
 	void * drcontext = dr_get_current_drcontext();
 	instr_trace_t * trace;
 
-	dr_get_mcontext(drcontext,&mc);
-	addr = reg_get_value(reg,&mc);
-
-	data = drmgr_get_tls_field(drcontext,tls_index);
+	data = drmgr_get_tls_field(drcontext, tls_index);
 	trace = (instr_trace_t *)data->buf_ptr;
-	trace->mem_opnds[trace->num_mem] = addr;
+	trace->mem_opnds[trace->num_mem] = regvalue;
 	trace->pos[trace->num_mem] = pos;
+	/* assuming the thread init gives out stack bounds properly we can select the memory type as follows */
+	if (regvalue <= data->stack_base && regvalue >= data->deallocation_stack){
+		trace->mem_type[trace->num_mem] = MEM_STACK_TYPE;
+	}
+	else{
+		trace->mem_type[trace->num_mem] = MEM_HEAP_TYPE;
+	}
+
 	trace->dst_or_src[trace->num_mem++] = dest_or_src;
 	
+	
 
+}
+
+void clean_call_print_regvalues(){
+
+	uint regvalue;
+	dr_mcontext_t mc = { sizeof(mc), DR_MC_ALL };
+	void * drcontext = dr_get_current_drcontext();
+
+	dr_get_mcontext(drcontext, &mc);
+	dr_printf("---------\n");
+	regvalue = reg_get_value(DR_REG_XAX, &mc);
+	dr_printf("xax - %x\n", regvalue);
+	regvalue = reg_get_value(DR_REG_XBX, &mc);
+	dr_printf("xbx - %x\n", regvalue);
+	regvalue = reg_get_value(DR_REG_XCX, &mc);
+	dr_printf("xcx - %x\n", regvalue);
+	regvalue = reg_get_value(DR_REG_XDX, &mc);
+	dr_printf("xdx - %x\n", regvalue);
+
+}
+
+void clean_call_mem_stats(reg_t memvalue){
+
+	dr_mem_info_t info;
+	uint base;
+	uint limit;
+	uint reserve;
+
+	void * drcontext = dr_get_current_drcontext();
+
+	dr_switch_to_app_state(drcontext);
+
+	dr_query_memory_ex(memvalue, &info);
+
+	dr_printf("mem - %d, base_pc - %d , size - %d, prot - %d, type - %d\n", memvalue, info.base_pc, info.size, info.prot, info.type);
+
+	__asm{
+		mov EAX, FS : [0x04]
+		mov[base], EAX
+		mov EAX, FS : [0x08]
+		mov[limit], EAX
+		mov EAX, FS : [0xE0C]
+		mov[reserve], EAX
+	}
+
+	dr_printf("stack information - %d %d %d\n", base, limit, reserve);
+
+	dr_switch_to_dr_state(drcontext);
+
+}
+
+void clean_call_teb_info(uint * stack_base, uint * stack_limit, uint * deallocation_stack){
+
+	__asm{
+		mov EAX, FS : [0x04]
+		mov[stack_base], EAX
+		mov EAX, FS : [0x08]
+		mov[stack_limit], EAX
+		mov EAX, FS : [0xE0C]
+		mov[deallocation_stack], EAX
+	}
+	return;
 }
 
 static void dynamic_info_instrumentation(void *drcontext, instrlist_t *ilist, instr_t *where,
                instr_t * static_info)
 {
+
+
+	/* 
+		issues that may arise
+		1. pc and eflags is uint but in 64 bit mode 8 byte transfers are done -> so far no problem (need to see this)
+			need to see whether there is a better way
+		2. double check all the printing
+	*/
 
 	/*
 		this function does the acutal instrumentation
@@ -493,9 +628,10 @@ static void dynamic_info_instrumentation(void *drcontext, instrlist_t *ilist, in
     reg_id_t reg2 = DR_REG_XCX; /* reg2 must be ECX or RCX for jecxz */
 	reg_id_t reg3 = DR_REG_XAX;
     per_thread_t *data;
-    app_pc pc;
+    uint pc;
 	uint i;
 
+	module_data_t * module_data;
 
     data = drmgr_get_tls_field(drcontext, tls_index);
 
@@ -503,48 +639,14 @@ static void dynamic_info_instrumentation(void *drcontext, instrlist_t *ilist, in
      * We can optimize away the unnecessary register save and restore
      * by analyzing the code and finding the register is dead.
      */
+
     dr_save_reg(drcontext, ilist, where, reg1, SPILL_SLOT_2);
     dr_save_reg(drcontext, ilist, where, reg2, SPILL_SLOT_3);
 	dr_save_reg(drcontext, ilist, where, reg3, SPILL_SLOT_4);
+
 	
-
-	/*  check whether this instruction has a memory reference 
-		In x86 an instruction can have only one memory reference.
-		So, we can safely iterate and get the latest memory reference. (dst, src mem -> dst = src)
-	*/
-
-	/* The following assembly performs the following instructions
-	 * for(all memory operands){
-	 *    buf_ptr->pos[num_mem] = i;
-	 *    buf_ptr->dest_or_src[num_mem] = ?
-	 *    buf_ptr->mem_addr[num_mem] = ?
-	 *	  buf_ptr->num_mem++;
-	 * }
-     * buf_ptr++;
-     * if (buf_ptr >= buf_end_ptr)
-     *    clean_call();
-     */
-
-	/*
-	assembly to get the memory addresses
-	reg 1 <- lea mem_addr
-	reg_2 <- buf_ptr
-	reg_3 <- [reg_2 + offset(num_mem)]
-	reg_4 <- reg_2 + offset(dest_or_src)
-	[reg_4 + uint(reg_3)] <- dest or src
-	reg_4 <- reg_2 + offset(pos)
-	[reg_4 + uint(reg_3)] <- pos
-	reg_4 <- reg_2 + offset(addr)
-	[reg_4 + uint(reg_3)] <- reg_1
-	[reg_2 + offset(num_mem)]++;
-
-	then the rest
-
-	*/
-	dr_save_arith_flags_to_xax(drcontext,ilist,where);
-
-
 	drmgr_insert_read_tls_field(drcontext, tls_index, ilist, where, reg2);
+
     /* Load data->buf_ptr into reg2 */
     opnd1 = opnd_create_reg(reg2);
     opnd2 = OPND_CREATE_MEMPTR(reg2, offsetof(per_thread_t, buf_ptr));
@@ -554,42 +656,79 @@ static void dynamic_info_instrumentation(void *drcontext, instrlist_t *ilist, in
 
 	/* buf_ptr->static_info_instr = static_info; */
     /* Move static_info to static_info_instr field of buf (which is a instr_trace_t *) */
-    opnd1 = OPND_CREATE_MEM32(reg2, offsetof(instr_trace_t, static_info_instr));
-    opnd2 = OPND_CREATE_INT32((ptr_int_t)static_info);
-    instr = INSTR_CREATE_mov_imm(drcontext, opnd1, opnd2);
-    instrlist_meta_preinsert(ilist, where, instr);
+    opnd1 = OPND_CREATE_MEMPTR(reg2, offsetof(instr_trace_t, static_info_instr));
+	instrlist_insert_mov_immed_ptrsz(drcontext, (ptr_int_t)static_info, opnd1, ilist, where, &first, &second);
 
 	/* buf_ptr->num_mem = 0; */
-    opnd1 = OPND_CREATE_MEM32(reg2, offsetof(instr_trace_t, num_mem));
-    opnd2 = OPND_CREATE_INT32(0);
-    instr = INSTR_CREATE_mov_imm(drcontext, opnd1, opnd2);
-    instrlist_meta_preinsert(ilist, where, instr);
+    opnd1 = OPND_CREATE_MEMPTR(reg2, offsetof(instr_trace_t, num_mem));
+    
+	instrlist_insert_mov_immed_ptrsz(drcontext, (ptr_int_t)0, opnd1, ilist, where, &first, &second);
 
-
-	for(i=0; i<instr_num_dsts(where); i++){
-		if(opnd_is_memory_reference(instr_get_dst(where,i))){
-			ref =  instr_get_dst(where,i);
+	for (i = 0; i<instr_num_dsts(where); i++){
+		if (opnd_is_memory_reference(instr_get_dst(where, i))){
+			ref = instr_get_dst(where, i);
 
 			DR_ASSERT(opnd_is_null(ref) == false);
-		
+
+
+			dr_restore_reg(drcontext, ilist, where, reg1, SPILL_SLOT_2);
+			dr_restore_reg(drcontext, ilist, where, reg2, SPILL_SLOT_3);
+
+#ifdef DEBUG_MEM_REGS
+			dr_insert_clean_call(drcontext, ilist, where, clean_call_disassembly_trace, false, 0);
+			dr_insert_clean_call(drcontext, ilist, where, clean_call_print_regvalues, false, 0);
+#endif
+			
 			drutil_insert_get_mem_addr(drcontext, ilist, where, ref, reg1, reg2);
-			dr_insert_clean_call(drcontext,ilist,where,clean_call_populate_mem,false,3,OPND_CREATE_INT32(reg1),OPND_CREATE_INT32(i),OPND_CREATE_INT32(DST_TYPE));
-		
+
+#ifdef DEBUG_MEM_REGS
+			dr_insert_clean_call(drcontext, ilist, where, clean_call_print_regvalues, false, 0);
+#endif
+
+#ifdef DEBUG_MEM_STATS
+			dr_insert_clean_call(drcontext, ilist, where, clean_call_disassembly_trace, false, 0);
+			dr_insert_clean_call(drcontext, ilist, where, clean_call_mem_stats, false, 1, opnd_create_reg(reg1));
+#endif
+
+			dr_insert_clean_call(drcontext, ilist, where, clean_call_populate_mem, false, 3, opnd_create_reg(reg1), OPND_CREATE_INT32(i), OPND_CREATE_INT32(DST_TYPE));
+
 		}
 	}
 
-	for(i=0; i<instr_num_srcs(where); i++){
-		if(opnd_is_memory_reference(instr_get_src(where,i))){
-			ref =  instr_get_src(where,i);
-		
+	for (i = 0; i<instr_num_srcs(where); i++){
+		if (opnd_is_memory_reference(instr_get_src(where, i))){
+			ref = instr_get_src(where, i);
+
+			DR_ASSERT(opnd_is_null(ref) == false);			
+			
+			dr_restore_reg(drcontext, ilist, where, reg1, SPILL_SLOT_2);
+			dr_restore_reg(drcontext, ilist, where, reg2, SPILL_SLOT_3);
+
+#ifdef DEBUG_MEM_REGS
+			dr_insert_clean_call(drcontext, ilist, where, clean_call_disassembly_trace, false, 0);
+			dr_insert_clean_call(drcontext, ilist, where, clean_call_print_regvalues, false, 0);
+#endif
+
 			drutil_insert_get_mem_addr(drcontext, ilist, where, ref, reg1, reg2);
-			dr_insert_clean_call(drcontext,ilist,where,clean_call_populate_mem,false,3,OPND_CREATE_INT32(reg1),OPND_CREATE_INT32(i),OPND_CREATE_INT32(SRC_TYPE));
-		
+
+#ifdef DEBUG_MEM_REGS
+
+			dr_insert_clean_call(drcontext, ilist, where, clean_call_print_regvalues, false, 0);
+#endif
+
+#ifdef DEBUG_MEM_STATS
+			dr_insert_clean_call(drcontext, ilist, where, clean_call_disassembly_trace, false, 0);
+			dr_insert_clean_call(drcontext, ilist, where, clean_call_mem_stats, false, 1, opnd_create_reg(reg1));
+#endif
+
+			dr_insert_clean_call(drcontext, ilist, where, clean_call_populate_mem, false, 3, opnd_create_reg(reg1), OPND_CREATE_INT32(i), OPND_CREATE_INT32(SRC_TYPE));
+
 		}
 	}
+	
 
 #ifdef DISASSEMBLY_TRACE
-	dr_insert_clean_call(drcontext,ilist,where,disassembly_trace,false,0);
+	dr_insert_clean_call(drcontext,ilist,where,clean_call_disassembly_trace,false,0);
 #endif
 
 	drmgr_insert_read_tls_field(drcontext, tls_index, ilist, where, reg2);
@@ -599,11 +738,30 @@ static void dynamic_info_instrumentation(void *drcontext, instrlist_t *ilist, in
     instr = INSTR_CREATE_mov_ld(drcontext, opnd1, opnd2);
     instrlist_meta_preinsert(ilist, where, instr);
 
+	/* arithmetic flags are saved here for buf_ptr->eflags filling */
+	dr_save_arith_flags_to_xax(drcontext, ilist, where);
+
 	/* load the eflags */
 	opnd1 = OPND_CREATE_MEMPTR(reg2, offsetof(instr_trace_t, eflags));
 	opnd2 = opnd_create_reg(reg3);
     instr = INSTR_CREATE_mov_st(drcontext, opnd1, opnd2);
     instrlist_meta_preinsert(ilist, where, instr);
+
+
+	/* load the app_pc */
+	opnd1 = OPND_CREATE_MEMPTR(reg2, offsetof(instr_trace_t, pc));
+	module_data = dr_lookup_module(instr_get_app_pc(where));
+
+	//dynamically generated code - module information not available - then just store 0 at the pc slot of the instr_trace data
+	if (module_data != NULL){
+		pc = instr_get_app_pc(where) - module_data->start;
+		dr_free_module_data(module_data);
+	}
+	else{
+		pc = 0;
+	}
+
+	instrlist_insert_mov_immed_ptrsz(drcontext, (ptr_int_t)pc, opnd1, ilist, where, &first, &second);
 
 
 
@@ -670,13 +828,15 @@ static void dynamic_info_instrumentation(void *drcontext, instrlist_t *ilist, in
 
     /* restore %reg */
     instrlist_meta_preinsert(ilist, where, restore);
+
+	//dr_restore_arith_flags_from_xax(drcontext, ilist, where);
     dr_restore_reg(drcontext, ilist, where, reg1, SPILL_SLOT_2);
     dr_restore_reg(drcontext, ilist, where, reg2, SPILL_SLOT_3);
 	dr_restore_reg(drcontext, ilist, where, reg3, SPILL_SLOT_4);
 
 }
 
-void output_populator_printer(void * drcontext, opnd_t opnd, instr_t * instr, uint addr, operand_t * output){
+void output_populator_printer(void * drcontext, opnd_t opnd, instr_t * instr, uint64 addr, operand_t * output){
 
 
 	uint value;
@@ -692,7 +852,7 @@ void output_populator_printer(void * drcontext, opnd_t opnd, instr_t * instr, ui
 		value = opnd_get_reg(opnd);
 		width = opnd_size_in_bytes(reg_get_size(value));
 #ifdef READABLE_TRACE
-		dr_fprintf(data->log,",%d,%d,%d",REG_TYPE, width, value);
+		dr_fprintf(data->log,",%u,%u,%u",REG_TYPE, width, value);
 #else	
 		output->type = REG_TYPE; 
 		output->width = width;
@@ -711,7 +871,7 @@ void output_populator_printer(void * drcontext, opnd_t opnd, instr_t * instr, ui
 			float_value = opnd_get_immed_float(opnd);
 
 #ifdef READABLE_TRACE
-			dr_fprintf(data->log,",%d,%d,%.4f",IMM_FLOAT_TYPE,width,float_value);
+			dr_fprintf(data->log,",%u,%u,%.4f",IMM_FLOAT_TYPE,width,float_value);
 #else
 			output->type = IMM_FLOAT_TYPE;
 			output->width = width;
@@ -725,7 +885,7 @@ void output_populator_printer(void * drcontext, opnd_t opnd, instr_t * instr, ui
 			width = opnd_size_in_bytes(opnd_get_size(opnd));
 			value = opnd_get_immed_int(opnd);
 #ifdef READABLE_TRACE
-			dr_fprintf(data->log,",%d,%d,%d",IMM_INT_TYPE,width,value);
+			dr_fprintf(data->log,",%u,%u,%u",IMM_INT_TYPE,width,value);
 #else
 			output->type = IMM_INT_TYPE;
 			output->width = width;
@@ -737,13 +897,12 @@ void output_populator_printer(void * drcontext, opnd_t opnd, instr_t * instr, ui
 	else if(opnd_is_memory_reference(opnd)){
 
 		width = drutil_opnd_mem_size_in_bytes(opnd,instr);
-		value = addr;
 #ifdef READABLE_TRACE
-		dr_fprintf(data->log, ",%d,%d,%d",MEM_STACK_TYPE,width,value);
+		dr_fprintf(data->log, ",%u,%u,%llu",MEM_STACK_TYPE,width,addr);
 #else
 		output->type = MEM_STACK_TYPE;
 		output->width = width;
-		output->float_value = value;
+		output->float_value = addr;
 #endif
 
 	}
@@ -755,7 +914,10 @@ void operand_trace(instr_t * instr,void * drcontext){
 
 	int i;
 	char stringop[MAX_STRING_LENGTH];
+	int pc;
 	per_thread_t * data = drmgr_get_tls_field(drcontext,tls_index);
+	module_data_t * module_data = dr_lookup_module(instr_get_app_pc(instr));
+
 	
 	instr_disassemble_to_buffer(drcontext,instr,stringop,MAX_STRING_LENGTH);
 	dr_fprintf(data->log,"%s\n",stringop);
@@ -770,9 +932,15 @@ void operand_trace(instr_t * instr,void * drcontext){
 		dr_fprintf(data->log,"src-%d-%s\n",i,stringop);
 	}
 
+	if (module_data != NULL){
+		pc = instr_get_app_pc(instr) - module_data->start;
+		dr_fprintf(data->log,"app_pc-%d\n", pc);
+		dr_free_module_data(module_data);
+	}
+
 }
 
-uint get_address(instr_trace_t * trace, uint pos, uint dst_or_src){
+uint64 get_address(instr_trace_t * trace, uint pos, uint dst_or_src){
 
 	uint i;
 
@@ -848,19 +1016,22 @@ static void print_trace(void *drcontext)
 		
 		instr = instr_trace->static_info_instr;
 		instr_disassemble_to_buffer(drcontext,instr,disassembly,SHORT_STRING_LENGTH);
-		//dr_fprintf(data->log,"%s\n",disassembly);
-		dr_fprintf(data->log,"%d",instr_get_opcode(instr));
+#ifdef DISASSEMBLY_TO_FILE
+		dr_fprintf(data->log,"%s\n",disassembly);
+#endif
+		dr_fprintf(data->log,"%u",instr_get_opcode(instr));
 
-		dr_fprintf(data->log,",%d",calculate_operands(instr,DST_TYPE));
+		dr_fprintf(data->log,",%u",calculate_operands(instr,DST_TYPE));
 		for(j=0; j<instr_num_dsts(instr); j++){
 			output_populator_printer(drcontext,instr_get_dst(instr,j),instr,get_address(instr_trace,j,DST_TYPE),NULL);
 		}
 
-		dr_fprintf(data->log,",%d",calculate_operands(instr,SRC_TYPE));
+		dr_fprintf(data->log,",%u",calculate_operands(instr,SRC_TYPE));
 		for(j=0; j<instr_num_srcs(instr); j++){
 			output_populator_printer(drcontext,instr_get_src(instr,j),instr,get_address(instr_trace,j,SRC_TYPE),NULL);
 		}
-		dr_fprintf(data->log,",%d\n",instr_trace->eflags);
+		//dr_printf("%u,%u\n", instr_trace->eflags, instr_trace->pc);
+		dr_fprintf(data->log,",%u,%u\n",instr_trace->eflags,instr_trace->pc);
         ++instr_trace;
     }
 #else

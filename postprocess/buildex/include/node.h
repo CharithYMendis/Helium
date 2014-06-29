@@ -2,13 +2,20 @@
  #define _NODE_H
  
 #include  "..\..\..\include\output.h"
+
+#define NODE_RIGHT	1
+#define NODE_LEFT	2
+#define NODE_NONE   3
  
  class Node{
 	public:
 		int operation;
 		Node * left;
 		Node * right;
+		Node * prev;
 		operand_t * symbol;
+		uint lr;
+
 		
 	public:
 		

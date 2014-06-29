@@ -20,8 +20,12 @@ enum {
 	op_not,
 	op_xor,
 	op_and,
-	op_or
+	op_or,
 
+	/*support operations*/
+	op_split,
+	op_concat,
+	op_signex,
 
 };
 
@@ -35,6 +39,7 @@ enum {
 	operand_t dst;
 	uint num_srcs;
 	operand_t srcs[2];
+	bool sign;
 	
  
  } rinstr_t;
