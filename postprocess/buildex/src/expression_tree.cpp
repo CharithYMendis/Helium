@@ -1,9 +1,9 @@
-#include "exbuild.h"
+#include "expression_tree.h"
 #include <assert.h>
 #include <fstream>
 #include <iostream>
 #include "defines.h"
-#include "plainprint.h"
+#include "print.h"
 
 #define MAX_FRONTIERS		1000
 #define SIZE_PER_FRONTIER	5
@@ -168,46 +168,41 @@ void Expression_tree::update_frontier(rinstr_t * instr){
 		bool assign_opt = false;
 		
 		if ( (instr->num_srcs == 1) && (instr->operation == op_assign) ){  //this is just an assign then remove the current node and place the new src node -> compiler didn't optimize for this?
-			if (dst->lr == NODE_RIGHT){
-				dst->prev->right = src;
-				src->prev = dst->prev;
-				src->lr = NODE_RIGHT;
+			for (int i = 0; i < dst->num_references; i++){
+				src->num_references++;
+				src->prev.push_back(dst->prev[i]);
+				if (dst->lr[i] == NODE_RIGHT){
+					dst->prev[i]->right = src;
+					src->lr.push_back(NODE_RIGHT);
+				}
+				else if (dst->lr[i] == NODE_LEFT){
+					dst->prev[i]->left = src;
+					src->lr.push_back(NODE_LEFT);
+				}
 				assign_opt = true;
-			}
-			else if (dst->lr == NODE_LEFT) {
-				dst->prev->left = src;
-				src->prev = dst->prev;
-				src->lr = NODE_LEFT;
-				assign_opt = true;
-			}
-			else{
-				//can only come when dst is the head
-				ASSERT_MSG((head == dst), ("ERROR: can only be reached when head == dst\n"));
-				//the condition of reaching this stage
-				ASSERT_MSG((dst->prev == NULL) && (dst->lr == NODE_NONE), ("ERROR: information incomplete for this node\n"));
-				//actually we do not need to do anything
 			}
 		}
 
-		/* update the tree */
+		/* update the tree + backward references */
 
 		if (!assign_opt){
+			src->num_references++;
 			if (instr->num_srcs == 1){   //unary operation so place the operand to the right
 				ASSERT_MSG(i == 0, ("ERROR: not the first source in a single source instruction\n"));
 				dst->right = src;
-				src->prev = dst;
-				src->lr = NODE_RIGHT;
+				src->prev.push_back(dst);
+				src->lr.push_back(NODE_RIGHT);
 			}
 			else{
 				if (i == 0){
 					dst->left = src;
-					src->prev = dst;
-					src->lr = NODE_LEFT;
+					src->prev.push_back(dst);
+					src->lr.push_back(NODE_LEFT);
 				}
 				else{
 					dst->right = src;
-					src->prev = dst;
-					src->lr = NODE_RIGHT;
+					src->prev.push_back(dst);
+					src->lr.push_back(NODE_RIGHT);
 				}
 			}
 		}

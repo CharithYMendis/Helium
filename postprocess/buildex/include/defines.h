@@ -1440,6 +1440,10 @@ enum {
 #define DEUBG_PRINT(s)
 #endif
 
+#define IF_PRINT(x,s) \
+	  if((x)){        \
+		printf s ;    \
+	  	  }   
 	
 
 

@@ -38,4 +38,4 @@ endif ()
 
 
 include_directories("include")
-add_executable(buildex src/main.cpp src/exbuild.cpp src/node.cpp src/canonicalize.cpp src/fileparser.cpp src/plainprint.cpp)
+add_executable(buildex src/main.cpp src/expression_tree.cpp src/node.cpp src/canonicalize.cpp src/fileparser.cpp src/print.cpp src/build_mem_layout.cpp src/build_tree.cpp)

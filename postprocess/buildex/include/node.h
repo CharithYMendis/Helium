@@ -2,19 +2,28 @@
  #define _NODE_H
  
 #include  "..\..\..\include\output.h"
+#include <vector>
 
 #define NODE_RIGHT	1
 #define NODE_LEFT	2
 #define NODE_NONE   3
+
+#define MAX_REFERENCES 10
+
+using namespace std;
  
  class Node{
 	public:
+
 		int operation;
 		Node * left;
 		Node * right;
-		Node * prev;
+		uint num_references;
 		operand_t * symbol;
-		uint lr;
+
+		//keep the backward references - use a container that can grow
+		vector<Node *> prev;
+		vector<uint> lr;
 
 		
 	public:

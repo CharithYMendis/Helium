@@ -836,7 +836,7 @@ static void dynamic_info_instrumentation(void *drcontext, instrlist_t *ilist, in
 
 }
 
-void output_populator_printer(void * drcontext, opnd_t opnd, instr_t * instr, uint64 addr, operand_t * output){
+void output_populator_printer(void * drcontext, opnd_t opnd, instr_t * instr, uint64 addr, uint mem_type, operand_t * output){
 
 
 	uint value;
@@ -898,9 +898,9 @@ void output_populator_printer(void * drcontext, opnd_t opnd, instr_t * instr, ui
 
 		width = drutil_opnd_mem_size_in_bytes(opnd,instr);
 #ifdef READABLE_TRACE
-		dr_fprintf(data->log, ",%u,%u,%llu",MEM_STACK_TYPE,width,addr);
+		dr_fprintf(data->log, ",%u,%u,%llu",mem_type,width,addr);
 #else
-		output->type = MEM_STACK_TYPE;
+		output->type = mem_type;
 		output->width = width;
 		output->float_value = addr;
 #endif
@@ -940,17 +940,20 @@ void operand_trace(instr_t * instr,void * drcontext){
 
 }
 
-uint64 get_address(instr_trace_t * trace, uint pos, uint dst_or_src){
+void get_address(instr_trace_t *trace, uint pos, uint dst_or_src, uint *type, uint64  *addr){
 
 	uint i;
+	*type = 0;
+	*addr = 0;
 
 	for(i=0; i<trace->num_mem; i++){
 		if(trace->dst_or_src[i] == dst_or_src && trace->pos[i] == pos){
-			return trace->mem_opnds[i];
+			*addr = trace->mem_opnds[i];
+			*type = trace->mem_type[i];
 		}
 	}
 
-	return 0;
+	return;
 	
 }
 
@@ -1007,6 +1010,9 @@ static void print_trace(void *drcontext)
     instr_trace   = (instr_trace_t *)data->buf_base;
     num_refs  = (int)((instr_trace_t *)data->buf_ptr - instr_trace);
 
+	uint mem_type;
+	uint64 mem_addr;
+
 
 #ifdef OUTPUT_TO_FILE_TRACE
 	
@@ -1023,12 +1029,14 @@ static void print_trace(void *drcontext)
 
 		dr_fprintf(data->log,",%u",calculate_operands(instr,DST_TYPE));
 		for(j=0; j<instr_num_dsts(instr); j++){
-			output_populator_printer(drcontext,instr_get_dst(instr,j),instr,get_address(instr_trace,j,DST_TYPE),NULL);
+			get_address(instr_trace, j, DST_TYPE, &mem_type, &mem_addr);
+			output_populator_printer(drcontext,instr_get_dst(instr,j),instr,mem_addr,mem_type,NULL);
 		}
 
 		dr_fprintf(data->log,",%u",calculate_operands(instr,SRC_TYPE));
 		for(j=0; j<instr_num_srcs(instr); j++){
-			output_populator_printer(drcontext,instr_get_src(instr,j),instr,get_address(instr_trace,j,SRC_TYPE),NULL);
+			get_address(instr_trace, j, SRC_TYPE, &mem_type, &mem_addr);
+			output_populator_printer(drcontext,instr_get_src(instr,j),instr,mem_addr,mem_type,NULL); 
 		}
 		//dr_printf("%u,%u\n", instr_trace->eflags, instr_trace->pc);
 		dr_fprintf(data->log,",%u,%u\n",instr_trace->eflags,instr_trace->pc);

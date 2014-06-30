@@ -5,7 +5,7 @@
  #include <vector>
  #include <string.h>
  #include <sstream>
- #include "exbuild.h"
+ #include "expression_tree.h"
  #include "node.h"
  #include "canonicalize.h"
  #include "assert.h"
@@ -13,7 +13,9 @@
  #include <stdlib.h>
  #include <fstream>
  #include "defines.h"
-#include "plainprint.h"
+#include "print.h"
+#include "build_tree.h"
+#include "build_mem_layout.h"
 
 #define MAX_STRING_LENGTH 200
  
@@ -73,75 +75,28 @@
 	}
 
 
-	cinstr_t * instr;
-	int no_rinstrs;
-	rinstr_t * rinstr;
 	Expression_tree * tree = new Expression_tree();
 
 
-	int curpos = 0;
-
-	//we need to scroll to the place from where we need to build the instrace
 	if (given_start){
 
-		
-		char dummystr[MAX_STRING_LENGTH];
+		end_trace = given_end ? end_trace : FILE_END;
 
-		while (curpos < start_trace - 1){
-			in.getline(dummystr, MAX_STRING_LENGTH);
-			curpos++;
-			ASSERT_MSG(!(in.fail() || in.eof()),("ERROR: went past the end of the file\n"));
-		}
+		/* create the mem_layout */
+		vector<mem_info_t *> mem_info;
+		create_mem_layout(in, mem_info);
 
-		//now we need to read the next line and start from the correct destination
-		bool dest_present = false;
-		int index = -1;
-
-		//major assumption here is that reg and mem 'value' fields do not overlap. This is assumed in all other places as well.
-
-		instr = get_next_from_ascii_file(in);
-		curpos++;
-		rinstr = cinstr_to_rinstrs(instr, no_rinstrs);
-		for (int i = no_rinstrs - 1; i >= 0; i--){
-			if (rinstr[i].dst.value == dest_to_track){
-				ASSERT_MSG((rinstr[i].dst.type != IMM_FLOAT_TYPE) && (rinstr[i].dst.type != IMM_INT_TYPE),("ERROR: dest cannot be an immediate\n"));
-				index = i;
-				dest_present = true;
-				break;
-			}
-		}
-
-		ASSERT_MSG((dest_present == true) && (index >= 0),("ERROR: couldn't find the dest to start trace\n")); //we should have found the destination
-
-		//do the initial processing
-		for (int i = index; i >= 0; i--){
-			tree->update_frontier(&rinstr[i]);
-		}
+		build_tree(dest_to_track, start_trace, end_trace, in, tree);
+		flatten_to_expression(tree->get_head(), out);
 
 	}
+	else{
+		/* this is for experimentation */
+		//walk_instructions(in);
+		vector<mem_info_t *> mem_info;
+		create_mem_layout(in, mem_info);
+		print_mem_layout(mem_info);
 
-	
-	//do the rest of expression tree building
-	while(!in.eof()){
-		instr = get_next_from_ascii_file(in);
-		curpos++;
-		if (instr != NULL){
-			rinstr = cinstr_to_rinstrs(instr, no_rinstrs);
-			if (given_start){  // if a starting point and a destination is given build the tree; otherwise it is a walk through the instructions
-				for (int i = no_rinstrs - 1; i >= 0; i--){
-					tree->update_frontier(&rinstr[i]);
-				}
-			}
-		}
-
-		if (given_end && (curpos == end_trace)){  //if an end point is given then we break before EOF
-			break;
-		}
-
-	}
-
-	if (given_start){
-		flatten_to_expression(tree->get_head(),out);
 	}
 
 	if (argc >= 2)
