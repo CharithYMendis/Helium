@@ -9,6 +9,19 @@
 #include "stdio.h"
 
 
+struct cregions{
+
+	cregions * prev;
+	mem_info_t * current;
+	cregions * next;
+
+	cregions(){
+		prev = NULL;
+		next = NULL;
+	}
+
+};
+
 
 
 using namespace std;
@@ -191,6 +204,12 @@ void infer_connected_regions(vector<mem_info_t * > &mem_info){
 	/*
 	algortihm - first find regions which are seperated with constant gaps; this may be due to various bounds in the algorithm
 	*/
+
+	vector<cregions * > heads; /* this will carry the heads of all supposedly connected areas */
+
+	/* yet another n^2 algorithm - I am not trying to be fancy like trying for dynamic programming etc. */
+
+
 
 
 }
