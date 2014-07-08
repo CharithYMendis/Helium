@@ -34,11 +34,15 @@ static void inscount(uint num_instrs) { global_count += num_instrs; }
 
 static bool parse_commandline_args (const char * args) {
 
+
 	client_arg = (client_arg_t *)dr_global_alloc(sizeof(client_arg_t));
+
+
 	if(dr_sscanf(args,"%s %d",&client_arg->in_filename,
-						   client_arg->filter_mode)!=2){
+						   &client_arg->filter_mode)!=2){
 		return false;
 	}
+
 
 	
 	return true;
@@ -56,11 +60,13 @@ void inscount_init(client_id_t id, const char * arguments)
 	DR_ASSERT(parse_commandline_args(arguments) == true);
 	head = md_initialize();
 
+
 	if(client_arg->filter_mode != FILTER_NONE){
 		in_file = dr_open_file(client_arg->in_filename,DR_FILE_READ);
 		md_read_from_file(head,in_file,false);
 		dr_close_file(in_file);
 	}
+
 	
 
     /* make it easy to tell, by looking at log file, which client executed */
@@ -82,6 +88,7 @@ void inscount_exit_event(void)
 #endif /* SHOW_RESULTS */
 	
 	md_delete_list(head,false);
+	dr_global_free(client_arg, sizeof(client_arg_t));
 
 	drmgr_exit();
 

@@ -9,6 +9,7 @@
 #include <string.h>
 #include "canonicalize.h"
 #include "defines.h"
+#include <stdint.h>
 #include <vector>
 
 #define MAX_STRING_LENGTH 100
@@ -32,7 +33,7 @@ cinstr_t * get_next_from_ascii_file(ifstream &file){
 	string string_cpp(string_ins);
 
 #ifdef DEBUG
-#if DEBUG_LEVEL >= 4
+#if DEBUG_LEVEL >= 5
 	cout << string_cpp << endl;
 #endif
 #endif
@@ -99,7 +100,7 @@ cinstr_t * get_next_from_ascii_file(ifstream &file){
 	}
 
 #ifdef DEBUG
-#if DEBUG_LEVEL >= 4
+#if DEBUG_LEVEL >= 5
 	if (instr != NULL)
 		print_cinstr(instr);
 #endif
@@ -140,9 +141,33 @@ void walk_instructions(ifstream &file){
 		instr = get_next_from_ascii_file(file);
 		if (instr != NULL){
 			rinstr = cinstr_to_rinstrs(instr, no_rinstrs);
+			delete[] rinstr;
+		}
+		delete instr;
+	}
 
+}
+
+uint32_t go_to_line_dest(ifstream &file, uint64_t dest, uint32_t stride){
+
+	/* assume that the file is at the beginning*/
+	uint32_t lineno = 0;
+	cinstr_t * instr;
+
+
+	while (!file.eof()){
+		instr = get_next_from_ascii_file(file);
+		lineno++;
+		if (instr != NULL){
+			for (int i = 0; i < instr->num_dsts; i++){
+				if ( (instr->dsts[i].value == dest) && (instr->dsts[i].width == stride) ){
+					return lineno;
+				}
+			}
 		}
 	}
+
+	return 0;
 
 }
  

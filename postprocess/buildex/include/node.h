@@ -15,15 +15,22 @@ using namespace std;
  class Node{
 	public:
 
+		/* the main identification material for the node */
 		int operation;
-		Node * left;
-		Node * right;
-		uint num_references;
 		operand_t * symbol;
 
-		//keep the backward references - use a container that can grow
+		/* to accommodate for partial registers we will use the upper 32 bits of the value field in operand_t
+		   it will signify the start point of the register
+		*/
+
+		/*keep the backward references - use a container that can grow */
 		vector<Node *> prev;
-		vector<uint> lr;
+		vector<uint> pos;
+
+		/*forward references also srcs of the destination */
+		vector<Node *> srcs;
+		int order_num;
+
 
 		
 	public:
@@ -31,16 +38,7 @@ using namespace std;
 		Node(operand_t * symbol);
 		Node();
 		~Node();
-		
-		Node * get_left();
-		Node * get_right();
-		int get_operation();
-		operand_t * get_symbol();
-		
-		void set_left(Node * left);
-		void set_right(Node * right);
-		void set_operation(int operation);
-		void set_symbol(operand_t * symbol);
+	
 
 };
 

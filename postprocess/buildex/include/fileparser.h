@@ -4,6 +4,7 @@
 #include <iostream>
 #include <fstream>
 #include "canonicalize.h"
+#include <stdint.h>
 #include <vector>
 
 using namespace std;
@@ -20,5 +21,7 @@ void reverse_file(ofstream &out, ifstream &in);
 void go_to_line(uint line_no, ifstream &file);
 
 void print_cinstr(cinstr_t * instr);
+
+uint32_t go_to_line_dest(ifstream &file, uint64_t dest, uint32_t stride);
 
 #endif

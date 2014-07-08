@@ -6,6 +6,8 @@
 
 #include  "..\..\..\include\output.h"
 
+#define MAX_SIZE_OF_REG 32
+
 //canonicalized operations
 enum {
 
@@ -27,6 +29,10 @@ enum {
 	op_concat,
 	op_signex,
 
+	/* to cater to different widths */
+	op_partial_overlap,
+	op_full_overlap,
+
 };
 
 
@@ -46,7 +52,8 @@ enum {
  
  //functions
  rinstr_t * cinstr_to_rinstrs (cinstr_t * cinstr, int &amount);
- 
+ void reg_to_mem_range(operand_t * opnd);
+ int mem_range_to_reg(operand_t * opnd);
  
  #endif
  

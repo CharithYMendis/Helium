@@ -85,7 +85,11 @@
 		/* create the mem_layout */
 		vector<mem_info_t *> mem_info;
 		create_mem_layout(in, mem_info);
+		print_mem_layout(mem_info);
 
+		in.clear();
+		in.seekg(in.beg);
+	
 		build_tree(dest_to_track, start_trace, end_trace, in, tree);
 		flatten_to_expression(tree->get_head(), out);
 
@@ -97,7 +101,35 @@
 		create_mem_layout(in, mem_info);
 		print_mem_layout(mem_info);
 
+		in.clear();
+		in.seekg(in.beg);
+
+		uint64_t dest;
+		uint32_t stride;
+		uint32_t lineno;
+
+		random_dest_select(mem_info, &dest, &stride);
+
+		DEBUG_PRINT(("track info - dest %llu stride %d\n", dest, stride), 3);
+
+		lineno = go_to_line_dest(in, dest, stride);
+
+		DEBUG_PRINT(("line no - %d\n", lineno), 3);
+
+		ASSERT_MSG((lineno != 0), ("ERROR: the selected destination does not exist\n"));
+
+		in.clear();
+		in.seekg(in.beg);
+
+		build_tree(dest, lineno, FILE_END, in, tree);
+
+		flatten_to_expression(tree->get_head(), out);
+
+		//walk_instructions(in);
+
 	}
+
+	delete tree;
 
 	if (argc >= 2)
 		in.close();

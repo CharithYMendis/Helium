@@ -42,14 +42,14 @@ DISASSEMBLY_TO_FILE - prints out the disassembly of the dynamic instructions
 #define VERBOSE_INSTRACE
 //#define OPCODE_TRACE
 //#define DISASSEMBLY_TRACE
-#define OUTPUT_TO_FILE_TRACE
+//#define OUTPUT_TO_FILE_TRACE
 //#define DISASSEMBLY_TO_FILE
-//#define OPERAND_TRACE
+#define OPERAND_TRACE
 
 
 //debug prints
 //#define DEBUG_MEM_REGS
-#define DEBUG_MEM_STATS
+//#define DEBUG_MEM_STATS
 
 
 

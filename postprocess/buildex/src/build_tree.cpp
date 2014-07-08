@@ -10,10 +10,23 @@
 using namespace std;
 
 
+void cinstr_convert_reg(cinstr_t * instr){
+
+	for (int i = 0; i < instr->num_srcs; i++){
+		reg_to_mem_range(&instr->srcs[i]);
+	}
+
+	for (int i = 0; i < instr->num_dsts; i++){
+		reg_to_mem_range(&instr->dsts[i]);
+	}
+
+}
+
+
 void build_tree(uint64 destination, int start_trace, int end_trace, ifstream &file, Expression_tree * tree){
 
-
-	ASSERT_MSG((end_trace >= start_trace), ("trace end should be greater than the trace start\n"));
+	if (end_trace != FILE_END)
+		ASSERT_MSG((end_trace >= start_trace), ("trace end should be greater than the trace start\n"));
 
 	uint curpos = 0;
 	
@@ -26,6 +39,7 @@ void build_tree(uint64 destination, int start_trace, int end_trace, ifstream &fi
 	rinstr_t * rinstr;
 	int no_rinstrs;
 
+
 	//now we need to read the next line and start from the correct destination
 	bool dest_present = false;
 	int index = -1;
@@ -33,6 +47,7 @@ void build_tree(uint64 destination, int start_trace, int end_trace, ifstream &fi
 	//major assumption here is that reg and mem 'value' fields do not overlap. This is assumed in all other places as well. can have an assert for this
 
 	instr = get_next_from_ascii_file(file);
+	cinstr_convert_reg(instr);
 
 	ASSERT_MSG((instr != NULL), ("ERROR: you have given a line no beyond this file\n"));
 
@@ -58,6 +73,7 @@ void build_tree(uint64 destination, int start_trace, int end_trace, ifstream &fi
 	//do the rest of expression tree building
 	while (!file.eof()){
 		instr = get_next_from_ascii_file(file);
+		cinstr_convert_reg(instr);
 		curpos++;
 		if (instr != NULL){
 			rinstr = cinstr_to_rinstrs(instr, no_rinstrs);

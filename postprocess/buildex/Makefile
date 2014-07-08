@@ -16,6 +16,7 @@ EXEC:=reverse
 
 CPPSOURCES += reverse.cpp
 CPPSOURCES += fileparser.cpp
+CPPSOURCES += canonicalize.cpp
 
 OBJS += $(addprefix $(OBJ_DIR)/, $(CPPSOURCES:.cpp=.o))
 OBJS += $(addprefix $(OBJ_DIR)/, $(CSOURCES:.c=.o))

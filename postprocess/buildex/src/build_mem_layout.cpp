@@ -33,7 +33,6 @@ void create_mem_layout(std::ifstream &in, vector<mem_info_t *> &mem_info){
 
 	while (!in.eof()){
 		cinstr_t * instr = get_next_from_ascii_file(in);
-		//print_cinstr(instr);
 
 		if (instr != NULL){
 			for (int i = 0; i < instr->num_srcs; i++){
@@ -43,10 +42,13 @@ void create_mem_layout(std::ifstream &in, vector<mem_info_t *> &mem_info){
 				update_mem_regions(&instr->dsts[i], mem_info, true);
 			}
 		}
-		//print_mem_layout(mem_info);
 
-		defragment_regions(mem_info);
+		delete instr;
+
+		//defragment_regions(mem_info); /* this could be lifted out? */
 	}
+
+	defragment_regions(mem_info);
 
 
 }
@@ -59,6 +61,58 @@ void create_mem_layout(vector<cinstr_t * > &instrs, vector<mem_info_t *> &mem_in
 /* should we record the smallest stride? or the most frequent stride (width) as the data element width
 */
 
+int get_most_probable_stride(vector<pair<uint, uint> > &strides){
+	
+	int stride = -1;
+	int max_freq = -1;
+
+	for (int i = 0; i < strides.size(); i++){
+		if (max_freq < strides[i].second){
+			max_freq = strides[i].second;
+			stride = strides[i].first;
+		}
+	}
+
+	return stride;
+
+}
+
+void update_stride(vector<pair<uint, uint> > &strides, uint stride){
+
+	bool updated = false;
+
+	for (int i = 0; i < strides.size(); i++){
+		if (strides[i].first == stride){
+			strides[i].second++;
+			updated = true;
+			break;
+		}
+	}
+	if (!updated){
+		strides.push_back(make_pair(stride, 1));
+	}
+}
+
+void update_stride_from_vector(vector<pair<uint, uint> > &strides, vector<pair<uint, uint> > &old){
+	for (int i = 0; i < old.size(); i++){
+		
+		uint old_stride = old[i].first;
+		uint old_freq = old[i].second;
+		bool updated = false;
+		for (int j = 0; j < strides.size(); j++){
+			if (strides[i].first == old_stride){
+				strides[i].second += old_freq;
+				updated = true;
+				break;
+			}
+		}
+
+		if (!updated){
+			strides.push_back(old[i]);
+		}
+	}
+}
+
 
 void update_mem_regions(operand_t * opnd, vector<mem_info_t *> &mem_info, bool write){
 
@@ -67,6 +121,9 @@ void update_mem_regions(operand_t * opnd, vector<mem_info_t *> &mem_info, bool w
 		uint stride = opnd->width;
 		bool merged = false;
 
+		uint32_t direction = 0;
+		vector<pair<uint, uint> > stride_acc;
+
 		for (int i = 0; i < mem_info.size(); i++){
 			mem_info_t * info = mem_info[i];
 			if (info->type == opnd->type){
@@ -74,37 +131,35 @@ void update_mem_regions(operand_t * opnd, vector<mem_info_t *> &mem_info, bool w
 				/* is the address with in range?*/
 				if ((addr >= info->start) && (addr + stride <= info->end)){
 					info->direction |= write ? MEM_OUTPUT : MEM_INPUT;
+					update_stride(info->stride_freqs, stride);
 					merged = true;
 				}
-
+				/* delete the memory region that is contained */
+				else if ((addr < info->start) && (addr + stride > info->end)){
+					
+					direction |= info->direction;
+					update_stride_from_vector(stride_acc, info->stride_freqs);
+					mem_info.erase(mem_info.begin() + i--);
+					
+				}
 				/* can we prepend this to the start of the memory region? */
 				else if ( (addr + stride >= info->start) && (addr < info->start) ){
 					
-					ASSERT_MSG((addr + stride <= info->end), ("ERROR: accessing a huge chunk of memory compared to the initial stride\n"));
-					/* some sanity warnings which should be addressed */
-					if ((addr + stride >  info->start) && (addr < info->start))
-						DEBUG_PRINT(("WARNING: possible unaligned access\n"), 3);
-					if (stride != info->stride)
-						DEBUG_PRINT(("WARNING: accessing at a different stride than before\n"), 3);
 
 					info->start = addr;
 					info->direction |= write ? MEM_OUTPUT : MEM_INPUT;
+					info->direction |= direction;
+					update_stride(info->stride_freqs, stride);
 					merged = true;
 				}
 
 				/* can we append this to the end of the memory region? */
 				else if ( (addr <= info->end) && (addr + stride > info->end) ){
-
-					ASSERT_MSG((addr >= info->start), ("ERROR: accessing a huge chunk of memory compared to the initial stride\n"));
-					/* some sanity warnings which should be addressed */
-					if ((addr <  info->end) && (addr + stride > info->end))
-						DEBUG_PRINT(("WARNING: possible unaligned access\n"), 3);
-					if (stride != info->stride)
-						DEBUG_PRINT(("WARNING: accessing at a different stride than before\n"), 3);
-
-
+					
 					info->end = addr + stride;
 					info->direction |= write ? MEM_OUTPUT : MEM_INPUT;
+					info->direction |= direction;
+					update_stride(info->stride_freqs, stride);
 					merged = true;
 
 				}
@@ -123,8 +178,10 @@ void update_mem_regions(operand_t * opnd, vector<mem_info_t *> &mem_info, bool w
 			new_region->start = addr;
 			new_region->end = addr + stride;  /* actually this should be stride - 1 */
 			new_region->direction = write ? MEM_OUTPUT : MEM_INPUT;
+			new_region->direction |= direction;
 			new_region->type = opnd->type;
-			new_region->stride = stride;
+			update_stride_from_vector(new_region->stride_freqs, stride_acc);
+			update_stride(new_region->stride_freqs, stride);			
 			mem_info.push_back(new_region);
 		}
 	}
@@ -152,33 +209,37 @@ void defragment_regions(vector<mem_info_t *> &mem_info){
 
 				/*check if they can be merged*/
 				if (current->type == candidate->type){
+					
 					/*can we merge the two? we will always update the candidate and delete the current if this can be merged*/
 					/* we cannot possibly have a mem region captured within a mem region if update mem regions has done its job*/
 
-					ASSERT_MSG(!((candidate->start <= current->start) && (candidate->end >= current->end)), ("ERROR: please check update mem regions function - subset relation detected\n"));
-					ASSERT_MSG(!((current->start <= candidate->start) && (current->end >= candidate->end)), ("ERROR: please check update mem regions function - subset relation detected\n"));
-					
 					bool merged = false;
 
+					/*if the candidate is a subset of the current? remove candidate*/
+					if ((candidate->start >= current->start) && (candidate->end <= current->end)){
+						current->direction |= candidate->direction;
+						update_stride_from_vector(current->stride_freqs, candidate->stride_freqs);
+						mem_info.erase(mem_info.begin() + i--);
+						break;
+					}
+					/*if current is a subset of the candidate? remove current*/
+					else if ((current->start >= candidate->start) && (current->end <= candidate->end)){
+						merged = true;
+					}
 					/* prepend to the candidate?*/
-					if ((current->start < candidate->start) && (current->end >= candidate->start)){
-						if (current->stride != candidate->stride)
-							DEBUG_PRINT(("WARNING: accessing at a different stride in current and candidate\n"), 3);
+					else if ((current->start < candidate->start) && (current->end >= candidate->start)){
 						candidate->start = current->start;
-						candidate->direction |= current->direction;
 						merged = true;
 					}
 					/* append to candidate?*/
 					else if ((current->start <= candidate->end) && (current->end > candidate->end)){
-						if (current->stride != candidate->stride)
-							DEBUG_PRINT(("WARNING: accessing at a different stride in current and candidate\n"), 3);
 						candidate->end = current->end;
-						candidate->direction |= current->direction;
 						merged = true;
-
 					}
 
 					if (merged){
+						candidate->direction |= current->direction;
+						update_stride_from_vector(candidate->stride_freqs, current->stride_freqs);
 						mem_info.erase(mem_info.begin() + j--);
 					}
 
@@ -214,6 +275,33 @@ void infer_connected_regions(vector<mem_info_t * > &mem_info){
 
 }
 
+
+void random_dest_select(vector<mem_info_t *> &mem_info, uint64_t * dest, uint32_t * stride){
+
+	/* select a random location to track using the heap regions (actually non stack regions) */
+	for (int i = 0; i < mem_info.size(); i++){
+		if ( (mem_info[i]->type == MEM_HEAP_TYPE) && ( (mem_info[i]->direction & MEM_OUTPUT) == MEM_OUTPUT) ){
+
+
+			uint32_t probable_stride = get_most_probable_stride(mem_info[i]->stride_freqs);
+
+			uint32_t size = (mem_info[i]->end - mem_info[i]->start) / (probable_stride);
+
+			uint32_t random = size/2 + 10;
+
+			/* here we are returning the first heap block we get; we can also randomize this */
+			*dest = mem_info[i]->start + random * probable_stride;
+			*stride = probable_stride;
+
+			DEBUG_PRINT(("size, random, start - %d, %d, %llu\n", size, random, mem_info[i]->start), 3);
+
+			return;
+
+		}
+	}
+
+}
+
 void print_mem_layout(vector<mem_info_t *> &mem_info){
 	for (int i = 0; i < mem_info.size(); i++){
 		mem_info_t * info = mem_info[i];
@@ -228,9 +316,16 @@ void print_mem_layout(vector<mem_info_t *> &mem_info){
 
 		printf("start - %llu\n", info->start);
 		printf("end - %llu\n", info->end);
-		printf("stride - %d\n", info->stride);
 
-		printf("estimated size - %d\n", (info->end - info->start) / (info->stride));
+		uint stride = get_most_probable_stride(info->stride_freqs);
+
+		printf("stride (most) - %d\n", stride);
+
+		for (int i = 0; i < info->stride_freqs.size(); i++){
+			printf("stride - %d, freq - %d\n", info->stride_freqs[i].first, info->stride_freqs[i].second);
+		}
+
+		printf("estimated size - %d\n", (info->end - info->start) / (stride));
 		printf("-------------------------------------\n");
 
 	}

@@ -1201,7 +1201,7 @@ enum {
 };
 
 enum {
-    DR_REG_NULL, /**< Sentinel value indicating no register, for address modes. */
+    DR_REG_NULL, /**< Sentinel value indicating no register, for address modes. "null" register */
     /* 64-bit general purpose */
     DR_REG_RAX, /**< The "rax" register. */
     DR_REG_RCX, /**< The "rcx" register. */
@@ -1409,8 +1409,8 @@ enum {
 
 
 	/*virtual registers for split and joins*/
-	DR_REG_VIRTUAL_1,
-	DR_REG_VIRTUAL_2,
+	DR_REG_VIRTUAL_1, /*"virtual1"*/
+	DR_REG_VIRTUAL_2, /*"virtual2"*/
 
     
 };

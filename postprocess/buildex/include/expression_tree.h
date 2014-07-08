@@ -7,6 +7,12 @@
 #include  "..\..\..\include\output.h"
 #include <fstream>
 
+#define MAX_FRONTIERS		1000
+#define SIZE_PER_FRONTIER	5
+#define MEM_OFFSET			200
+#define MEM_REGION			(MAX_FRONTIERS - MEM_OFFSET)
+#define REG_REGION			MEM_OFFSET
+
 //frontier type with book keeping
 struct frontier_t {
 
@@ -23,6 +29,11 @@ class Expression_tree {
 		Node * head;
 		frontier_t * frontier;  //this is actually a hash list keeping pointers to the Nodes already allocated
 
+		/* memoization structures for partial mem and reg writes and reads */
+		vector<uint> mem_in_frontier;
+
+		/* opt: can have nodes for immediates? */
+
 
 	public:
 		Expression_tree();
@@ -34,9 +45,13 @@ class Expression_tree {
 
 private:
 	int generate_hash(operand_t * opnd);
-	Node * search_node(int hash, int value);
-	void remove_from_frontier(int hash, int value);
+	Node * search_node(operand_t * opnd);
+	Node * search_reg(uint reg_value);
+	void remove_from_frontier(operand_t * opnd);
 	void add_to_frontier(int hash, Node * node);
+
+	void get_full_overlap_nodes(vector<Node *> &nodes, operand_t * opnd);
+	void get_partial_overlap_nodes(vector<Node *> &nodes, operand_t * opnd);
 
 };
 

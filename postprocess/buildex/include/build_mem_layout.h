@@ -26,12 +26,14 @@ struct mem_info_t {
 	uint64_t end;
 
 	/* stride */
-	uint32_t stride;
+	vector<pair<uint, uint> > stride_freqs;
 };
 
 void create_mem_layout(std::ifstream &in, vector<mem_info_t *> &mem_info);
 void create_mem_layout(vector<cinstr_t * > &instrs, vector<mem_info_t *> &mem_info);
 void print_mem_layout(vector<mem_info_t *> &mem_info);
+
+void random_dest_select(vector<mem_info_t *> &mem_info, uint64_t * dest, uint32_t * stride);
 
 
 #endif
