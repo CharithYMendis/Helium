@@ -47,9 +47,11 @@ void build_tree(uint64 destination, int start_trace, int end_trace, ifstream &fi
 	//major assumption here is that reg and mem 'value' fields do not overlap. This is assumed in all other places as well. can have an assert for this
 
 	instr = get_next_from_ascii_file(file);
-	cinstr_convert_reg(instr);
+	
 
 	ASSERT_MSG((instr != NULL), ("ERROR: you have given a line no beyond this file\n"));
+	cinstr_convert_reg(instr);
+
 
 	curpos++;
 	rinstr = cinstr_to_rinstrs(instr, no_rinstrs);
@@ -73,9 +75,10 @@ void build_tree(uint64 destination, int start_trace, int end_trace, ifstream &fi
 	//do the rest of expression tree building
 	while (!file.eof()){
 		instr = get_next_from_ascii_file(file);
-		cinstr_convert_reg(instr);
 		curpos++;
+		DEBUG_PRINT(("%d\n", curpos), 1);
 		if (instr != NULL){
+			cinstr_convert_reg(instr);
 			rinstr = cinstr_to_rinstrs(instr, no_rinstrs);
 			for (int i = no_rinstrs - 1; i >= 0; i--){
 				tree->update_frontier(&rinstr[i]);

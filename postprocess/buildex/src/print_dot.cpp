@@ -2,11 +2,13 @@
 #include "node.h"
 #include "defines.h"
 #include "print.h"
+#include "print_dot.h"
 #include <string>
 
 using namespace std;
 
-
+void print_edges(ofstream &file, Node * node);
+void print_nodes(ofstream &file, Node * node, uint no_of_nodes);
 
 
 string get_edge_string(uint from, uint to){
@@ -17,14 +19,17 @@ string get_edge_string(uint from, uint to){
 
 string get_node_string(Node *node){
 
-	return to_string(node->order_num) + " [label=\"" + operation_to_string(node->operation) + "\n" + opnd_to_string(node->symbol) + "\"];";
+	return to_string(node->order_num) + " [label=\"" + operation_to_string(node->operation) + "\\n" + opnd_to_string(node->symbol) + "\"];";
 
 }
 
 void print_to_dotfile(ofstream &file,Node * head, uint no_of_nodes){
 
+
+	file << "digraph G {" << endl;
 	print_nodes(file, head, no_of_nodes);
 	print_edges(file, head);
+	file << "}" << endl;
 }
 
 

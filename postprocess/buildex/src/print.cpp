@@ -6,10 +6,13 @@
 
 /* get strings for opnds and operations etc */
 
-uint number_tree(Node * node){
-	static uint num;
+void print_tree(Node * node, std::ostream &file);
 
-	if (node->order_num != -1){
+static uint num = 0;
+
+uint number_tree(Node * node){
+
+	if (node->order_num == -1){
 		node->order_num = num;
 		num++;
 	}
@@ -22,12 +25,14 @@ uint number_tree(Node * node){
 
 }
 
+
 string opnd_to_string(operand_t * opnd){
 
 	string label = "";
 
 	if (opnd->type == REG_TYPE){
-		label += "r[" +  regname_to_string(opnd->value) + "]";
+		uint offset = opnd->value - (opnd->value / MAX_SIZE_OF_REG) * MAX_SIZE_OF_REG;
+		label += to_string(opnd->value) + ":r[" +  regname_to_string(mem_range_to_reg(opnd)) + ":" + to_string(offset) +  "]";
 	}
 	else if (opnd->type == IMM_FLOAT_TYPE){
 		label += "imm[" + to_string(opnd->float_value) + "]";
@@ -65,6 +70,7 @@ string operation_to_string(uint operation){
 	case op_concat: return ",";
 	case op_signex: return "SE";
 	case op_full_overlap: return "FO";
+	case op_partial_overlap: return "PO";
 	default: return "__";
 	}
 
@@ -96,7 +102,6 @@ void flatten_to_expression(Node * head, std::ostream &file){
 void print_tree(Node * node, std::ostream &file){
 
 	int no_srcs = node->srcs.size();
-
 
 	if (no_srcs == 0){ /* we are at a leaf just print it*/
 		file << opnd_to_string(node->symbol);
@@ -131,6 +136,14 @@ void print_tree(Node * node, std::ostream &file){
 		/*here it is important to see how each source contributes
 		another important problem is that what source updates first
 		 */
+		file << "(";
+		for (int i = 0; i < no_srcs; i++){
+			print_tree(node->srcs[0], file);
+			if (i != no_srcs - 1){
+				file << "," << endl;
+			}
+		}
+		file << ")";
 	}
 
 }

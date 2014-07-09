@@ -67,9 +67,9 @@ int get_most_probable_stride(vector<pair<uint, uint> > &strides){
 	int max_freq = -1;
 
 	for (int i = 0; i < strides.size(); i++){
-		if (max_freq < strides[i].second){
-			max_freq = strides[i].second;
-			stride = strides[i].first;
+		if (max_freq < (int)strides[i].second){
+			max_freq = (int)strides[i].second;
+			stride = (int)strides[i].first;
 		}
 	}
 

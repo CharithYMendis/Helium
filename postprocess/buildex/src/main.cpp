@@ -16,6 +16,7 @@
 #include "print.h"
 #include "build_tree.h"
 #include "build_mem_layout.h"
+#include "print_dot.h"
 
 #define MAX_STRING_LENGTH 200
  
@@ -83,15 +84,22 @@
 		end_trace = given_end ? end_trace : FILE_END;
 
 		/* create the mem_layout */
-		vector<mem_info_t *> mem_info;
+		/*vector<mem_info_t *> mem_info;
 		create_mem_layout(in, mem_info);
 		print_mem_layout(mem_info);
 
 		in.clear();
-		in.seekg(in.beg);
+		in.seekg(in.beg);*/
 	
 		build_tree(dest_to_track, start_trace, end_trace, in, tree);
-		flatten_to_expression(tree->get_head(), out);
+		//flatten_to_expression(tree->get_head(), out);
+
+		uint nodes = number_tree(tree->get_head());
+
+		cout << nodes << endl;
+
+		print_to_dotfile(out, tree->get_head(), nodes);
+
 
 	}
 	else{
@@ -123,7 +131,10 @@
 
 		build_tree(dest, lineno, FILE_END, in, tree);
 
-		flatten_to_expression(tree->get_head(), out);
+		//flatten_to_expression(tree->get_head(), out);
+
+		uint nodes = number_tree(tree->get_head());
+		print_to_dotfile(out, tree->get_head(), nodes);
 
 		//walk_instructions(in);
 

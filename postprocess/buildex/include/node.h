@@ -36,6 +36,7 @@ using namespace std;
 	public:
 		
 		Node(operand_t * symbol);
+		Node(uint type, uint value, uint width, float float_value);
 		Node();
 		~Node();
 	

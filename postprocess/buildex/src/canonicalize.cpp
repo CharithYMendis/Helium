@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include "canonicalize.h"
 #include "defines.h"
+#include "print.h"
 #include <stdlib.h>
 
 
@@ -76,7 +77,13 @@ void reg_to_mem_range(operand_t * opnd){
 
 	if (opnd->type == REG_TYPE){
 
-		uint value = opnd->value;
+		uint64 value = opnd->value;
+
+#if DEBUG_LEVEL >= 3
+		printf("%d\n", opnd->value);
+		printf("before %s ", regname_to_string(opnd->value).c_str());
+#endif
+
 
 		switch (value){
 
@@ -149,19 +156,25 @@ void reg_to_mem_range(operand_t * opnd){
 
 		}
 
+#if DEBUG_LEVEL >= 3
+		printf("after %s\n", opnd_to_string(opnd).c_str());
+#endif
+
 	}
 	else if ((opnd->type == MEM_HEAP_TYPE) || (opnd->type == MEM_STACK_TYPE)){
 		ASSERT_MSG((opnd->value > MAX_SIZE_OF_REG * 48), ("ERROR: memory and register space overlap\n"));
 	}
 
-}
 
+
+}
 
 int mem_range_to_reg(operand_t * opnd){
 
 	if (opnd->type == REG_TYPE){
 		
-		uint range = opnd->value / MAX_SIZE_OF_REG;
+		uint64 range = opnd->value / MAX_SIZE_OF_REG;
+		range++;
 
 		switch (range){
 
@@ -232,7 +245,6 @@ int mem_range_to_reg(operand_t * opnd){
 
 }
 
-
 rinstr_t * cinstr_to_rinstrs (cinstr_t * cinstr, int &amount){
 
 
@@ -297,6 +309,7 @@ rinstr_t * cinstr_to_rinstrs (cinstr_t * cinstr, int &amount){
 			amount = 3;
 			/* create an operand for the virtual register */
 			operand_t virtual_reg = { REG_TYPE, 2 * cinstr->srcs[1].width, DR_REG_VIRTUAL_1 };
+			reg_to_mem_range(&virtual_reg);
 
 			//virtual <- edx:eax
 			rinstr[0] = { op_concat, virtual_reg, 2, { cinstr->srcs[1], cinstr->srcs[2] }, false };

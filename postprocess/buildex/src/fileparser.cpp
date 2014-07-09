@@ -11,6 +11,8 @@
 #include "defines.h"
 #include <stdint.h>
 #include <vector>
+#include "print.h"
+
 
 #define MAX_STRING_LENGTH 100
 
@@ -100,7 +102,7 @@ cinstr_t * get_next_from_ascii_file(ifstream &file){
 	}
 
 #ifdef DEBUG
-#if DEBUG_LEVEL >= 5
+#if DEBUG_LEVEL >= 3
 	if (instr != NULL)
 		print_cinstr(instr);
 #endif
@@ -274,6 +276,8 @@ void print_cinstr(cinstr_t * instr){
 	}
 	cout << instr->eflags << ",";
 	cout << instr->pc << endl;
+
+	cout << dr_operation_to_string(instr->opcode) << endl;
 }
 
 

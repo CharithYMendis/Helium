@@ -1426,7 +1426,7 @@ enum {
 };
 
 #define DEBUG
-#define DEBUG_LEVEL 3
+#define DEBUG_LEVEL 1
 
 #define ASSERT_MSG(x,s)	      \
 	if(!(x)){				  \
