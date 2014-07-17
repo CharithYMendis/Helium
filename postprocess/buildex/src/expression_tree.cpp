@@ -3,7 +3,7 @@
 #include <fstream>
 #include <iostream>
 #include "defines.h"
-#include "print.h"
+#include "print_common.h"
 
 
 
@@ -151,11 +151,14 @@ void Expression_tree::get_full_overlap_nodes(vector<Node *> &nodes, operand_t * 
 	}
 	else if ( (opnd->type == MEM_HEAP_TYPE) || (opnd->type == MEM_STACK_TYPE) ){
 
-
+#ifdef DEBUG
+#if DEBUG_LEVEL >= 3
 		for (int i = 0; i < mem_in_frontier.size(); i++){
 			printf("%d-", mem_in_frontier[i]);
 		}
 		printf("\n");
+#endif
+#endif
 
 		for (int i = 0; i < mem_in_frontier.size(); i++){
 			uint index = mem_in_frontier[i];
@@ -428,7 +431,7 @@ void Expression_tree::update_frontier(rinstr_t * instr){
 		DEBUG_PRINT(("printing\n"), 3);
 
 #ifdef DEBUG
-#if DEBUG_LEVEL >= 1
+#if DEBUG_LEVEL >= 3
 		flatten_to_expression(head,cout);
 		cout << endl;
 #endif
@@ -445,4 +448,14 @@ void Expression_tree::update_frontier(rinstr_t * instr){
 
 Node* Expression_tree::get_head(){
 	return head;
+}
+
+
+void Expression_tree::print_tree(ostream &file){
+
+}
+
+
+void Expression_tree::print_to_dot(ostream &file){
+
 }

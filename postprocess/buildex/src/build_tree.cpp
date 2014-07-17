@@ -52,7 +52,6 @@ void build_tree(uint64 destination, int start_trace, int end_trace, ifstream &fi
 	ASSERT_MSG((instr != NULL), ("ERROR: you have given a line no beyond this file\n"));
 	cinstr_convert_reg(instr);
 
-
 	curpos++;
 	rinstr = cinstr_to_rinstrs(instr, no_rinstrs);
 	for (int i = no_rinstrs - 1; i >= 0; i--){
@@ -76,7 +75,7 @@ void build_tree(uint64 destination, int start_trace, int end_trace, ifstream &fi
 	while (!file.eof()){
 		instr = get_next_from_ascii_file(file);
 		curpos++;
-		DEBUG_PRINT(("%d\n", curpos), 1);
+		//DEBUG_PRINT(("%d\n", curpos), 1);
 		if (instr != NULL){
 			cinstr_convert_reg(instr);
 			rinstr = cinstr_to_rinstrs(instr, no_rinstrs);

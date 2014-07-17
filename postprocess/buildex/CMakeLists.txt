@@ -38,5 +38,23 @@ endif ()
 
 
 include_directories("include")
-add_executable(buildex src/main.cpp src/expression_tree.cpp src/node.cpp src/canonicalize.cpp src/fileparser.cpp src/print.cpp src/build_mem_layout.cpp 
-				src/build_tree.cpp src/print_halide.cpp src/print_dot.cpp src/tree_transformations.cpp)
+add_executable(buildex 
+
+src/main.cpp 
+src/expression_tree.cpp 
+src/node.cpp 
+src/canonicalize.cpp 
+src/fileparser.cpp 
+src/tree_transformations.cpp 
+
+src/build_mem_instrace.cpp 
+src/build_mem_dump.cpp
+src/build_tree.cpp 
+src/build_abs_tree.cpp
+
+src/print_common.cpp 
+src/print_halide.cpp 
+src/print_dot.cpp 
+src/imageparser.cpp
+
+)

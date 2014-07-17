@@ -29,8 +29,11 @@ using namespace std;
 
 		/*forward references also srcs of the destination */
 		vector<Node *> srcs;
-		int order_num;
 
+		/*auxiliary variables*/
+		int order_num;
+		int para_num; 
+		bool is_para;
 
 		
 	public:

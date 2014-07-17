@@ -1,13 +1,13 @@
 #include <fstream>
 #include "node.h"
 #include "defines.h"
-#include "print.h"
+#include "print_common.h"
 #include "print_dot.h"
 #include <string>
 
 using namespace std;
 
-void print_edges(ofstream &file, Node * node);
+void print_edges(ofstream &file, Node * node, uint no_of_nodes);
 void print_nodes(ofstream &file, Node * node, uint no_of_nodes);
 
 
@@ -23,25 +23,45 @@ string get_node_string(Node *node){
 
 }
 
-void print_to_dotfile(ofstream &file,Node * head, uint no_of_nodes){
+void print_to_dotfile(ofstream &file,Node * head, uint no_of_nodes, uint graph_no){
 
 
-	file << "digraph G {" << endl;
+	file << "digraph G_" << graph_no << " {" << endl;
 	print_nodes(file, head, no_of_nodes);
-	print_edges(file, head);
+	print_edges(file, head, no_of_nodes);
 	file << "}" << endl;
 }
 
 
-void print_edges(ofstream &file, Node * node){
+
+
+
+void print_edges_recursive(ofstream &file, Node * node, uint * done, uint max_nodes){
+
+	ASSERT_MSG((node->order_num < max_nodes), ("ERROR: the node number exceeds the maximum number of nodes\n"));
+
+	if (done[node->order_num] == 1) return;
+
+	done[node->order_num] = 1;
 
 	for (int i = 0; i < node->srcs.size(); i++){
 		file << get_edge_string(node->order_num, node->srcs[i]->order_num) << endl;
 	}
 
 	for (int i = 0; i < node->srcs.size(); i++){
-		print_edges(file, node->srcs[i]);
+		print_edges_recursive(file, node->srcs[i],done,max_nodes);
 	}
+
+}
+
+void print_edges(ofstream &file, Node * node, uint no_of_nodes){
+
+	uint * done = new uint[no_of_nodes];
+	memset(done, 0, sizeof(uint)*no_of_nodes);
+
+	print_edges_recursive(file, node, done, no_of_nodes);
+
+	delete[] done;
 
 }
 

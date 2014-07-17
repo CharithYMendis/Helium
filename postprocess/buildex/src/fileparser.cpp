@@ -11,7 +11,7 @@
 #include "defines.h"
 #include <stdint.h>
 #include <vector>
-#include "print.h"
+#include "print_common.h"
 
 
 #define MAX_STRING_LENGTH 100
@@ -102,7 +102,7 @@ cinstr_t * get_next_from_ascii_file(ifstream &file){
 	}
 
 #ifdef DEBUG
-#if DEBUG_LEVEL >= 3
+#if DEBUG_LEVEL >= 5
 	if (instr != NULL)
 		print_cinstr(instr);
 #endif

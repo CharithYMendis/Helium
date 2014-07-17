@@ -26,7 +26,6 @@ set BUILDEX_FOLDER="%POST_PROCESS_FOLDER%\buildex"
 :: reverse the file
 
 cd %BUILDEX_FOLDER%
-make
 reverse.exe %1 %2   
 
 :: build the expression builder
@@ -40,10 +39,9 @@ cmake --build . --config Debug
 cd bin
 
 echo %argC%
-if "%argC%" == "4"  buildex.exe %2 %3 > %4
-if "%argC%" == "6"  buildex.exe %2 %3 %5 %6 > %4
+if "%argC%" == "5"  buildex.exe %2 %3 %5 > %4
 if "%argC%" == "7"  buildex.exe %2 %3 %5 %6 %7 > %4
-if "%argC%" == "8"  echo wrong number of argments to buildex.exe
+if "%argC%" == "8"  buildex.exe %2 %3 %5 %6 %7 %8 > %4
 
 
 cd %CURRENT_DIR%

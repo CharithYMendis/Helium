@@ -1,31 +1,10 @@
-#include "print.h"
+#include "print_common.h"
 #include "defines.h"
+#include "build_abs_tree.h"
 #include <string>
 
-#define MAX_STRING_LENGTH 250
 
-/* get strings for opnds and operations etc */
-
-void print_tree(Node * node, std::ostream &file);
-
-static uint num = 0;
-
-uint number_tree(Node * node){
-
-	if (node->order_num == -1){
-		node->order_num = num;
-		num++;
-	}
-
-	for (int i = 0; i < node->srcs.size(); i++){
-		number_tree(node->srcs[i]);
-	}
-
-	return num;
-
-}
-
-
+/* node - opnd to string */
 string opnd_to_string(operand_t * opnd){
 
 	string label = "";
@@ -52,6 +31,7 @@ string opnd_to_string(operand_t * opnd){
 	return label;
 }
 
+/* get the operations to string */
 string operation_to_string(uint operation){
 
 	switch (operation){
@@ -76,13 +56,14 @@ string operation_to_string(uint operation){
 
 }
 
-/*implement these - may be write a program to automatically get these*/
+/* get the regname to string */
 string regname_to_string(uint reg){
 
 #include "print_regs.h"
 	return "ERROR";
 }
 
+/* DR operations to string */
 string dr_operation_to_string(uint operation){
 
 #include "print_ops.h"
@@ -90,15 +71,47 @@ string dr_operation_to_string(uint operation){
 
 }
 
+/*printing abs nodes*/
+string abs_node_mem_to_string(Abs_node * node){
 
-void flatten_to_expression(Node * head, std::ostream &file){
+	string ret = node->mem_info.associated_mem->name + "(";
 
-	file << opnd_to_string(head->symbol) << " " << operation_to_string(op_assign) << " ";
+	for (int i = 0; i < node->mem_info.dimensions; i++){
+		if (i < node->mem_info.dimensions - 1){
+			ret += to_string(node->mem_info.pos[i]) + ",";
+		}
+		else{
+			ret += to_string(node->mem_info.pos[i]) + ")";
+		}
+	}
 
-	print_tree(head,file);
+	return ret;
 
 }
 
+string abs_node_to_string(Abs_node* node){
+
+	if ((node->type == INPUT_NODE) || (node->type == OUTPUT_NODE) || (node->type == INTERMEDIATE_NODE)){
+		return abs_node_mem_to_string(node);
+	}
+	else if (node->type == IMMEDIATE_INT){
+		return to_string(node->value);
+	}
+	else if (node->type == IMMEDIATE_FLOAT){
+		return to_string(node->float_value);
+	}
+	else if (node->type == OPERATION_ONLY){
+		return operation_to_string(node->operation);
+	}
+	else if (node->type == PARAMETER){
+		return "p_" + to_string(node->value);
+	}
+
+	return "";
+
+}
+
+/* print an expression tree to an expression */
 void print_tree(Node * node, std::ostream &file){
 
 	int no_srcs = node->srcs.size();
@@ -145,6 +158,14 @@ void print_tree(Node * node, std::ostream &file){
 		}
 		file << ")";
 	}
+
+}
+
+void flatten_to_expression(Node * head, std::ostream &file){
+
+	file << opnd_to_string(head->symbol) << " " << operation_to_string(op_assign) << " ";
+
+	print_tree(head, file);
 
 }
 

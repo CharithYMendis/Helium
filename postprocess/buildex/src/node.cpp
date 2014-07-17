@@ -10,6 +10,7 @@ Node::Node(operand_t * symbol){
 	srcs.reserve(2); /* mostly it will be two sources */
 	prev.reserve(2); /* mostly it will be one - but let's reserve two*/
 	this->order_num = -1;
+	this->is_para = false;
 
 }
 
@@ -30,6 +31,7 @@ Node::Node(uint type, uint value, uint width, float float_value){
 	srcs.reserve(2); /* mostly it will be two sources */
 	prev.reserve(2); /* mostly it will be one - but let's reserve two*/
 	this->order_num = -1;
+	this->is_para = false;
 	
 }
 

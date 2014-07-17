@@ -1,7 +1,7 @@
 /* we will try to recreate the mem layout from the execution traces */
 #include <fstream>
 #include <iostream>
-#include "build_mem_layout.h"
+#include "build_mem_instrace.h"
 #include <vector>
 #include "expression_tree.h"
 #include "fileparser.h"
@@ -278,10 +278,22 @@ void infer_connected_regions(vector<mem_info_t * > &mem_info){
 
 void random_dest_select(vector<mem_info_t *> &mem_info, uint64_t * dest, uint32_t * stride){
 
+	/*get heap regions*/
+	uint size_heap = 0;
+	for (int i = 0; i < mem_info.size(); i++){
+		if ((mem_info[i]->type == MEM_HEAP_TYPE) && ((mem_info[i]->direction & MEM_OUTPUT) == MEM_OUTPUT)){
+			size_heap++;
+		}
+	}
+
+	uint current_heap = 0;
+
 	/* select a random location to track using the heap regions (actually non stack regions) */
 	for (int i = 0; i < mem_info.size(); i++){
 		if ( (mem_info[i]->type == MEM_HEAP_TYPE) && ( (mem_info[i]->direction & MEM_OUTPUT) == MEM_OUTPUT) ){
 
+			current_heap++;
+			if (current_heap < size_heap / 2) continue;
 
 			uint32_t probable_stride = get_most_probable_stride(mem_info[i]->stride_freqs);
 
@@ -293,7 +305,7 @@ void random_dest_select(vector<mem_info_t *> &mem_info, uint64_t * dest, uint32_
 			*dest = mem_info[i]->start + random * probable_stride;
 			*stride = probable_stride;
 
-			DEBUG_PRINT(("size, random, start - %d, %d, %llu\n", size, random, mem_info[i]->start), 3);
+			DEBUG_PRINT(("size, random, start - %d, %d, %llu\n", size, random, mem_info[i]->start), 1);
 
 			return;
 
@@ -303,6 +315,9 @@ void random_dest_select(vector<mem_info_t *> &mem_info, uint64_t * dest, uint32_
 }
 
 void print_mem_layout(vector<mem_info_t *> &mem_info){
+
+	printf("------------------------------MEM_INFO-------------------------------------------\n");
+
 	for (int i = 0; i < mem_info.size(); i++){
 		mem_info_t * info = mem_info[i];
 
@@ -326,7 +341,7 @@ void print_mem_layout(vector<mem_info_t *> &mem_info){
 		}
 
 		printf("estimated size - %d\n", (info->end - info->start) / (stride));
-		printf("-------------------------------------\n");
+		printf("--------------------------------------------------------------------------\n");
 
 	}
 }

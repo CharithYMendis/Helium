@@ -40,20 +40,24 @@ class Expression_tree {
 		~Expression_tree();
 		
 		void update_frontier(rinstr_t * instr);
+		void print_tree(std::ostream &file);
+		void print_to_dot(std::ostream &file);
 		Node * get_head();
 		
 
 private:
+
 	int generate_hash(operand_t * opnd);
 	Node * search_node(operand_t * opnd);
 	Node * create_or_get_node(operand_t * opnd);
-	//Node * search_reg(uint reg_value);
 	void remove_from_frontier(operand_t * opnd);
 	void add_to_frontier(int hash, Node * node);
 
 	void get_full_overlap_nodes(vector<Node *> &nodes, operand_t * opnd);
 	void split_partial_overlaps(vector < pair <Node *, vector<Node *> > > &nodes, operand_t * opnd, uint hash);
 	void get_partial_overlap_nodes(vector<pair<Node *, vector<Node *> > > &nodes, operand_t * opnd);
+
+	void print_tree_internal(Node * node, std::ostream &file);
 
 };
 

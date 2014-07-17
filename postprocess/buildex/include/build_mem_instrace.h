@@ -34,6 +34,7 @@ void create_mem_layout(vector<cinstr_t * > &instrs, vector<mem_info_t *> &mem_in
 void print_mem_layout(vector<mem_info_t *> &mem_info);
 
 void random_dest_select(vector<mem_info_t *> &mem_info, uint64_t * dest, uint32_t * stride);
+int get_most_probable_stride(vector<pair<uint, uint> > &strides);
 
 
 #endif

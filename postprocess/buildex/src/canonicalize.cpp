@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include "canonicalize.h"
 #include "defines.h"
-#include "print.h"
+#include "print_common.h"
 #include <stdlib.h>
 
 
