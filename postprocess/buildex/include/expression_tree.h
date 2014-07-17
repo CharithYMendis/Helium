@@ -40,8 +40,6 @@ class Expression_tree {
 		~Expression_tree();
 		
 		void update_frontier(rinstr_t * instr);
-		void print_tree(std::ostream &file);
-		void print_to_dot(std::ostream &file);
 		Node * get_head();
 		
 

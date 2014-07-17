@@ -161,7 +161,7 @@ void print_tree(Node * node, std::ostream &file){
 
 }
 
-void flatten_to_expression(Node * head, std::ostream &file){
+void print_node_tree(Node * head, std::ostream &file){
 
 	file << opnd_to_string(head->symbol) << " " << operation_to_string(op_assign) << " ";
 

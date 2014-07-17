@@ -449,13 +449,3 @@ void Expression_tree::update_frontier(rinstr_t * instr){
 Node* Expression_tree::get_head(){
 	return head;
 }
-
-
-void Expression_tree::print_tree(ostream &file){
-
-}
-
-
-void Expression_tree::print_to_dot(ostream &file){
-
-}

@@ -10,8 +10,11 @@
 #include <string>
 
 
-void print_to_dotfile(ofstream &file, Node * head, uint no_of_nodes, uint graph_no);
-void print_to_dotfile(ofstream &file, Abs_node * head);
-void print_to_dotfile(ofstream &file, Comp_Abs_node * head);
+uint number_tree_nodes(Node * node);
+uint number_tree_nodes(Abs_node * node);
+uint number_tree_nodes(Comp_Abs_node * node);
 
+void print_to_dotfile(ofstream &file, Node * head, uint no_of_nodes, uint graph_no);
+void print_to_dotfile(ofstream &file, Abs_node * head, uint no_of_nodes, uint graph_no, bool abs);
+void print_to_dotfile(ofstream &file, Comp_Abs_node * head, uint no_of_nodes, uint graph_no);
 #endif

@@ -2,13 +2,23 @@
 #include <math.h>
 
 
+Abs_node::Abs_node(){
+
+	order_num = -1;
+
+}
+
+Comp_Abs_node::Comp_Abs_node(){
+	order_num = -1;
+}
+
+
+
 Abs_tree::Abs_tree(){
 
 	head = NULL;
 
 }
-
-
 
 void fill_abs_node(Abs_node * abs_node, Node * node, vector<mem_regions_t *> &mem_regions){
 
@@ -26,12 +36,12 @@ void fill_abs_node(Abs_node * abs_node, Node * node, vector<mem_regions_t *> &me
 
 		abs_node->mem_info.associated_mem = mem;
 		abs_node->mem_info.dimensions = DIMENSIONS;
-		abs_node->mem_info.indexes = new uint * [DIMENSIONS];
+		abs_node->mem_info.indexes = new int * [DIMENSIONS];
 		abs_node->mem_info.pos = new uint[DIMENSIONS];
 
 		vector<uint> pos = get_mem_position(mem, node->symbol->value);
 		for (int i = 0; i < DIMENSIONS; i++){
-			abs_node->mem_info.indexes[i] = new uint[DIMENSIONS + 1];
+			abs_node->mem_info.indexes[i] = new int[DIMENSIONS + 1];
 			abs_node->mem_info.pos[i] = pos[i];
 		}
 	}
@@ -64,7 +74,6 @@ void fill_abs_node(Abs_node * abs_node, Node * node, vector<mem_regions_t *> &me
 	}
 
 }
-
 
 void Abs_tree::build_abs_tree(Abs_node * abs_node, Node * node, vector<mem_regions_t *> &mem_regions){
 
@@ -118,7 +127,6 @@ bool Abs_tree::are_abs_trees_similar(vector<Abs_node *> abs_nodes){
 
 }
 
-
 void Abs_tree::seperate_intermediate_buffers(Abs_node * node){
 
 }
@@ -137,9 +145,10 @@ void Comp_Abs_tree::build_compound_tree(Comp_Abs_node * comp_node, vector<Abs_no
 
 	if (comp_node == NULL){
 		comp_node = head = new Comp_Abs_node();
-		for (int i = 0; i < abs_nodes.size(); i++){
-			comp_node->nodes.push_back(abs_nodes[i]);
-		}
+	}
+
+	for (int i = 0; i < abs_nodes.size(); i++){
+		comp_node->nodes.push_back(abs_nodes[i]);
 	}
 
 	for (int i = 0; i < abs_nodes[0]->srcs.size(); i++){
@@ -158,8 +167,7 @@ void Comp_Abs_tree::build_compound_tree(Comp_Abs_node * comp_node, vector<Abs_no
 
 }
 
-
-vector<double> solve_linear_eq(vector<vector<double> > &A, vector<double> &b){
+vector<double> solve_linear_eq(vector<vector<double> > A, vector<double> b){
 
 #define EPSILON 1e-10
 
@@ -208,17 +216,44 @@ vector<double> solve_linear_eq(vector<vector<double> > &A, vector<double> &b){
 
 }
 
-/* to be implemented */
-
 void Comp_Abs_tree::abstract_buffer_indexes(Comp_Abs_node * comp_node){
 
 	Comp_Abs_node * head_for_ex = comp_node;
 
 	/* assert that the comp node is an input or an intermediate node */
-
-	abstract_buffer_indexes(head_for_ex, head_for_ex);
+	for (int i = 0; i < head_for_ex->srcs.size(); i++){
+		abstract_buffer_indexes(head_for_ex, head_for_ex->srcs[i]);
+	}
 
 }
+
+void printout_matrices(vector<vector<double> >  values){
+	for (int i = 0; i < values.size(); i++){
+		vector<double> row = values[i];
+		for (int j = 0; j < row.size(); j++){
+			cout << row[j] << " ";
+		}
+		cout << endl;
+	}
+}
+
+void printout_vector(vector<double> values){
+	for (int i = 0; i < values.size(); i++){
+		cout << values[i] << " ";
+	}
+	cout << endl;
+}
+
+
+int double_to_int(double value){
+	if (value >= 0){
+		return (int)(value + 0.5);
+	}
+	else{
+		return (int)(value - 0.5);
+	}
+}
+
 
 void Comp_Abs_tree::abstract_buffer_indexes(Comp_Abs_node * head, Comp_Abs_node * node){
 
@@ -227,27 +262,40 @@ void Comp_Abs_tree::abstract_buffer_indexes(Comp_Abs_node * head, Comp_Abs_node 
 	if ((first->type == INPUT_NODE) || (first->type == INTERMEDIATE_NODE)){
 		/*make a system of linear equations and solve them*/
 		vector<vector<double> > A;
-		for (int i = 0; i < head->nodes.size(); i++){
+		//for (int i = 0; i < head->nodes.size(); i++){
+		for (int i = 0; i < DIMENSIONS + 1; i++){
 			vector<double> coeff;
 			for (int j = 0; j < head->nodes[i]->mem_info.dimensions; j++){
-				coeff.push_back(head->nodes[i]->mem_info.pos[j]);
+				coeff.push_back((double)head->nodes[i]->mem_info.pos[j]);
 			}
 			coeff.push_back(1.0);
 			A.push_back(coeff);
 		}
 
+		/*cout << "A" << endl;
+		printout_matrices(A);*/
+
 
 		for (int dim = 0; dim < first->mem_info.dimensions; dim++){
 			vector<double> b;
-			for (int i = 0; i < node->nodes.size(); i++){
-				b.push_back(node->nodes[i]->mem_info.pos[dim]);
+			//for (int i = 0; i < node->nodes.size(); i++){
+			for (int i = 0; i < DIMENSIONS + 1; i++){
+				b.push_back((double)node->nodes[i]->mem_info.pos[dim]);
 			}
+			/*cout << "b" << endl;
+			printout_vector(b);*/
+
 			vector<double> results = solve_linear_eq(A, b);
+
+			cout << "results" << endl;
+			printout_vector(results);
 
 			ASSERT_MSG((results.size() == (first->mem_info.dimensions + 1)), ("ERROR: the result vector is inconsistent\n"));
 			for (int i = 0; i < results.size(); i++){
-				first->mem_info.indexes[dim][i] = results[i];
+				first->mem_info.indexes[dim][i] = double_to_int(results[i]);
+				cout << first->mem_info.indexes[dim][i] << " ";
 			}
+			cout << endl;
 			
 		}
 	

@@ -139,31 +139,6 @@ void do_remove_signex(Node * node, Node * head){
 } 
 
 
-/*  order numbering for printing out */
-static uint num = 0;
-
-uint number_tree(Node * node){
-
-	if (node->order_num == -1){
-		node->order_num = num;
-		num++;
-	}
-
-	for (int i = 0; i < node->srcs.size(); i++){
-		number_tree(node->srcs[i]);
-	}
-
-	return num;
-
-}
-
-uint number_expression_tree(Node * node){
-
-	num = 0;
-	return number_tree(node);
-
-}
-
 
 /*should implement to suite the current standard calling conventions used by the applications*/
 static uint para_num = 0;

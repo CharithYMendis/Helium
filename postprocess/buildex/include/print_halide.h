@@ -7,7 +7,7 @@
 #include <vector>
 #include "build_abs_tree.h"
 
-string get_abs_node_string_unprocessed(Abs_node* node);
+string get_abs_node_string(Abs_node * node);
 
 /* main halide program for generation Halide code - we also need a helper halide module to setup buffer_t for patching */
 class Halide_program {

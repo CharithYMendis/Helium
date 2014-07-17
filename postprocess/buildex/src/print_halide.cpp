@@ -4,7 +4,9 @@
 #include <string>
 #include <stack>
 
-/* lots of helper functions */
+string get_abs_node_string(Abs_node * node);
+
+/* lots of helper functions - halide specific only */
 
 /*halide header and footer - in future move to a file and read the header from the file*/
 string get_halide_header(){
@@ -14,7 +16,6 @@ string get_halide_header(){
 string get_halide_footer(){
 	return "return 0;\n}";
 }
-
 
 /* halide supported types - Int, UInt , Float with width specified as the first parameter to the type */
 string get_string_type(uint width, bool sign, bool is_float){
@@ -27,7 +28,6 @@ string get_string_type(uint width, bool sign, bool is_float){
 		return "Float(" + to_string(width * 8) + ")";
 
 }
-
 
 /* ImageParam name(type,dim) */
 string get_input_definition_string(Abs_node * node){
@@ -48,18 +48,22 @@ string get_parameter_definition_string(Abs_node * node){
 
 string get_function_string(Halide_program::function * func){
 	Abs_node * node = func->nodes[0];
-	return node->mem_info.associated_mem->name + ";";
+	return "Func " + node->mem_info.associated_mem->name + ";";
 }
-
 
 
 /* get memory in the form of mem(x,y,z) etc. */
 string get_mem_string(Abs_node * node, vector<string> vars){
 
 	
+	cout << node->mem_info.associated_mem->name << endl;
+
 	string ret = node->mem_info.associated_mem->name + "(";
 	for (int i = 0; i < node->mem_info.dimensions; i++){
 		for (int j = 0; j < node->mem_info.dimensions ; j++){
+
+			cout << node->mem_info.indexes[i][j] << " ";
+
 			if (node->mem_info.indexes[i][j] == 1){
 				ret +=  vars[j] + " + ";
 			}
@@ -68,14 +72,16 @@ string get_mem_string(Abs_node * node, vector<string> vars){
 			}
 
 		}
-		if (node->mem_info.indexes[i][node->mem_info.dimensions] != 0){
-			ret += to_string(node->mem_info.indexes[i][node->mem_info.dimensions]);
-		}
+
+		cout << node->mem_info.indexes[i][node->mem_info.dimensions] << endl;
+
+		ret += to_string(node->mem_info.indexes[i][node->mem_info.dimensions]);
 
 		if (i != node->mem_info.dimensions - 1){
 			ret += ",";
 		}
 		else{
+			
 			ret += ")";
 		}
 		
@@ -95,8 +101,6 @@ vector<string> get_vars(uint dim){
 	return ret;
 }
 
-
-
 string get_abs_node_string(Abs_node * node){
 
 	if ((node->type == INPUT_NODE) || (node->type == OUTPUT_NODE) || (node->type == INTERMEDIATE_NODE)){
@@ -111,6 +115,10 @@ string get_abs_node_string(Abs_node * node){
 string get_output_to_file_string(Abs_node * node, string filename, uint file_no){
 	return node->mem_info.associated_mem->name + ".output_to_file(" + filename + "_" + to_string(file_no) + ");";
 }
+
+
+
+
 
 /* main print functions for the halide module */
 
@@ -193,7 +201,6 @@ void Halide_program::print_input_params(Abs_node * node, ostream &out, vector<ui
 		print_input_params(node->srcs[i], out, values);
 	}
 }
-
 
 Halide_program::function * Halide_program::check_function(mem_regions_t * mem){
 
