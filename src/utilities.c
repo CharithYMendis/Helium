@@ -95,6 +95,10 @@ bool filter_range_from_list (module_t * head, instr_t * instr){
 	return false;
 }
 
+bool neg_filter_module(module_t * head, instr_t * instr){
+
+}
+
 bool filter_from_list(module_t * head, instr_t * instr, uint mode){
 
 	if(mode == FILTER_BB){
@@ -108,6 +112,12 @@ bool filter_from_list(module_t * head, instr_t * instr, uint mode){
 	}
 	else if(mode == FILTER_NONE){
 		return true;
+	}
+	else if (mode == NEG_FILTER_MODULE){
+
+	}
+	else if (mode == FILTER_FUNCTION){
+
 	}
 
 }

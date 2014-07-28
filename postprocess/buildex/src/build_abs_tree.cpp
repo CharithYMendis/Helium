@@ -28,9 +28,9 @@ void fill_abs_node(Abs_node * abs_node, Node * node, vector<mem_regions_t *> &me
 		abs_node->operation = node->operation;
 
 		switch (mem->type){
-		case IMAGE_INPUT: abs_node->type = INPUT_NODE;
-		case IMAGE_OUTPUT: abs_node->type = OUTPUT_NODE;
-		case IMAGE_INTERMEDIATE: abs_node->type = INTERMEDIATE_NODE;
+		case IMAGE_INPUT: abs_node->type = INPUT_NODE; break;
+		case IMAGE_OUTPUT: abs_node->type = OUTPUT_NODE; break; 
+		case IMAGE_INTERMEDIATE: abs_node->type = INTERMEDIATE_NODE; break;
 		}
 		abs_node->width = node->symbol->width;
 
@@ -52,7 +52,9 @@ void fill_abs_node(Abs_node * abs_node, Node * node, vector<mem_regions_t *> &me
 			abs_node->type = PARAMETER;
 			abs_node->value = node->para_num;
 		}
-		else abs_node->type = OPERATION_ONLY;
+		else{
+			abs_node->type = OPERATION_ONLY;
+		}
 		
 	}
 	else if (node->symbol->type == IMM_INT_TYPE){
@@ -72,6 +74,11 @@ void fill_abs_node(Abs_node * abs_node, Node * node, vector<mem_regions_t *> &me
 	else{
 		ASSERT_MSG((false), ("ERROR: node type unknown\n"));
 	}
+
+	abs_node->range = node->symbol->value;
+
+	/* change this sometime */
+	abs_node->sign = false;
 
 }
 
@@ -287,15 +294,15 @@ void Comp_Abs_tree::abstract_buffer_indexes(Comp_Abs_node * head, Comp_Abs_node 
 
 			vector<double> results = solve_linear_eq(A, b);
 
-			cout << "results" << endl;
-			printout_vector(results);
+			/*cout << "results" << endl;
+			printout_vector(results);*/
 
 			ASSERT_MSG((results.size() == (first->mem_info.dimensions + 1)), ("ERROR: the result vector is inconsistent\n"));
 			for (int i = 0; i < results.size(); i++){
 				first->mem_info.indexes[dim][i] = double_to_int(results[i]);
-				cout << first->mem_info.indexes[dim][i] << " ";
+				//cout << first->mem_info.indexes[dim][i] << " ";
 			}
-			cout << endl;
+			//cout << endl;
 			
 		}
 	

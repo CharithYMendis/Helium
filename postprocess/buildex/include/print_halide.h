@@ -6,6 +6,7 @@
 #include "build_mem_dump.h"
 #include <vector>
 #include "build_abs_tree.h"
+#include "defines.h"
 
 string get_abs_node_string(Abs_node * node);
 
@@ -39,15 +40,24 @@ public:
 	/* methods to manipulate and fill the Halide program */
 	Halide_program(Abs_node * head);
 	void get_input_params(Abs_node * node);
-	void seperate_to_Funcs(Abs_node * node, vector<Abs_node *> stack);
+	void seperate_to_Funcs(Abs_node * node, vector<Abs_node *> &stack);
 	void print_halide(ostream &out);
+	void print_seperated_funcs();
+	
 
 
 private:
+
 	function * check_function(mem_regions_t * mem);
 	void print_function(function* func, ostream &out);
-	void print_abs_tree_in_halide(Abs_node* node, ostream &out);
-	void print_input_params(Abs_node * node, ostream &out, vector<uint> &values);
+	void print_input_params(Abs_node * node, ostream &out, vector<uint> &values, vector<string> &inputs);
+
+	void print_abs_tree_in_halide(Abs_node* node, Abs_node* head, ostream &out);
+	void print_full_overlap_string(Abs_node * node, Abs_node* head, ostream &out);
+	void print_partial_overlap_string(Abs_node * node, Abs_node* head, ostream &out);
+
+	
+	
 
 
 };

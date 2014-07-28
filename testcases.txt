@@ -1,0 +1,19 @@
+3x1 and 1x3 blur
+then add input dependent weights
+normalize it
+rotation by 90 -> out(x,y) = in(y,x)
+snake
+image resizing
+color conversion (R,G,B) -> new set of values (color correction) - camera_pipe.cpp
+composition of filters
+
+this will be done in halide + my own version
+
+do some scheduling -> tiling, parallel.....
+how critical is this?
+
+boundary conditions???
+how to handle selects???? -> control flow
+memory dump???
+
+

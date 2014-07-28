@@ -486,7 +486,6 @@ static void get_full_filename_with_process(char * fileName,char * dest,uint proc
 	//final absolute path
 	strncat(dest,filenamel,MAX_STRING_LENGTH);
 
-
 }
 
 static void get_full_filename(char * fileName,char * dest){

@@ -204,14 +204,40 @@ void print_nodes(ofstream &file, Abs_node * node, uint no_of_nodes, bool abs){
 	uint * done = new uint[no_of_nodes];
 	memset(done, 0, sizeof(uint)*no_of_nodes);
 
-	/* can write this as a recursive or an iterative procedure? do an DFS
-	* assert that the node numbers cannot exceed the no_of_nodes
-	*/
+	/* for the first node set indexes to zero -> this will make it print correctly and finally restore */
+	uint ** indexes = new uint *[node->mem_info.dimensions];
+	for (int i = 0; i < node->mem_info.dimensions; i++){
+		indexes[i] = new uint[node->mem_info.dimensions + 1];
+	}
+
+	for (int i = 0; i < node->mem_info.dimensions; i++){
+		for (int j = 0; j < node->mem_info.dimensions + 1; j++){
+			indexes[i][j] = node->mem_info.indexes[i][j];
+			if (i == j){
+				node->mem_info.indexes[i][j] = 1;
+			}
+			else{
+				node->mem_info.indexes[i][j] = 0;
+			}
+			
+		}
+	}
 
 	print_nodes_recursive(file, node, done, no_of_nodes,abs);
 
+	/* restore back the indexes */
+	for (int i = 0; i < node->mem_info.dimensions; i++){
+		for (int j = 0; j < node->mem_info.dimensions + 1; j++){
+			node->mem_info.indexes[i][j] = indexes[i][j];
+		}
+	}
 
+	/* clean up */
 	delete[] done;
+	for (int i = 0; i < node->mem_info.dimensions; i++){
+		delete[] indexes[i];
+	}
+	delete indexes;
 }
 
 void print_to_dotfile(ofstream &file, Abs_node * head, uint no_of_nodes, uint graph_no, bool abs){

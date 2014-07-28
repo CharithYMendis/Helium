@@ -5,10 +5,13 @@
 #include "moduleinfo.h"
 
 /* filtering modes shared by the files */
-#define FILTER_BB		1
-#define FILTER_MODULE	2
-#define FILTER_RANGE	3
-#define FILTER_NONE		4
+#define FILTER_BB			1
+#define FILTER_MODULE		2
+#define FILTER_RANGE		3
+#define FILTER_FUNCTION		4
+#define NEG_FILTER_MODULE	5
+#define FILTER_NONE			6
+
 
 
 /* provides various filtering functions - all the filtering is done through runtime */

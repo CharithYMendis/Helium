@@ -16,6 +16,8 @@
 
 #define NULL_TERMINATE(buf) buf[(sizeof(buf)/sizeof(buf[0])) - 1] = '\0'
 
+/*stack demarcation only for 32 bit applications ??? */
+
 
 /* Each mem_ref_t includes the type of reference (read or write),
  * the address referenced, and the size of the reference.
@@ -45,6 +47,10 @@ typedef struct {
     void   *cache;
     file_t  log;
     uint64  num_refs;
+
+	uint stack_base;
+	uint stack_limit;
+
 } per_thread_t;
 
 
@@ -158,6 +164,9 @@ void memtrace_thread_init(void *drcontext)
     int len;
     per_thread_t *data;
 
+	uint * stack_base;
+	uint * deallocation_stack;
+
     /* allocate thread private data */
     data = dr_thread_alloc(drcontext, sizeof(per_thread_t));
     drmgr_set_tls_field(drcontext, tls_index, data);
@@ -194,6 +203,22 @@ void memtrace_thread_init(void *drcontext)
                    dr_get_thread_id(drcontext), logname);
     }
 #endif
+
+
+	/* this is done for 32 bit applications */
+	deallocation_stack = &data->stack_limit;
+	stack_base = &data->stack_base;
+
+	__asm{
+		mov EAX, FS : [0x04]
+			mov EBX, stack_base
+			mov[EBX], EAX
+			mov EAX, FS : [0xE0C]
+			mov EBX, deallocation_stack
+			mov[EBX], EAX
+	}
+
+
 }
 
 

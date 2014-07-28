@@ -20,6 +20,7 @@
 #include "print_dot.h"
 #include "tree_transformations.h"
 #include "build_abs_tree.h"
+#include "print_halide.h"
 
 #define MAX_STRING_LENGTH 200
  
@@ -205,8 +206,10 @@
 
 			build_tree(nbd_locations[i], lineno, FILE_END, in, tree);
 			do_remove_signex(tree->get_head(), tree->get_head());
+			remove_full_overlap_nodes_aggressive(tree->get_head(), tree->get_head(), 0);
 
 			/*print the node dot file*/
+
 			/*out.open(get_filename(folder, out_prefix + "_node", i, "txt"));
 			uint nodes = number_tree_nodes(tree->get_head());
 			print_node_tree(tree->get_head(), out);
@@ -228,6 +231,7 @@
 
 		bool similar = Abs_tree::are_abs_trees_similar(abs_nodes);
 		if (similar){
+
 			cout << "similar" << endl;
 			out.open(get_filename(folder, out_prefix + "_comp_node", 0, "txt"));
 			Comp_Abs_tree * comp_tree = new Comp_Abs_tree();
@@ -244,9 +248,15 @@
 			print_to_dotfile(out, final_tree, nodes, 0, true);
 
 
+			Halide_program * program = new Halide_program(final_tree);
+
+			vector<Abs_node *> stack;
+			program->seperate_to_Funcs(program->head, stack);
+			program->print_seperated_funcs();
+			program->print_halide(halide_out);
+
+
 		}
-
-
 
 	}
 

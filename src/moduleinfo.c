@@ -101,18 +101,48 @@ module_t * md_initialize(){
 	return new_elem("__init",100);
 }
 
+
+int internal_compare_prefix(char * prefix, char * name){
+
+	int i = 0;
+
+	while (prefix[i] != '*'){
+		if ( (prefix[i] != name[i]) || (name[i] == '\0') /* prefix is longer */ ){
+			return 1;
+		}
+		i++;
+	}
+	return 0;
+
+}
+
+bool internal_is_prefix(char * string){
+	/* asterix included means that this is a prefix */
+	char * asterix = strchr(string, '*');
+	return (asterix != NULL);
+
+}
+
 /* looks up the linked list using name and returns the node with matching name*/
 module_t * md_lookup_module (module_t * head,char * name){
+
 	while(head!=NULL){
-		if(strcmp(name,head->module)==0){
-			return head;
+
+		if (internal_is_prefix(head->module)){
+			if (internal_compare_prefix(head->module, name) == 0){
+				return head;
+			}
+		}
+		else{
+			if (strcmp(name, head->module) == 0){
+				return head;
+			}
 		}
 		head = head->next;
 	}
 	return NULL;
 
 }
-
 
 
 /* adds an element to the linked list*/

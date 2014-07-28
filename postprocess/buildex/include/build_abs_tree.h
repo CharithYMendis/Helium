@@ -32,7 +32,10 @@ public:
 	
 	/* some type information about the node */
 	uint type; 
+
+	/* operand characteristics */
 	uint width;
+	uint range;
 	bool sign;
 
 	union {
@@ -52,6 +55,7 @@ public:
 
 	/*node number*/
 	uint order_num;
+
 
 	Abs_node();
 
