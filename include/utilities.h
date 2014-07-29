@@ -9,7 +9,7 @@
 #define FILTER_MODULE		2
 #define FILTER_RANGE		3
 #define FILTER_FUNCTION		4
-#define NEG_FILTER_MODULE	5
+#define FILTER_NEG_MODULE	5
 #define FILTER_NONE			6
 
 

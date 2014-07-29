@@ -9,6 +9,8 @@
 #include "inscount.h"
 #include "instrace.h"
 #include "defines.h"
+#include "dr_stack.h"
+#include  "functrace.h"
 
 #define DEBUG_MAIN
 #define NO_OF_INS_PASSES 10
@@ -251,7 +253,21 @@ static void setupInsPasses(){
 	ins_pass[4].thread_exit = instrace_thread_exit;
 	ins_pass[4].process_exit = instrace_exit_event;
 
-	pass_length = 5;
+
+	//ins pass 5 - functrace
+	ins_pass[5].name = "functrace";
+	ins_pass[5].priority = priority;
+	ins_pass[5].priority.name = ins_pass[5].name;
+	ins_pass[5].priority.priority = 0;
+	ins_pass[5].init_func = functrace_init;
+	ins_pass[5].app2app_bb = functrace_bb_app2app;
+	ins_pass[5].analysis_bb = functrace_bb_analysis;
+	ins_pass[5].instrumentation_bb = functrace_bb_instrumentation;
+	ins_pass[5].thread_init = functrace_thread_init;
+	ins_pass[5].thread_exit = functrace_thread_exit;
+	ins_pass[5].process_exit = functrace_exit_event;
+
+	pass_length = 6;
 
 	 
 	

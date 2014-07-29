@@ -4,6 +4,7 @@
 #include "dr_api.h"
 #include <stdlib.h>
 #include <string.h>
+#include "functrace.h"
 
 #define MAX_TARGETS	100
 #define MAX_BBS_PER_MODULE 10000
@@ -22,7 +23,7 @@ conventions used -
 /* if you change bbinfo struct then you need to change functions add_pc_to_list + delete_list */
 
 //from which bbs was this called
-typedef struct call_bb_info_t {
+typedef struct _call_bb_info_t {
 	char * module;
 	uint start_addr;
 	uint freq;
@@ -41,9 +42,17 @@ typedef struct _call_target_info_t {
 typedef struct _bbinfo_t {
 	uint start_addr;
 	uint freq;
+	
 	call_bb_info_t * from_bbs;
 	call_bb_info_t * to_bbs;
+
 	call_target_info_t * called_from;
+	call_target_info_t * called_to;
+
+	
+	function_t * func; /* current function */
+	
+
 	bool printable;
 } bbinfo_t;
 
@@ -58,8 +67,12 @@ typedef struct _module_t {
 } module_t;
 
 
+
 /* get the head - handle */
 module_t * md_initialize();
+
+/* add a module to the list */
+void md_add_module(module_t * head, char * name, uint length_list_bbs);
 
 /* look up the module */
 module_t * md_lookup_module (module_t * head,char * name);

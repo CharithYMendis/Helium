@@ -145,6 +145,19 @@ module_t * md_lookup_module (module_t * head,char * name){
 }
 
 
+void md_add_module(module_t * head, char * name, uint length_list_bbs){
+	
+	module_t * tail;
+
+	if (md_lookup_module(head, name) == NULL){
+		tail = get_tail(head);
+		tail->next = new_elem(name, length_list_bbs);
+	}
+
+
+}
+
+
 /* adds an element to the linked list*/
 /* important assumes that the head is not null - therefore, the user should initialize the head */
 bbinfo_t * md_add_bb_to_module(module_t * head,

@@ -289,7 +289,6 @@ void instrace_thread_init(void *drcontext)
 
 }
 
-
 void
 instrace_thread_exit(void *drcontext)
 {

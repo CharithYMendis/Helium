@@ -123,8 +123,9 @@ configure_DynamoRIO_global(OFF ON)
 # better by parameterizing; but it works for now.
 include_directories("C:/Charith/libraries/dynamorio/ext/drmgr")
 include_directories("C:/Charith/libraries/dynamorio/ext/drutil")
+include_directories("C:/Charith/libraries/dynamorio/ext/drcontainers")
 include_directories("include")
-add_sample_client(exalgo    "src/main.c;src/bbinfo.c;src/moduleinfo.c;src/cpuid.c;src/memtrace.c;src/inscount.c;src/instrace.c;src/utilities.c;src/debug.c"      "drmgr;drutil")
+add_sample_client(exalgo    "src/main.c;src/bbinfo.c;src/moduleinfo.c;src/cpuid.c;src/memtrace.c;src/inscount.c;src/instrace.c;src/utilities.c;src/debug.c;src/dr_stack.c;src/functrace.c"      "drcontainers;drmgr;drutil")
 # add utils.h for installation  # NON-PUBLIC
 set(srcs ${srcs} "utils.h")     # NON-PUBLIC
 

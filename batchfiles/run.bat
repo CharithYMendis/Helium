@@ -39,7 +39,7 @@ set FILTER_FILE="C:\Charith\Dropbox\Research\development\exalgo\tests\c_tests\fi
 
 set HALIDE_FILTER_FILE="C:\Charith\Dropbox\Research\development\exalgo\tests\halide_tests\filter.txt"
 
-set INPUT_IMAGE="C:\Charith\Dropbox\Research\development\exalgo\tests\images\bird.png"
+set INPUT_IMAGE="C:\Charith\Dropbox\Research\development\exalgo\tests\images\forty.png"
 set OUTPUT_IMAGE="C:\Charith\Dropbox\Research\development\exalgo\tests\images\output.png"
 
 :: %DR_PATH% -debug -root %DYNAMORIO_HOME% -syntax_intel -c exalgo.dll -instrace 4 %LOG_DIR% hello.txt 300000 -- %ASM_TEST%
@@ -48,7 +48,7 @@ set OUTPUT_IMAGE="C:\Charith\Dropbox\Research\development\exalgo\tests\images\ou
 
 :: %DR_PATH% -debug -root %DYNAMORIO_HOME% -syntax_intel -c exalgo.dll -instrace 3 %LOG_DIR% %FILTER_FILE% 300000 -- %BASIC_TEST% %INPUT_IMAGE% %OUTPUT_IMAGE%
 
-%DR_PATH% -debug -root %DYNAMORIO_HOME% -syntax_intel -c exalgo.dll -bbinfo %LOG_DIR% input output summary 0 4 -- %HALIDE_TEST% %INPUT_IMAGE% %OUTPUT_IMAGE%
+%DR_PATH% -debug -root %DYNAMORIO_HOME% -syntax_intel -c exalgo.dll -bbinfo %LOG_DIR% input output summary 0 6 -- %HALIDE_TEST% %INPUT_IMAGE% %OUTPUT_IMAGE%
 
 :: -instrace 3 %LOG_DIR% %FILTER_FILE% 300000
 
