@@ -1,5 +1,5 @@
-#ifndef CPUID_MASK
-#define CPUID_MASK
+#ifndef _CPUID_EXALGO_H
+#define _CPUID_EXALGO_H
 
 
 void cpuid_init(client_id_t id, 

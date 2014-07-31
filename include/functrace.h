@@ -1,19 +1,21 @@
-#ifndef _FUNCTRACE_H
-#define _FUNCTRACE_H
+#ifndef _FUNCTRACE_EXALGO_H
+#define _FUNCTRACE_EXALGO_H
 
 #include "dr_api.h"
-#include "moduleinfo.h"
-#include "defines.h"
+
+
 
 /* typdefs */
 typedef struct _function_t {
 
-	module_t * module;
-	app_pc pc;
+	uint start_addr;
+	uint end_addr;
 	bool is_recursive;
 
 } function_t;
 
+/* other public functions */
+function_t * get_current_function(void * drcontext);
 
 /*instrumentation routines*/
 
@@ -40,7 +42,6 @@ void functrace_thread_init(void *drcontext);
 void functrace_thread_exit(void *drcontext);
 
 
-/* other public functions */
-function_t * get_current_function();
+
 
 #endif

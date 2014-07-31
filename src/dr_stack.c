@@ -1,5 +1,4 @@
 #include "dr_stack.h"
-#include "drvector.h"
 
 
 bool stack_init(stack_t ** stack, uint capacity, void (*free_data_func) (void *)){
@@ -26,9 +25,14 @@ void * stack_pop(stack_t * stack){
 
 	void * ret = drvector_get_entry(stack->vector, stack->head);
 
+	
+
 	if (ret != NULL){
 		stack->head--;
 	}
+
+	
+
 	return ret;
 
 }
@@ -40,10 +44,15 @@ void * stack_peek(stack_t * stack){
 
 }
 
+
+
 bool stack_push(stack_t * stack, void * data){
 
 	if (drvector_set_entry(stack->vector, stack->head + 1, data)){
 		stack->head++;
+
+		
+
 		return true;
 	}
 

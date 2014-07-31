@@ -1,5 +1,5 @@
-#ifndef _TEMPLATE_H
-#define _TEMPLATE_H
+#ifndef _TEMPLATE_EXALGO_H
+#define _TEMPLATE_EXALGO_H
 
 #include "defines.h"
 #include "dr_api.h"

@@ -1,5 +1,5 @@
-#ifndef _EXALGO_STACK_H
-#define _EXALGO_STACK_H
+#ifndef _STACK_EXALGO_H
+#define _STACK_EXALGO_H
 
 #include "dr_api.h"
 #include "drvector.h"

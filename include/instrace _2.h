@@ -1,5 +1,5 @@
- #ifndef INSTRACE
- #define INSTRACE
+#ifndef _INSTRACE_EXALGO_H
+#define _INSTRACE_EXALGO_H
  
 #include "defines.h"
 

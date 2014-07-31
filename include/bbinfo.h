@@ -1,10 +1,8 @@
-#ifndef CBW_H
-#define CBW_H
+#ifndef _BBINFO_EXALGO_H
+#define _BBINFO_EXALGO_H
 
 #include "dr_api.h"
-#include "moduleinfo.h"
-#include "drmgr.h"
-#include <stdio.h>
+
 
 /*instrumentation routines*/
 void bbinfo_init(client_id_t id, 

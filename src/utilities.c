@@ -96,7 +96,7 @@ bool filter_range_from_list (module_t * head, instr_t * instr){
 }
 
 bool neg_filter_module(module_t * head, instr_t * instr){
-
+	return !filter_module_level_from_list(head, instr);
 }
 
 bool filter_from_list(module_t * head, instr_t * instr, uint mode){
@@ -113,13 +113,43 @@ bool filter_from_list(module_t * head, instr_t * instr, uint mode){
 	else if(mode == FILTER_NONE){
 		return true;
 	}
-	else if (mode == NEG_FILTER_MODULE){
-
+	else if (mode == FILTER_NEG_MODULE){
+		return neg_filter_module(head, instr);
 	}
 	else if (mode == FILTER_FUNCTION){
+		return true;
+	}
 
+	return true;
+
+}
+
+bool filter_from_module_name(module_t * head, char * name, uint mode){
+
+	if (mode == FILTER_NEG_MODULE){
+		return (md_lookup_module(head, name) == NULL);
+	}
+	else{
+		return (md_lookup_module(head, name) != NULL);
 	}
 
 }
 
 /* need to code to dump PEB and TEB parameters - try to make it cross platform */
+
+
+bool get_offset_from_module(app_pc instr_addr,uint * offset){
+
+	module_data_t * data = dr_lookup_module(instr_addr);
+
+	if (data != NULL){
+		*offset = instr_addr - data->start;
+		return true;
+	}
+	else{
+		*offset = 0;
+		return false;
+	}
+
+
+}

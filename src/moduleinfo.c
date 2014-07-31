@@ -1,4 +1,4 @@
-#include "bbinfo.h"
+#include "moduleinfo.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -145,14 +145,17 @@ module_t * md_lookup_module (module_t * head,char * name){
 }
 
 
-void md_add_module(module_t * head, char * name, uint length_list_bbs){
+bool md_add_module(module_t * head, char * name, uint length_list_bbs){
 	
 	module_t * tail;
 
 	if (md_lookup_module(head, name) == NULL){
 		tail = get_tail(head);
 		tail->next = new_elem(name, length_list_bbs);
+		return true;
 	}
+
+	return false;
 
 
 }

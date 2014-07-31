@@ -1,6 +1,9 @@
 #include "bbinfo.h"
 #include "utilities.h"
 #include "defines.h"
+#include "moduleinfo.h"
+#include "drmgr.h"
+#include <stdio.h>
 
 
 /* 
@@ -288,6 +291,7 @@ static void clean_call(void* bb,int offset,const char * module,uint is_call,uint
 
 	bbinfo = (bbinfo_t*) bb;
 	bbinfo->freq++;
+	bbinfo->func = get_current_function(drcontext);
 
 	if(strcmp(module,data->module_name) == 0){		
 		//updating from bbs
@@ -375,16 +379,18 @@ bbinfo_bb_instrumentation(void *drcontext, void *tag, instrlist_t *bb,
 			return DR_EMIT_DEFAULT;
 		}
 
+
 		module_name = (char *)dr_global_alloc(sizeof(char)*MAX_STRING_LENGTH);
 		strncpy(module_name,module_data->full_path,MAX_STRING_LENGTH);
 
 		offset = (int)instr_get_app_pc(first) - (int)module_data->start;
 		bbinfo = md_lookup_bb_in_module(head,module_data->full_path,offset);
 
+
 		/* populate and filter the bbs if true go ahead and do instrumentation */
 		/* range filtering is not supported as we changing the data structure in place */
 		if(client_arg->filter_mode == FILTER_MODULE){
-			if(filter_module_level_from_list(head,instr)){
+			if(filter_module_level_from_list(head,first)){
 				//addr or the module is not present from what we read from file
 				if(bbinfo == NULL){
 					bbinfo = md_add_bb_to_module(head,module_data->full_path,offset,MAX_BBS_PER_MODULE,true);

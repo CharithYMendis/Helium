@@ -1,5 +1,5 @@
- #ifndef INSCOUNT
- #define INSCOUNT
+#ifndef _INSCOUNT_EXALGO_H
+#define _INSCOUNT_EXALGO_H
 
  /*instrumentation routines*/
 void inscount_init(client_id_t id, const char * arguments);

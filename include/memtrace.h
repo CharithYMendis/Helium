@@ -1,5 +1,5 @@
- #ifndef MY_MEMTRACE
- #define MY_MEMTRACE
+#ifndef _MEMTRACE_EXALGO_H
+#define _MEMTRACE_EXALGO_H
  
  /*instrumentation routines*/
 void memtrace_init(client_id_t id, 

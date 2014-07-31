@@ -1,5 +1,5 @@
- #ifndef _INSOPS_H
- #define _INSOPS_H
+#ifndef _INSOPS_EXALGO_H
+#define _INSOPS_EXALGO_H
  
  /* defines for operations */
  #define OP_MOV	1
