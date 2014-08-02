@@ -86,7 +86,8 @@ static void process_output();
 file_t in_file;
 file_t out_file;
 file_t summary_file;
-static module_t * head;
+static module_t * filter_head;
+static module_t * info_head;
 static void *stats_mutex; /* for multithread support */
 static int tls_index;
 
@@ -105,7 +106,8 @@ void bbinfo_init(client_id_t id,
 	
 	drmgr_init();
 
-	head = md_initialize();
+	filter_head = md_initialize();
+	info_head = md_initialize();
 
 	//get the output files
 	parse_commandline_args(arguments);
@@ -130,13 +132,13 @@ void bbinfo_init(client_id_t id,
 	if(client_arg->filter_mode != FILTER_NONE){
 		get_full_filename(client_arg->in_filename,filename);
 
-		if(dr_file_exists(filename)){
+		if(!dr_file_exists(filename)){
 			DR_ASSERT_MSG(false,"input file missing\n");
 		}
 
 		in_file = dr_open_file(filename,DR_FILE_READ);
 
-		md_read_from_file(head,in_file,true);
+		md_read_from_file(filter_head,in_file,true);
 
 	}
 
@@ -154,7 +156,8 @@ void bbinfo_exit_event(void){
 	int i=0;
 
 	process_output();
-	md_delete_list(head,true);
+	md_delete_list(filter_head,true);
+	md_delete_list(info_head, true); 
 
 	for(i=0;i<string_pointer_index;i++){
 		dr_global_free(string_pointers[i],sizeof(char)*MAX_STRING_LENGTH);
@@ -205,13 +208,13 @@ bbinfo_thread_exit(void *drcontext){
 /* TODO - need to change */
 static void process_output(){
 
-	module_t * local_head = head->next;
+	module_t * local_head = info_head->next;
 	int size = 0;
 	uint i = 0, j = 0;
 	bool printed = 0;
 
 
-	md_sort_bb_list_in_module(head);
+	md_sort_bb_list_in_module(info_head);
 
 	/*first get the number of modules to instrument*/
 	while(local_head != NULL){
@@ -251,6 +254,9 @@ static void process_output(){
 														   local_head->bbs[i].called_from[j].freq);
 				}
 			}
+
+			dr_fprintf(out_file, ": func : %x",local_head->bbs[i].func->start_addr);
+
 			dr_fprintf(out_file,"\n");
 			if(local_head->bbs[i].freq > client_arg->threshold ){
 				dr_fprintf(summary_file,"\n");
@@ -384,16 +390,16 @@ bbinfo_bb_instrumentation(void *drcontext, void *tag, instrlist_t *bb,
 		strncpy(module_name,module_data->full_path,MAX_STRING_LENGTH);
 
 		offset = (int)instr_get_app_pc(first) - (int)module_data->start;
-		bbinfo = md_lookup_bb_in_module(head,module_data->full_path,offset);
+		bbinfo = md_lookup_bb_in_module(info_head,module_data->full_path,offset);
 
 
 		/* populate and filter the bbs if true go ahead and do instrumentation */
 		/* range filtering is not supported as we changing the data structure in place */
 		if(client_arg->filter_mode == FILTER_MODULE){
-			if(filter_module_level_from_list(head,first)){
+			if(filter_module_level_from_list(filter_head,first)){
 				//addr or the module is not present from what we read from file
 				if(bbinfo == NULL){
-					bbinfo = md_add_bb_to_module(head,module_data->full_path,offset,MAX_BBS_PER_MODULE,true);
+					bbinfo = md_add_bb_to_module(info_head,module_data->full_path,offset,MAX_BBS_PER_MODULE,true);
 				}
 				DR_ASSERT(bbinfo != NULL);
 			}
@@ -406,17 +412,37 @@ bbinfo_bb_instrumentation(void *drcontext, void *tag, instrlist_t *bb,
 		}
 		else if(client_arg->filter_mode == FILTER_BB){
 			//addr or the module is not present from what we read from file
-			if(bbinfo == NULL){
+			if (filter_bb_level_from_list(filter_head, instr)){
+				if (bbinfo == NULL){
+					bbinfo = md_add_bb_to_module(info_head, module_data->full_path, offset, MAX_BBS_PER_MODULE, true);
+				}
+				DR_ASSERT(bbinfo != NULL);
+			}
+			else{
 				dr_free_module_data(module_data);
-				dr_global_free(module_name,sizeof(char)*MAX_STRING_LENGTH);
+				dr_global_free(module_name, sizeof(char)*MAX_STRING_LENGTH);
 				return DR_EMIT_DEFAULT;
 			}
+			
 		}
 		else if(client_arg->filter_mode == FILTER_NONE){
 			if(bbinfo == NULL){
-				bbinfo = md_add_bb_to_module(head,module_data->full_path,offset,MAX_BBS_PER_MODULE,true);
+				bbinfo = md_add_bb_to_module(info_head,module_data->full_path,offset,MAX_BBS_PER_MODULE,true);
 			}
 			DR_ASSERT(bbinfo != NULL);
+		}
+		else if (client_arg->filter_mode == FILTER_NEG_MODULE){
+			if (filter_from_module_name(filter_head, module_name, client_arg->filter_mode)){
+				if (bbinfo == NULL){
+					bbinfo = md_add_bb_to_module(info_head, module_data->full_path, offset, MAX_BBS_PER_MODULE, true);
+				}
+				DR_ASSERT(bbinfo != NULL);
+			}
+			else{
+				dr_free_module_data(module_data);
+				dr_global_free(module_name, sizeof(char)*MAX_STRING_LENGTH);
+				return DR_EMIT_DEFAULT;
+			}
 		}
 
 

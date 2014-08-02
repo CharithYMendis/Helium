@@ -19,6 +19,7 @@ Image<uint16_t> blur_halide(Image<uint16_t> in) {
 
     // Compute the same region of the output as blur_fast (i.e., we're
     // still being sloppy with boundary conditions)
+	
     halide_blur_gen(in, out);
 
 
@@ -35,7 +36,6 @@ int main(int argc, char **argv) {
 	
 	
     Image<uint16_t> halide = blur_halide(ppm_in);
-
 
 	save_image<uint16_t>(argv[2], halide);
 

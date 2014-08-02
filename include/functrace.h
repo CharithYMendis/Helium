@@ -3,8 +3,6 @@
 
 #include "dr_api.h"
 
-
-
 /* typdefs */
 typedef struct _function_t {
 

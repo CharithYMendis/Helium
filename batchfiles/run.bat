@@ -38,6 +38,7 @@ set HALIDE_TEST="C:\Charith\Dropbox\Research\development\exalgo\tests\halide_tes
 set FILTER_FILE="C:\Charith\Dropbox\Research\development\exalgo\tests\c_tests\filter_files\image_blur_filter.txt"
 
 set FILTER="C:\Charith\Dropbox\Research\development\exalgo\log\filter_file.txt"
+set FILTER_FILENAME="filter_file"
 
 set HALIDE_FILTER_FILE="C:\Charith\Dropbox\Research\development\exalgo\tests\halide_tests\filter.txt"
 
@@ -54,7 +55,9 @@ set OUTPUT_IMAGE="C:\Charith\Dropbox\Research\development\exalgo\tests\images\ou
 
 :: %DR_PATH% -debug -root %DYNAMORIO_HOME% -syntax_intel -c exalgo.dll -functrace %FILTER% 5 -- %HALIDE_TEST% %INPUT_IMAGE% %OUTPUT_IMAGE%
 
-%DR_PATH% -debug -root %DYNAMORIO_HOME% -syntax_intel -c exalgo.dll -functrace %FILTER% 5 -bbinfo %LOG_DIR% input output summary 0 6 -- %HALIDE_TEST% %INPUT_IMAGE% %OUTPUT_IMAGE%
+%DR_PATH% -debug -root %DYNAMORIO_HOME% -syntax_intel -max_elide_jmp 0 -c exalgo.dll -functrace %FILTER% 5 -bbinfo %LOG_DIR% filter_file output summary 0 5 -memtrace %FILTER% 5 -- %HALIDE_TEST% %INPUT_IMAGE% %OUTPUT_IMAGE%
+
+:: -memtrace %FILTER% 5
 
 :: -instrace 3 %LOG_DIR% %FILTER_FILE% 300000
 

@@ -1,6 +1,6 @@
+#include "debug.h"
 #include "dr_api.h"
 #include "instrace.h"
-#include "debug.h"
 #include "defines.h"
 
 /*

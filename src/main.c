@@ -2,14 +2,15 @@
 #include "dr_api.h"
 #include "drmgr.h"
 
+#include "defines.h"
+#include "stack.h"
+
 /* includes from by instrumentation passes */
-#include "bbinfo.h"
+#include "profile_global.h"
 #include "cpuid.h"
 #include "memtrace.h"
 #include "inscount.h"
 #include "instrace.h"
-#include "defines.h"
-#include "dr_stack.h"
 #include  "functrace.h"
 
 #define DEBUG_MAIN
@@ -186,7 +187,8 @@ static void setupInsPasses(){
         NULL,             /* optional name of operation we should follow */
         0};
 
-	//ins pass 1 - bbinfo
+
+	//ins pass 1 - bbinfo - most of the time should be executed first 
 	ins_pass[0].name = "bbinfo";	
 	ins_pass[0].priority = priority;
 	ins_pass[0].priority.name = ins_pass[0].name;
@@ -204,7 +206,7 @@ static void setupInsPasses(){
 	ins_pass[1].name = "cpuid";	
 	ins_pass[1].priority = priority;
 	ins_pass[1].priority.name = ins_pass[1].name;
-	ins_pass[1].priority.priority = 0;
+	ins_pass[1].priority.priority = 1;
 	ins_pass[1].init_func = cpuid_init;
 	ins_pass[1].app2app_bb = cpuid_bb_app2app;
 	ins_pass[1].analysis_bb = cpuid_bb_analysis;
@@ -217,7 +219,7 @@ static void setupInsPasses(){
 	ins_pass[2].name = "memtrace";	
 	ins_pass[2].priority = priority;
 	ins_pass[2].priority.name = ins_pass[2].name;
-	ins_pass[2].priority.priority = 0;
+	ins_pass[2].priority.priority = 1;
 	ins_pass[2].init_func = memtrace_init;
 	ins_pass[2].app2app_bb = memtrace_bb_app2app;
 	ins_pass[2].analysis_bb = memtrace_bb_analysis;
@@ -231,7 +233,7 @@ static void setupInsPasses(){
 	ins_pass[3].name = "inscount";	
 	ins_pass[3].priority = priority;
 	ins_pass[3].priority.name = ins_pass[3].name;
-	ins_pass[3].priority.priority = 0;
+	ins_pass[3].priority.priority = 1;
 	ins_pass[3].init_func = inscount_init;
 	ins_pass[3].app2app_bb = NULL;
 	ins_pass[3].analysis_bb = inscount_bb_analysis;
@@ -244,7 +246,7 @@ static void setupInsPasses(){
 	ins_pass[4].name = "instrace";	
 	ins_pass[4].priority = priority;
 	ins_pass[4].priority.name = ins_pass[4].name;
-	ins_pass[4].priority.priority = 0;
+	ins_pass[4].priority.priority = 1;
 	ins_pass[4].init_func = instrace_init;
 	ins_pass[4].app2app_bb = instrace_bb_app2app;
 	ins_pass[4].analysis_bb = instrace_bb_analysis;
@@ -254,11 +256,11 @@ static void setupInsPasses(){
 	ins_pass[4].process_exit = instrace_exit_event;
 
 
-	//ins pass 5 - functrace
+	//ins pass 5 - functrace - this is a low priority update (should be the last)
 	ins_pass[5].name = "functrace";
 	ins_pass[5].priority = priority;
 	ins_pass[5].priority.name = ins_pass[5].name;
-	ins_pass[5].priority.priority = 0;
+	ins_pass[5].priority.priority = 2;
 	ins_pass[5].init_func = functrace_init;
 	ins_pass[5].app2app_bb = functrace_bb_app2app;
 	ins_pass[5].analysis_bb = functrace_bb_analysis;

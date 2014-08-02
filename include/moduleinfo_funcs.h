@@ -64,16 +64,24 @@ typedef struct _bbinfo_t {
 
 } bbinfo_t;
 
+typedef struct _func_target_t {
 
+	function_t * func;
+
+
+};
 
 //module information
 typedef struct _module_t {
-		struct _module_t * next;
-		char * module;
-		bbinfo_t * bbs;
+
+	struct _module_t * next; /* next module information */
+	char * module;  /* module full path */
+	bbinfo_t * bbs; 
 		uint size_bbs;
 } module_t;
 
+
+/* specially we will have some analysis as well as other capabilities here */
 
 
 /* get the head - handle */

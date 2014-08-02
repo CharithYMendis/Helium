@@ -1,6 +1,8 @@
 #ifndef _CPUID_EXALGO_H
 #define _CPUID_EXALGO_H
 
+#include "dr_api.h"
+
 
 void cpuid_init(client_id_t id, 
 				const char * arguments);

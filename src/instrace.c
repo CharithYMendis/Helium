@@ -1,12 +1,11 @@
+#include "instrace.h"
 #include <string.h> /* for memset */
 #include <stddef.h> /* for offsetof */
 #include "dr_api.h"
 #include "drmgr.h"
 #include "drutil.h"
 #include "utilities.h"
-#include "instrace.h"
 #include "debug.h"
-#include "inops.h"
 #include "output.h"
 
 #ifdef WINDOWS

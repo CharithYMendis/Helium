@@ -38,13 +38,20 @@ typedef struct _call_target_info_t {
 
 //basic structure to carry bb information
 typedef struct _bbinfo_t {
+	
 	uint start_addr;
 	uint freq;
+	uint size;
+	
 	call_bb_info_t * from_bbs;
 	call_bb_info_t * to_bbs;
+
 	call_target_info_t * called_from;
+	call_target_info_t * called_to;
+	
 	function_t * func;
 	bool printable;
+
 } bbinfo_t;
 
 
@@ -53,6 +60,7 @@ typedef struct _bbinfo_t {
 typedef struct _module_t {
 	struct _module_t * next;
 	char * module;
+	uint64 start_addr;
 	bbinfo_t * bbs;
 	uint size_bbs;
 } module_t;
@@ -75,7 +83,7 @@ bbinfo_t * md_lookup_bb_in_module (module_t * head, char * name, unsigned int ad
 /* parse the file and fill the linked list */
 void md_read_from_file (module_t * head, file_t file, bool extra_info);
 /* print the addresses according to the protocol */
-void md_print_to_file (module_t * head, file_t file);
+void md_print_to_file (module_t * head, file_t file, bool extra_info);
 
 /* deletes the linked list */
 void md_delete_list (module_t * head, bool extra_info);

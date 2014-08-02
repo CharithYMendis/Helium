@@ -3,7 +3,7 @@
 #include "defines.h"
 #include "utilities.h"
 #include "drmgr.h"
-#include "dr_stack.h"
+#include "stack.h"
 
 
 
@@ -50,6 +50,7 @@ static module_t * head;
 static function_t * functions;
 static int tls_index;
 
+
 static bool parse_commandline_args(const char * args) {
 
 	client_arg = (client_arg_t *)dr_global_alloc(sizeof(client_arg_t));
@@ -70,7 +71,7 @@ void functrace_init(client_id_t id, const char * arguments)
 {
 
 	file_t in_file;
-	file_t out_file;
+	
 
 	DEBUG_PRINT("functrace - initializing functrace\n");
 	drmgr_init();
@@ -78,16 +79,15 @@ void functrace_init(client_id_t id, const char * arguments)
 	DR_ASSERT(parse_commandline_args(arguments) == true);
 	tls_index = drmgr_register_tls_field();
 	head = md_initialize();
-	out_file = dr_open_file("C:\\Charith\\Dropbox\\Research\\development\\exalgo\\log\\out_file.txt", DR_FILE_WRITE_OVERWRITE);
-
+	
 
 	if (client_arg->filter_mode != FILTER_NONE){
 		in_file = dr_open_file(client_arg->in_filename, DR_FILE_READ);
 		md_read_from_file(head, in_file, false);
 		dr_close_file(in_file);
-		md_print_to_file(head,out_file);
-		dr_close_file(out_file);
 	}
+
+	
 
 
 }
@@ -152,7 +152,7 @@ functrace_thread_exit(void *drcontext){
 	
 	data = drmgr_get_tls_field(drcontext, tls_index);
 
-	stack_delete(data->stack);
+	//stack_delete(data->stack);
 
 	dr_fprintf(data->file, "functrace - exiting thread done %d\n", dr_get_thread_id(drcontext));
 	dr_thread_free(drcontext, data, sizeof(per_thread_t));
@@ -312,6 +312,13 @@ at_cti(app_pc instr_addr, app_pc target_addr){
 }
 
 
+dr_emit_flags_t
+functrace_bb_app2app(void *drcontext, void *tag, instrlist_t *bb,
+bool for_trace, bool translating)
+{
+	return DR_EMIT_DEFAULT;
+}
+
 /* callbacks for basic blocks */
 dr_emit_flags_t
 functrace_bb_analysis(void *drcontext, void *tag, instrlist_t *bb,
@@ -328,27 +335,42 @@ instr_t *instr, bool for_trace, bool translating,
 void *user_data)
 {
 
-	
-	if (instr_is_call_direct(instr)) {
-		dr_insert_call_instrumentation(drcontext, bb, instr, (app_pc)at_call);
-	}
-	else if (instr_is_call_indirect(instr)) {
-		dr_insert_mbr_instrumentation(drcontext, bb, instr, (app_pc)at_call,
-			SPILL_SLOT_1);
-	}
+	module_data_t * data;
+	char disassembly[250];
+	file_t out_file;
 
-	else if (instr_is_return(instr)) {
-		dr_insert_mbr_instrumentation(drcontext, bb, instr, (app_pc)at_return,
-			SPILL_SLOT_1);
+	DR_ASSERT(instr_ok_to_mangle(instr));
+
+	if (instr_ok_to_mangle(instr)){
+
+
+		if (instr_is_call_direct(instr)) {
+			dr_insert_call_instrumentation(drcontext, bb, instr, (app_pc)at_call);
+		}
+		else if (instr_is_call_indirect(instr)) {
+			dr_insert_mbr_instrumentation(drcontext, bb, instr, (app_pc)at_call,
+				SPILL_SLOT_1);
+		}
+		else if (instr_is_return(instr)) {
+			dr_insert_mbr_instrumentation(drcontext, bb, instr, (app_pc)at_return,
+				SPILL_SLOT_1);
+		}
+		else if (instr_is_mbr(instr)){
+			dr_insert_mbr_instrumentation(drcontext, bb, instr, (app_pc)at_cti,
+				SPILL_SLOT_1);
+		}
+		else if (instr_is_near_ubr(instr)){
+			dr_insert_ubr_instrumentation(drcontext, bb, instr, (app_pc)at_cti);
+		}
+		else if (instr_is_ubr(instr)){
+			dr_printf("WARNING : far cti detected\n");
+		}
+		else if (instr_is_far_cti(instr)){
+			dr_printf("WARNING : far cti detected\n");
+		}
+
+
 	}
-	else if (instr_is_mbr(instr)){
-		dr_insert_mbr_instrumentation(drcontext, bb, instr, (app_pc)at_cti,
-			SPILL_SLOT_1);
-	}
-	else if (instr_is_ubr(instr)){
-		dr_insert_ubr_instrumentation(drcontext, bb, instr, (app_pc)at_cti);
-	}
-	
 
 
 	return DR_EMIT_DEFAULT;
@@ -356,12 +378,7 @@ void *user_data)
 }
 
 
-dr_emit_flags_t
-functrace_bb_app2app(void *drcontext, void *tag, instrlist_t *bb,
-bool for_trace, bool translating)
-{
-	return DR_EMIT_DEFAULT;
-}
+
 
 
 

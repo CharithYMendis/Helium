@@ -1,6 +1,6 @@
+#include "inscount.h"
 #include "dr_api.h"
 #include "drmgr.h"
-#include "inscount.h"
 #include "utilities.h"
 #include "moduleinfo.h"
 #include "defines.h"

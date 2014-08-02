@@ -1,9 +1,9 @@
+#include "memtrace.h"
 #include <string.h> /* for memset */
 #include <stddef.h> /* for offsetof */
 #include "dr_api.h"
 #include "drmgr.h"
 #include "drutil.h"
-#include "memtrace.h"
 #include "utilities.h"
 #include "moduleinfo.h"
 #include "defines.h"
@@ -84,9 +84,10 @@ static bool parse_commandline_args (const char * args) {
 
 	client_arg = (client_arg_t *)dr_global_alloc(sizeof(client_arg_t));
 	if(dr_sscanf(args,"%s %d",&client_arg->in_filename,
-						   client_arg->filter_mode)!=2){
+						   &client_arg->filter_mode)!=2){
 		return false;
 	}
+
 
 	
 	return true;
@@ -97,13 +98,18 @@ void memtrace_init(client_id_t id,const char * arguments)
 
 	file_t in_file;
 
+	dr_printf("memtrace - initializing\n");
+
 	drmgr_init();
     drutil_init();
+
     client_id = id;
     mutex = dr_mutex_create();
 
 	DR_ASSERT(parse_commandline_args(arguments) == true);
+	
 	head = md_initialize();
+
 
 	if(client_arg->filter_mode != FILTER_NONE){
 		in_file = dr_open_file(client_arg->in_filename,DR_FILE_READ);
@@ -126,6 +132,8 @@ void memtrace_init(client_id_t id,const char * arguments)
         dr_fprintf(STDERR, "Client memtrace is running\n");
     }
 #endif
+
+	dr_printf("memtrace - initialized\n");
 }
 
 
@@ -210,13 +218,15 @@ void memtrace_thread_init(void *drcontext)
 	stack_base = &data->stack_base;
 
 	__asm{
-		mov EAX, FS : [0x04]
+			mov EAX, FS : [0x04]
 			mov EBX, stack_base
 			mov[EBX], EAX
 			mov EAX, FS : [0xE0C]
 			mov EBX, deallocation_stack
 			mov[EBX], EAX
 	}
+
+	dr_printf("stack boundaries - %x,%x\n", data->stack_base, data->stack_limit);
 
 
 }
@@ -244,10 +254,10 @@ dr_emit_flags_t
 memtrace_bb_app2app(void *drcontext, void *tag, instrlist_t *bb,
                  bool for_trace, bool translating)
 {
-    if (!drutil_expand_rep_string(drcontext, bb)) {
-        DR_ASSERT(false);
+    //if (!drutil_expand_rep_string(drcontext, bb)) {
+     //   DR_ASSERT(false);
         /* in release build, carry on: we'll just miss per-iter refs */
-    }
+    //}
     return DR_EMIT_DEFAULT;
 }
 
@@ -272,28 +282,29 @@ memtrace_bb_instrumentation(void *drcontext, void *tag, instrlist_t *bb,
 {
     int i;
 	reg_id_t reg;
-	
+	file_t out_file;
 
-	if(filter_from_list(head,instrlist_first(bb),client_arg->filter_mode)){
-		if (instr_reads_memory(instr)) {
-			for (i = 0; i < instr_num_srcs(instr); i++) {
-				if (opnd_is_base_disp(instr_get_src(instr, i))) {  //removing absolute memory refs
-					//filtering based on esp and ebp modules
-					reg = opnd_get_base(instr_get_src(instr,i));
-					if(reg == DR_REG_ESP || reg == DR_REG_EBP) continue;
-					instrument_mem(drcontext, bb, instr, i, false);
+	DR_ASSERT(instr_ok_to_mangle(instr));
+
+	if (instr_ok_to_mangle(instr)){
+		if (filter_from_list(head, instr, client_arg->filter_mode)){
+
+
+			if (instr_reads_memory(instr)) {
+				for (i = 0; i < instr_num_srcs(instr); i++) {
+					if (opnd_is_memory_reference(instr_get_src(instr, i))) {
+						instrument_mem(drcontext, bb, instr, i, false);
+					}
 				}
 			}
-		}
-		if (instr_writes_memory(instr)) {
-			for (i = 0; i < instr_num_dsts(instr); i++) {   //removing absolute memory refs
-				if (opnd_is_base_disp(instr_get_dst(instr, i))) {
-					//filtering based on esp and ebp modules
-					reg = opnd_get_base(instr_get_dst(instr,i));
-					if(reg == DR_REG_ESP || reg == DR_REG_EBP) continue;
-					instrument_mem(drcontext, bb, instr, i, true);
+			if (instr_writes_memory(instr)) {
+				for (i = 0; i < instr_num_dsts(instr); i++) {
+					if (opnd_is_memory_reference(instr_get_dst(instr, i))) {
+						instrument_mem(drcontext, bb, instr, i, true);
+					}
 				}
 			}
+
 		}
 	}
 
@@ -311,6 +322,8 @@ memtrace(void *drcontext)
     int i;
 #endif
 
+	module_data_t * mdata;
+
     data      = drmgr_get_tls_field(drcontext, tls_index);
     mem_ref   = (mem_ref_t *)data->buf_base;
     num_refs  = (int)((mem_ref_t *)data->buf_ptr - mem_ref);
@@ -318,11 +331,25 @@ memtrace(void *drcontext)
 #ifdef READABLE_TRACE
     /*dr_fprintf(data->log,
                "Format: <instr address>,<(r)ead/(w)rite>,<data size>,<data address>\n");*/
-    for (i = 0; i < num_refs; i++) {
-        dr_fprintf(data->log, PFX",%c,%d,"PFX"\n",
-                   mem_ref->pc, mem_ref->write ? 'w' : 'r', mem_ref->size, mem_ref->addr);
-        ++mem_ref;
-    }
+
+	for (i = 0; i < num_refs; i++) {
+		mdata = dr_lookup_module(mem_ref->pc);
+		if (mdata != NULL){
+			if (((uint)mem_ref->addr > data->stack_base) || ((uint)mem_ref->addr < data->stack_limit)){
+				dr_fprintf(data->log, "%x,%x,"PFX",%d,%d,"PFX"\n", mdata->start, mem_ref->pc - mdata->start,
+					mem_ref->pc, mem_ref->write ? 1 : 0 , mem_ref->size, mem_ref->addr);
+			}
+			dr_free_module_data(mdata);
+		}
+			
+		++mem_ref;
+	}
+
+
+	
+
+
+    
 #else
     dr_write_file(data->log, data->buf_base,
                   (size_t)(data->buf_ptr - data->buf_base));

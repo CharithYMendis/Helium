@@ -1,6 +1,7 @@
 #ifndef _INSTRACE_EXALGO_H
 #define _INSTRACE_EXALGO_H
  
+#include "dr_api.h"
 #include "defines.h"
 
  /*instrumentation routines*/

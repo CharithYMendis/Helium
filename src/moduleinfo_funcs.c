@@ -1,4 +1,4 @@
-#include "moduleinfo.h"
+#include "moduleinfo_funcs.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -310,38 +310,7 @@ void md_read_from_file (module_t * head, file_t file, bool extra_info){
 
 }
 
-void print_bb_info(bbinfo_t * bb, file_t file, bool extra_info){
-
-	int i = 0;
-
-	if (!extra_info){
-		dr_fprintf(file, "%x\n", bb->start_addr);
-	}
-	else{
-		/*func, bb_addr, size, freq, <from_bbs_count>, from_bb, freq, .., <caller_count>, caller, freq, ..., <to_bbs_count>, to_bbs, freq, ..., <callee_count>, callee, freq*/
-
-		if (bb->func != NULL){
-			dr_fprintf(file,"%x,", bb->func->start_addr);
-		}
-		else{
-			dr_fprintf(file, "0,");
-		}
-
-		dr_fprintf(file, "%x,%u,%u,%u,", bb->start_addr, bb->size, bb->freq, bb->from_bbs[0].start_addr);
-		for (i = 1; i <= bb->from_bbs[0].start_addr; i++){
-			dr_fprintf(file, "%x,%u,", bb->from_bbs[i].start_addr, bb->from_bbs[i].freq);
-		}
-		dr_fprintf(file, "%u,", bb->called_from[0].bb_addr);
-		for (i = 1; i <= bb->called_from[0].bb_addr; i++){
-			dr_fprintf(file, "%x,%u,", bb->called_from[i].bb_addr, bb->called_from[i].freq);
-		}
-		dr_fprintf(file, "\n");
-	}
-
-}
-
-
-void md_print_to_file (module_t * head,file_t file, bool extra_info){
+void md_print_to_file (module_t * head,file_t file){
 
 	/* output format
 		number of modules
@@ -371,12 +340,10 @@ void md_print_to_file (module_t * head,file_t file, bool extra_info){
 	head = head->next;
 	while(head != NULL){
 		dr_fprintf(file,"%s\n",head->module);
-		dr_fprintf(file, "%x\n", head->start_addr);
 		limit = head->bbs[0].start_addr;
 		dr_fprintf(file,"%u\n",limit);
 		for(i=1;i<=limit;i++){
-			print_bb_info(&head->bbs[i], file, extra_info);
-			//dr_fprintf(file,"%u\n",head->bbs[i].start_addr);
+			dr_fprintf(file,"%u\n",head->bbs[i].start_addr);
 		}
 		head = head->next;
 	}

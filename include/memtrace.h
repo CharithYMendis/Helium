@@ -1,5 +1,7 @@
 #ifndef _MEMTRACE_EXALGO_H
 #define _MEMTRACE_EXALGO_H
+
+#include "dr_api.h"
  
  /*instrumentation routines*/
 void memtrace_init(client_id_t id, 

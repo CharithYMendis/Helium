@@ -1,6 +1,8 @@
 #ifndef _INSCOUNT_EXALGO_H
 #define _INSCOUNT_EXALGO_H
 
+#include "dr_api.h"
+
  /*instrumentation routines*/
 void inscount_init(client_id_t id, const char * arguments);
 void inscount_exit_event(void);

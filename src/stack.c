@@ -1,4 +1,4 @@
-#include "dr_stack.h"
+#include "stack.h"
 
 
 bool stack_init(stack_t ** stack, uint capacity, void (*free_data_func) (void *)){

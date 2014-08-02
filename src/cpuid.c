@@ -1,7 +1,7 @@
+#include "cpuid.h"
 #include <stdio.h>
 #include "dr_api.h"
 #include "drmgr.h"
-#include "cpuid.h"
 #include "defines.h"
 
 
