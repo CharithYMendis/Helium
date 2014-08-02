@@ -1,17 +1,8 @@
 @echo off
 
-:: arguments
-:: bbinfo
-:: folder ,  in_filename , out_filename , summary_filename , threshold , mode
-:: cpuid
-:: memtrace
-:: inscount
-
-
-:: general main arguments
-:: -bbinfo %LOG_DIR% diff freq summary 0 2
-									   
-
+:: functrace - filter_file filter_mode
+:: profile - filter_file out_file summary_file threshold filter_mode
+:: memtrace - filter_file out_file filter_mode
 
 set LOG_DIR=C:\Charith\Dropbox\Research\development\exalgo\log\
 set LOG_DIR_DR=C:\Charith\Dropbox\Research\development\exalgo\log
@@ -31,39 +22,32 @@ set DYNAMORIO_HOME=%DYNAMORIO_32_DEBUG_HOME%
 set PHOTOSHOP="C:\Program Files (x86)\Adobe\Adobe Photoshop CS6\Photoshop.exe"
 )
 
-:: various runs based on options
-set BASIC_TEST="C:\Charith\Dropbox\Research\development\exalgo\tests\c_tests\output\image_blur.exe"
+
 set ASM_TEST="C:\Charith\Dropbox\Research\development\exalgo\tests\asm_1.exe"
-set HALIDE_TEST="C:\Charith\Dropbox\Research\development\exalgo\tests\halide_tests\output_tests_x86\halide_blur_test.exe"
-set FILTER_FILE="C:\Charith\Dropbox\Research\development\exalgo\tests\c_tests\filter_files\image_blur_filter.txt"
+set BASIC_TEST="C:\Charith\Dropbox\Research\development\exalgo\tests\c_tests\output\image_blur.exe"
 
-set FILTER="C:\Charith\Dropbox\Research\development\exalgo\log\filter_file.txt"
-set FILTER_FILENAME="filter_file"
-
-set HALIDE_FILTER_FILE="C:\Charith\Dropbox\Research\development\exalgo\tests\halide_tests\filter.txt"
-
+set HALIDE_TEST="C:\Charith\Dropbox\Research\development\exalgo\tests\halide_tests\output_tests_x86\%2.exe"
 set INPUT_IMAGE="C:\Charith\Dropbox\Research\development\exalgo\tests\images\forty.png"
 set OUTPUT_IMAGE="C:\Charith\Dropbox\Research\development\exalgo\tests\images\output.png"
 
-:: %DR_PATH% -debug -root %DYNAMORIO_HOME% -syntax_intel -c exalgo.dll -instrace 4 %LOG_DIR% hello.txt 300000 -- %ASM_TEST%
-:: -loglevel 3 -logdir %LOG_DIR_DR%
-:: %DR_PATH% -debug -root %DYNAMORIO_HOME% -syntax_intel -c exalgo.dll -inscount %FILTER_FILE% 3 -- %BASIC_TEST% %INPUT_IMAGE% %OUTPUT_IMAGE%
 
-:: %DR_PATH% -debug -root %DYNAMORIO_HOME% -syntax_intel -c exalgo.dll -instrace 3 %LOG_DIR% %FILTER_FILE% 300000 -- %BASIC_TEST% %INPUT_IMAGE% %OUTPUT_IMAGE%
+:: path locations
+set PREPROCESS_FOLDER=C:\Charith\Dropbox\Research\development\exalgo\preprocess
+set IN_FOLDER=%PREPROCESS_FOLDER%\in_files
+set OUT_FOLDER=%PREPROCESS_FOLDER%\out_files
 
-:: %DR_PATH% -debug -root %DYNAMORIO_HOME% -syntax_intel -c exalgo.dll -bbinfo %LOG_DIR% input output summary 0 6 -- %HALIDE_TEST% %INPUT_IMAGE% %OUTPUT_IMAGE%
+set OUT_EXT=txt
+set PROFILE_PREFIX=profile
+set SUMMARY_PREFIX=summary
+set MEMTRACE_PREFIX=memtrace
 
-:: %DR_PATH% -debug -root %DYNAMORIO_HOME% -syntax_intel -c exalgo.dll -functrace %FILTER% 5 -- %HALIDE_TEST% %INPUT_IMAGE% %OUTPUT_IMAGE%
+set FILTER_FILE=%IN_FOLDER%\filter_file.txt
+set PROFILE_FILE=%OUT_FOLDER%\%PROFILE_PREFIX%_%2.%OUT_EXT%
+set SUMMARY_FILE=%OUT_FOLDER%\%SUMMARY_PREFIX%_%2.%OUT_EXT%
+set MEMTRACE_FILE=%OUT_FOLDER%\%MEMTRACE_PREFIX%_%2
 
-%DR_PATH% -debug -root %DYNAMORIO_HOME% -syntax_intel -max_elide_jmp 0 -c exalgo.dll -functrace %FILTER% 5 -bbinfo %LOG_DIR% filter_file output summary 0 5 -memtrace %FILTER% 5 -- %HALIDE_TEST% %INPUT_IMAGE% %OUTPUT_IMAGE%
+del %MEMTRACE_FILE%*
 
-:: -memtrace %FILTER% 5
-
-:: -instrace 3 %LOG_DIR% %FILTER_FILE% 300000
-
-:: -syntax_intel -c exalgo.dll -instrace 3 %LOG_DIR% %FILTER_FILE% 300000 -- %BASIC_TEST%
-
-:: %DR_PATH% -debug -root %DYNAMORIO_HOME% -logdir %LOG_DIR_DR% -msgbox_mask 0xf -- %BASIC_TEST%
-
+%DR_PATH% -debug -root %DYNAMORIO_HOME% -syntax_intel -c exalgo.dll -functrace %FILTER_FILE% 5 -bbinfo %FILTER_FILE% %PROFILE_FILE% %SUMMARY_FILE% 10 5 -memtrace %FILTER_FILE% %MEMTRACE_FILE% 5 -- %HALIDE_TEST% %INPUT_IMAGE% %OUTPUT_IMAGE%
 
 cd %CURRENT_DIR%

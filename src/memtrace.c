@@ -73,7 +73,8 @@ static bool parse_commandline_args (const char * args);
 
 
 typedef struct _client_arg_t{
-	char in_filename[MAX_STRING_LENGTH];
+	char filter_filename[MAX_STRING_LENGTH];
+	char out_filename[MAX_STRING_LENGTH];
 	uint filter_mode;
 } client_arg_t;
 
@@ -83,8 +84,9 @@ static module_t * head;
 static bool parse_commandline_args (const char * args) {
 
 	client_arg = (client_arg_t *)dr_global_alloc(sizeof(client_arg_t));
-	if(dr_sscanf(args,"%s %d",&client_arg->in_filename,
-						   &client_arg->filter_mode)!=2){
+	if(dr_sscanf(args,"%s %s %d",&client_arg->filter_filename,
+								&client_arg->out_filename,
+								&client_arg->filter_mode)!=3){
 		return false;
 	}
 
@@ -112,7 +114,7 @@ void memtrace_init(client_id_t id,const char * arguments)
 
 
 	if(client_arg->filter_mode != FILTER_NONE){
-		in_file = dr_open_file(client_arg->in_filename,DR_FILE_READ);
+		in_file = dr_open_file(client_arg->filter_filename,DR_FILE_READ);
 		md_read_from_file(head,in_file,false);
 		dr_close_file(in_file);
 	}
@@ -167,13 +169,15 @@ void memtrace_exit_event()
 
 void memtrace_thread_init(void *drcontext)
 {
-    char logname[MAXIMUM_PATH];
+    char logname[2*MAXIMUM_PATH];
     char *dirsep;
     int len;
     per_thread_t *data;
 
 	uint * stack_base;
 	uint * deallocation_stack;
+
+	int i = 0;
 
     /* allocate thread private data */
     data = dr_thread_alloc(drcontext, sizeof(per_thread_t));
@@ -189,28 +193,24 @@ void memtrace_thread_init(void *drcontext)
      * the same directory as our library. We could also pass
      * in a path and retrieve with dr_get_options().
      */
-    len = dr_snprintf(logname, sizeof(logname)/sizeof(logname[0]),
-                      "%s", dr_get_client_path(client_id));
-    DR_ASSERT(len > 0);
-    for (dirsep = logname + len; *dirsep != '/' IF_WINDOWS(&& *dirsep != '\\'); dirsep--)
-        DR_ASSERT(dirsep > logname);
-    len = dr_snprintf(dirsep + 1,
-                      (sizeof(logname) - (dirsep - logname))/sizeof(logname[0]),
-                      "memtrace.%d.log", dr_get_thread_id(drcontext));
-    DR_ASSERT(len > 0);
-    NULL_TERMINATE(logname);
+	strncpy(logname, client_arg->out_filename, 2*MAXIMUM_PATH);
+
+	dirsep = logname;
+	for (i = 0; i < 2 * MAXIMUM_PATH; i++){
+		if (*dirsep == 0){
+			break;
+		}
+		dirsep++;
+	}
+
+	len = dr_snprintf(dirsep, (sizeof(logname) - (dirsep - logname)) / sizeof(logname[0]), ".%d.txt", dr_get_thread_id(drcontext));
+
+	DR_ASSERT(len > 0);
+	NULL_TERMINATE(logname);
+	
     data->log = dr_open_file(logname,
                              DR_FILE_WRITE_OVERWRITE | DR_FILE_ALLOW_LARGE);
     DR_ASSERT(data->log != INVALID_FILE);
-    dr_log(drcontext, LOG_ALL, 1,
-           "memtrace: log for thread "TIDFMT" is memtrace.%03d\n",
-           dr_get_thread_id(drcontext), dr_get_thread_id(drcontext));
-#ifdef SHOW_RESULTS
-    if (dr_is_notify_on()) {
-        dr_fprintf(STDERR, "<memtrace results for thread "TIDFMT" in %s>\n",
-                   dr_get_thread_id(drcontext), logname);
-    }
-#endif
 
 
 	/* this is done for 32 bit applications */

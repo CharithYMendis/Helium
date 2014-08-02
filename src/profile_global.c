@@ -75,8 +75,7 @@ typedef struct _client_arg_t {
 
 	uint filter_mode;
 	uint threshold;
-	char folder[MAX_STRING_LENGTH];
-	char in_filename[MAX_STRING_LENGTH];
+	char filter_filename[MAX_STRING_LENGTH];
 	char out_filename[MAX_STRING_LENGTH];
 	char summary_filename[MAX_STRING_LENGTH];
 	
@@ -112,13 +111,12 @@ static client_arg_t * client_arg;
 static bool parse_commandline_args(const char * args) {
 
 	client_arg = (client_arg_t *)dr_global_alloc(sizeof(client_arg_t));
-	if (dr_sscanf(args, "%s %s %s %s %u %u",
-		&client_arg->folder,
-		&client_arg->in_filename,
+	if (dr_sscanf(args, "%s %s %s %u %u",
+		&client_arg->filter_filename,
 		&client_arg->out_filename,
 		&client_arg->summary_filename,
 		&client_arg->threshold,
-		&client_arg->filter_mode) != 6){
+		&client_arg->filter_mode) != 5){
 		return false;
 	}
 
@@ -140,8 +138,7 @@ void bbinfo_init(client_id_t id,
 	//get the output files
 	parse_commandline_args(arguments);
 
-
-	get_full_filename_with_process(client_arg->out_filename,filename,dr_get_process_id());
+	strncpy(filename, client_arg->out_filename, MAX_STRING_LENGTH);
 		
 	if(dr_file_exists(filename)){
 		dr_delete_file(filename);
@@ -149,7 +146,7 @@ void bbinfo_init(client_id_t id,
 
 	out_file = dr_open_file(filename,DR_FILE_WRITE_OVERWRITE);
 
-	get_full_filename_with_process(client_arg->summary_filename,filename,dr_get_process_id());
+	strncpy(filename, client_arg->summary_filename, MAX_STRING_LENGTH);
 
 	if(dr_file_exists(filename)){
 		dr_delete_file(filename);
@@ -158,7 +155,7 @@ void bbinfo_init(client_id_t id,
 	summary_file = dr_open_file(filename,DR_FILE_WRITE_OVERWRITE);
 
 	if(client_arg->filter_mode != FILTER_NONE){
-		get_full_filename(client_arg->in_filename,filename);
+		strncpy(filename, client_arg->filter_filename, MAX_STRING_LENGTH);
 
 		if(!dr_file_exists(filename)){
 			DR_ASSERT_MSG(false,"input file missing\n");
@@ -517,7 +514,7 @@ bbinfo_bb_instrumentation(void *drcontext, void *tag, instrlist_t *bb,
 
 /* debug and auxiliary functions */
 
-static void print_commandline_args (client_arg_t * args){
+/*static void print_commandline_args (client_arg_t * args){
 	
 	dr_printf("%s - %s - %s - %s\n",args->folder,args->in_filename,args->out_filename,client_arg->summary_filename);
 }
@@ -558,4 +555,4 @@ static void get_full_filename(char * fileName,char * dest){
 	//construct the filename
 	strncat(dest,fileName,MAX_STRING_LENGTH);
 	strncat(dest,".txt",MAX_STRING_LENGTH);
-}
+}*/

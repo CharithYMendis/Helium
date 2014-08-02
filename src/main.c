@@ -37,7 +37,7 @@ typedef struct _instrumentation_pass_t {
 typedef struct _cmdarguments_t {
 	
 	char name[MAX_STRING_LENGTH];
-	char arguments[MAX_STRING_LENGTH];
+	char arguments[2*MAX_STRING_LENGTH];
 
 } cmdarguments_t;
 
