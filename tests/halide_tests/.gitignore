@@ -1,4 +1,4 @@
 #ignore everything
-build32/
+build*/
 output*/
-bin32/
+bin*/

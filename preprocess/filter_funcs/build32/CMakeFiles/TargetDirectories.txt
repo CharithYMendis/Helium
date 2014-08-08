@@ -1,3 +1,0 @@
-C:/Charith/Dropbox/Research/development/exalgo/preprocess/filter_funcs/build32/CMakeFiles/ALL_BUILD.dir
-C:/Charith/Dropbox/Research/development/exalgo/preprocess/filter_funcs/build32/CMakeFiles/ZERO_CHECK.dir
-C:/Charith/Dropbox/Research/development/exalgo/preprocess/filter_funcs/build32/CMakeFiles/filter.dir

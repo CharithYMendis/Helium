@@ -1,8 +1,0 @@
-C:/Charith/Dropbox/Research/development/exalgo/tests/halide_tests/build32/CMakeFiles/ALL_BUILD.dir
-C:/Charith/Dropbox/Research/development/exalgo/tests/halide_tests/build32/CMakeFiles/ZERO_CHECK.dir
-C:/Charith/Dropbox/Research/development/exalgo/tests/halide_tests/build32/CMakeFiles/halide_blur.dir
-C:/Charith/Dropbox/Research/development/exalgo/tests/halide_tests/build32/CMakeFiles/halide_blur_test.dir
-C:/Charith/Dropbox/Research/development/exalgo/tests/halide_tests/build32/CMakeFiles/halide_input_dep.dir
-C:/Charith/Dropbox/Research/development/exalgo/tests/halide_tests/build32/CMakeFiles/halide_input_dep_test.dir
-C:/Charith/Dropbox/Research/development/exalgo/tests/halide_tests/build32/CMakeFiles/halide_rotate.dir
-C:/Charith/Dropbox/Research/development/exalgo/tests/halide_tests/build32/CMakeFiles/halide_rotate_test.dir
