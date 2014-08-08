@@ -36,17 +36,12 @@ endmacro(change_config)
 #end of functions
 
 
-
-
-
-
-
-set(HALIDE_OWN_BUILD ON)
+set(HALIDE_OWN_BUILD OFF)
 
 if(HALIDE_OWN_BUILD)
-	set(HALIDE_DIRECTORY "C:/Charith/libraries/Halide_prebuilt")
-else(HALIDE_OWN_BUILD)
 	set(HALIDE_DIRECTORY "C:/Charith/libraries/Halide_build")
+else(HALIDE_OWN_BUILD)
+	set(HALIDE_DIRECTORY "C:/Charith/libraries/Halide_prebuilt")
 endif(HALIDE_OWN_BUILD)
 
 message(STATUS "${TYPE}")
@@ -102,7 +97,17 @@ macro(build_app name)
 	#halide app build
 	include_directories(${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 	link_directories(${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-	set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/output_tests_${TYPE})
+	
+	if( CMAKE_SIZEOF_VOID_P EQUAL 8 )
+		file(MAKE_DIRECTORY "${CMAKE_SOURCE_DIR}/bin64")
+		set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/bin64")
+	else( CMAKE_SIZEOF_VOID_P EQUAL 8 )
+		file(MAKE_DIRECTORY "${CMAKE_SOURCE_DIR}/bin32")
+		set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/bin32")
+	endif( CMAKE_SIZEOF_VOID_P EQUAL 8 )
+	
+	#set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/output_tests_${TYPE})
+	
 	change_config()
 
 	if(FIRST)

@@ -45,6 +45,8 @@ src/main.cpp
 src/meminfo.cpp
 src/moduleinfo.cpp
 src/image_manipulation.cpp
+src/utilities.cpp
+src/filter_logic.cpp
 
 )
 

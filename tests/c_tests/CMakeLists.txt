@@ -23,11 +23,6 @@ project(tests)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}")
 
-file(MAKE_DIRECTORY "../output")
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "../output")
-# set(EXECUTABLE_OUTPUT_PATH "../output")
-
-
 if ("${CMAKE_GENERATOR}" MATCHES "Visual Studio")
   # we don't support the Debug and Release subdirs
   foreach (config ${CMAKE_CONFIGURATION_TYPES})
@@ -40,6 +35,14 @@ if ("${CMAKE_GENERATOR}" MATCHES "Visual Studio")
       "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}")
   endforeach ()
 endif ()
+
+if( CMAKE_SIZEOF_VOID_P EQUAL 8 )
+    file(MAKE_DIRECTORY "${CMAKE_SOURCE_DIR}/bin64")
+	set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/bin64")
+else( CMAKE_SIZEOF_VOID_P EQUAL 8 )
+	file(MAKE_DIRECTORY "${CMAKE_SOURCE_DIR}/bin32")
+	set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/bin32")
+endif( CMAKE_SIZEOF_VOID_P EQUAL 8 )
 
 include_directories("include_image")
 include_directories("include")

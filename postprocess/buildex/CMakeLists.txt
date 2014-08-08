@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 2.6)
+project(buildex)
 
 # To match Makefiles and have just one build type per configured build
 # dir, we collapse VS generator configs to a single choice.
@@ -18,7 +19,7 @@ else ("${CMAKE_GENERATOR}" MATCHES "Visual Studio")
   set(location_suffix "")
 endif ("${CMAKE_GENERATOR}" MATCHES "Visual Studio")
 
-project(buildex)
+
 
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}")

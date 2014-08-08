@@ -1,7 +1,7 @@
  #ifndef _NODE_H
  #define _NODE_H
  
-#include  "..\..\..\include\output.h"
+#include  "..\..\..\dr_clients\include\output.h"
 #include <vector>
 
 #define NODE_RIGHT	1

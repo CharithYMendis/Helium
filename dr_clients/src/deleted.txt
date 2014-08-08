@@ -1,0 +1,64 @@
+/*bool expanded;
+	char stringop[MAX_STRING_LENGTH];
+	instr_t * instr;
+	per_thread_t * data = drmgr_get_tls_field(drcontext,tls_index);
+	instr_t * first, * test, * last, * label, * jz, * main;
+	opnd_t opnd;
+	int i;
+
+	
+
+	instrlist_disassemble(drcontext,instr_get_app_pc(instrlist_first(bb)),bb,data->log);
+	
+	if (!drutil_expand_rep_string_ex(drcontext, bb,&expanded,&instr)) {
+        DR_ASSERT(false);
+    }
+
+	if(expanded){
+
+		dr_fprintf(data->log,"expanded\n");
+		instrlist_disassemble(drcontext,instr_get_app_pc(instrlist_first(bb)),bb,data->log);
+
+		first = instrlist_first(bb);
+		last = instrlist_last(bb);
+
+		//need to get the main instruction
+		main = first;
+		for(i=0; i<5;i++){
+			main = instr_get_next(main);
+		}
+		instr_disassemble_to_buffer(drcontext,main,stringop,MAX_STRING_LENGTH);
+		dr_printf("%s\n",stringop);
+
+
+		label = INSTR_CREATE_label(drcontext);
+		instrlist_meta_preinsert(bb,first,label);
+
+		dr_save_reg(drcontext,bb,first,DR_REG_XAX,SPILL_SLOT_2);
+		dr_save_arith_flags_to_xax(drcontext,bb,first);
+
+		test = INSTR_CREATE_test(drcontext,opnd_create_reg(DR_REG_XCX),opnd_create_reg(DR_REG_XCX));
+		instrlist_meta_preinsert(bb,first,test);
+		
+		opnd = instr_get_target(first);
+		opnd_disassemble_to_buffer(drcontext,opnd,stringop,MAX_STRING_LENGTH);
+		dr_printf("%s\n",stringop);
+
+		jz = INSTR_CREATE_jcc(drcontext,OP_jz,opnd);
+		instrlist_preinsert(bb,first,jz);
+		instr_set_next(jz,instr_get_next(first));
+
+		dr_restore_arith_flags_from_xax(drcontext,bb,main);
+		dr_restore_reg(drcontext,bb,main,DR_REG_XAX,SPILL_SLOT_2);
+
+		//instr_set_target(last,opnd_create_instr(label));
+
+		dr_fprintf(data->log,"after change\n");
+		instrlist_disassemble(drcontext,instr_get_app_pc(instrlist_first(bb)),bb,data->log);
+		
+		dr_printf("expanded string\n");
+		instr_disassemble_to_buffer(drcontext,instr,stringop,MAX_STRING_LENGTH);
+		dr_printf("%s\n",stringop);
+		//instr_destroy(drcontext,instr);
+	}*/
+	

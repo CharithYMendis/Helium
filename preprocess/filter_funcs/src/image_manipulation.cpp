@@ -16,9 +16,10 @@ void shutdown_image_subsystem(ULONG_PTR token){
 	Gdiplus::GdiplusShutdown(token);
 }
 
-image_t * populate_imageinfo(char * filename){
+image_t * populate_imageinfo(const char * filename){
 
-	wchar_t * file_wchar = new wchar_t[strlen(filename) + 1];;
+	wchar_t * file_wchar = new wchar_t[strlen(filename) + 1];
+
 	mbstowcs(file_wchar, filename, strlen(filename) + 1);
 
 	Gdiplus::Bitmap *image = Gdiplus::Bitmap::FromFile(file_wchar);

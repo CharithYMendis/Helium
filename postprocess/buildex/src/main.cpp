@@ -143,6 +143,7 @@
 
 		bool ok; 
 
+
 		/* get a random memory output location - this should be changed so that the location will always be from the output image */
 		mem_regions_t * mem_region = get_random_output_region(mem_regions);
 		uint64 mem_location = get_random_mem_location(mem_region, 1, 10, &ok);

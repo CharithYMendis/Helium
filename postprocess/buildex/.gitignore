@@ -1,4 +1,4 @@
-build_32/
-build/
+build*/
 tests/
+obj/
 *.exe

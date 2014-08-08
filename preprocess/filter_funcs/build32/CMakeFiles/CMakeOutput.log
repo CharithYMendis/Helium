@@ -1,0 +1,285 @@
+The system is: Windows - 6.1 - AMD64
+Compiling the C compiler identification source file "CMakeCCompilerId.c" succeeded.
+Compiler:  
+Build flags: 
+Id flags: 
+
+The output was:
+0
+Microsoft (R) Build Engine version 12.0.30501.0
+[Microsoft .NET Framework, version 4.0.30319.18444]
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+Build started 8/8/2014 11:26:06 PM.
+Project "C:\Charith\Dropbox\Research\development\exalgo\preprocess\filter_funcs\build32\CMakeFiles\2.8.11.2\CompilerIdC\CompilerIdC.vcxproj" on node 1 (default targets).
+PrepareForBuild:
+  Creating directory "Debug\".
+C:\Program Files (x86)\MSBuild\Microsoft.Cpp\v4.0\V120\Microsoft.CppBuild.targets(396,5): warning MSB8029: The Intermediate directory or Output directory cannot reside under the Temporary directory as it could lead to issues with incremental build. [C:\Charith\Dropbox\Research\development\exalgo\preprocess\filter_funcs\build32\CMakeFiles\2.8.11.2\CompilerIdC\CompilerIdC.vcxproj]
+  Creating directory "Debug\CompilerIdC.tlog\".
+InitializeBuildStatus:
+  Creating "Debug\CompilerIdC.tlog\unsuccessfulbuild" because "AlwaysCreate" was specified.
+ClCompile:
+  C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\CL.exe /c /nologo /W0 /WX- /Od /Oy- /D _MBCS /Gm- /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Fo"Debug\\" /Fd"Debug\vc120.pdb" /Gd /TC /analyze- /errorReport:queue CMakeCCompilerId.c
+  CMakeCCompilerId.c
+Link:
+  C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\link.exe /ERRORREPORT:QUEUE /OUT:".\CompilerIdC.exe" /INCREMENTAL:NO /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /PDB:".\CompilerIdC.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:".\CompilerIdC.lib" /MACHINE:X86 /SAFESEH Debug\CMakeCCompilerId.obj
+  CompilerIdC.vcxproj -> C:\Charith\Dropbox\Research\development\exalgo\preprocess\filter_funcs\build32\CMakeFiles\2.8.11.2\CompilerIdC\.\CompilerIdC.exe
+PostBuildEvent:
+  for %%i in (cl.exe) do @echo CMAKE_C_COMPILER=%%~$PATH:i
+  :VCEnd
+  CMAKE_C_COMPILER=C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\cl.exe
+FinalizeBuildStatus:
+  Deleting file "Debug\CompilerIdC.tlog\unsuccessfulbuild".
+  Touching "Debug\CompilerIdC.tlog\CompilerIdC.lastbuildstate".
+Done Building Project "C:\Charith\Dropbox\Research\development\exalgo\preprocess\filter_funcs\build32\CMakeFiles\2.8.11.2\CompilerIdC\CompilerIdC.vcxproj" (default targets).
+
+Build succeeded.
+
+"C:\Charith\Dropbox\Research\development\exalgo\preprocess\filter_funcs\build32\CMakeFiles\2.8.11.2\CompilerIdC\CompilerIdC.vcxproj" (default target) (1) ->
+(PrepareForBuild target) -> 
+  C:\Program Files (x86)\MSBuild\Microsoft.Cpp\v4.0\V120\Microsoft.CppBuild.targets(396,5): warning MSB8029: The Intermediate directory or Output directory cannot reside under the Temporary directory as it could lead to issues with incremental build. [C:\Charith\Dropbox\Research\development\exalgo\preprocess\filter_funcs\build32\CMakeFiles\2.8.11.2\CompilerIdC\CompilerIdC.vcxproj]
+
+    1 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:03.15
+
+
+Compilation of the C compiler identification source "CMakeCCompilerId.c" produced "CompilerIdC.exe"
+
+Compilation of the C compiler identification source "CMakeCCompilerId.c" produced "CompilerIdC.vcxproj"
+
+The C compiler identification is MSVC, found in "C:/Charith/Dropbox/Research/development/exalgo/preprocess/filter_funcs/build32/CMakeFiles/2.8.11.2/CompilerIdC/CompilerIdC.exe"
+
+Compiling the CXX compiler identification source file "CMakeCXXCompilerId.cpp" succeeded.
+Compiler:  
+Build flags: 
+Id flags: 
+
+The output was:
+0
+Microsoft (R) Build Engine version 12.0.30501.0
+[Microsoft .NET Framework, version 4.0.30319.18444]
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+Build started 8/8/2014 11:26:10 PM.
+Project "C:\Charith\Dropbox\Research\development\exalgo\preprocess\filter_funcs\build32\CMakeFiles\2.8.11.2\CompilerIdCXX\CompilerIdCXX.vcxproj" on node 1 (default targets).
+PrepareForBuild:
+  Creating directory "Debug\".
+C:\Program Files (x86)\MSBuild\Microsoft.Cpp\v4.0\V120\Microsoft.CppBuild.targets(396,5): warning MSB8029: The Intermediate directory or Output directory cannot reside under the Temporary directory as it could lead to issues with incremental build. [C:\Charith\Dropbox\Research\development\exalgo\preprocess\filter_funcs\build32\CMakeFiles\2.8.11.2\CompilerIdCXX\CompilerIdCXX.vcxproj]
+  Creating directory "Debug\CompilerIdCXX.tlog\".
+InitializeBuildStatus:
+  Creating "Debug\CompilerIdCXX.tlog\unsuccessfulbuild" because "AlwaysCreate" was specified.
+ClCompile:
+  C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\CL.exe /c /nologo /W0 /WX- /Od /Oy- /D _MBCS /Gm- /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Fo"Debug\\" /Fd"Debug\vc120.pdb" /Gd /TP /analyze- /errorReport:queue CMakeCXXCompilerId.cpp
+  CMakeCXXCompilerId.cpp
+Link:
+  C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\link.exe /ERRORREPORT:QUEUE /OUT:".\CompilerIdCXX.exe" /INCREMENTAL:NO /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /PDB:".\CompilerIdCXX.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:".\CompilerIdCXX.lib" /MACHINE:X86 /SAFESEH Debug\CMakeCXXCompilerId.obj
+  CompilerIdCXX.vcxproj -> C:\Charith\Dropbox\Research\development\exalgo\preprocess\filter_funcs\build32\CMakeFiles\2.8.11.2\CompilerIdCXX\.\CompilerIdCXX.exe
+PostBuildEvent:
+  for %%i in (cl.exe) do @echo CMAKE_CXX_COMPILER=%%~$PATH:i
+  :VCEnd
+  CMAKE_CXX_COMPILER=C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\cl.exe
+FinalizeBuildStatus:
+  Deleting file "Debug\CompilerIdCXX.tlog\unsuccessfulbuild".
+  Touching "Debug\CompilerIdCXX.tlog\CompilerIdCXX.lastbuildstate".
+Done Building Project "C:\Charith\Dropbox\Research\development\exalgo\preprocess\filter_funcs\build32\CMakeFiles\2.8.11.2\CompilerIdCXX\CompilerIdCXX.vcxproj" (default targets).
+
+Build succeeded.
+
+"C:\Charith\Dropbox\Research\development\exalgo\preprocess\filter_funcs\build32\CMakeFiles\2.8.11.2\CompilerIdCXX\CompilerIdCXX.vcxproj" (default target) (1) ->
+(PrepareForBuild target) -> 
+  C:\Program Files (x86)\MSBuild\Microsoft.Cpp\v4.0\V120\Microsoft.CppBuild.targets(396,5): warning MSB8029: The Intermediate directory or Output directory cannot reside under the Temporary directory as it could lead to issues with incremental build. [C:\Charith\Dropbox\Research\development\exalgo\preprocess\filter_funcs\build32\CMakeFiles\2.8.11.2\CompilerIdCXX\CompilerIdCXX.vcxproj]
+
+    1 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:01.24
+
+
+Compilation of the CXX compiler identification source "CMakeCXXCompilerId.cpp" produced "CompilerIdCXX.exe"
+
+Compilation of the CXX compiler identification source "CMakeCXXCompilerId.cpp" produced "CompilerIdCXX.vcxproj"
+
+The CXX compiler identification is MSVC, found in "C:/Charith/Dropbox/Research/development/exalgo/preprocess/filter_funcs/build32/CMakeFiles/2.8.11.2/CompilerIdCXX/CompilerIdCXX.exe"
+
+Determining if the C compiler works passed with the following output:
+Change Dir: C:/Charith/Dropbox/Research/development/exalgo/preprocess/filter_funcs/build32/CMakeFiles/CMakeTmp
+
+Run Build Command:C:\PROGRA~2\MSBuild\12.0\Bin\MSBuild.exe cmTryCompileExec1155500176.vcxproj /p:Configuration=Debug /p:VisualStudioVersion=12.0
+Microsoft (R) Build Engine version 12.0.30501.0
+[Microsoft .NET Framework, version 4.0.30319.18444]
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+Build started 8/8/2014 11:26:11 PM.
+Project "C:\Charith\Dropbox\Research\development\exalgo\preprocess\filter_funcs\build32\CMakeFiles\CMakeTmp\cmTryCompileExec1155500176.vcxproj" on node 1 (default targets).
+PrepareForBuild:
+  Creating directory "cmTryCompileExec1155500176.dir\Debug\".
+C:\Program Files (x86)\MSBuild\Microsoft.Cpp\v4.0\V120\Microsoft.CppBuild.targets(396,5): warning MSB8029: The Intermediate directory or Output directory cannot reside under the Temporary directory as it could lead to issues with incremental build. [C:\Charith\Dropbox\Research\development\exalgo\preprocess\filter_funcs\build32\CMakeFiles\CMakeTmp\cmTryCompileExec1155500176.vcxproj]
+  Creating directory "C:\Charith\Dropbox\Research\development\exalgo\preprocess\filter_funcs\build32\CMakeFiles\CMakeTmp\Debug\".
+  Creating directory "cmTryCompileExec1155500176.dir\Debug\cmTryCom.1C522AF3.tlog\".
+InitializeBuildStatus:
+  Creating "cmTryCompileExec1155500176.dir\Debug\cmTryCom.1C522AF3.tlog\unsuccessfulbuild" because "AlwaysCreate" was specified.
+ClCompile:
+  C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\CL.exe /c /Zi /W3 /WX- /Od /Ob0 /Oy- /D WIN32 /D _WINDOWS /D _DEBUG /D "CMAKE_INTDIR=\"Debug\"" /D _MBCS /Gm- /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Fo"cmTryCompileExec1155500176.dir\Debug\\" /Fd"C:/Charith/Dropbox/Research/development/exalgo/preprocess/filter_funcs/build32/CMakeFiles/CMakeTmp/Debug/cmTryCompileExec1155500176.pdb" /Gd /TC /analyze- /errorReport:queue testCCompiler.c
+  Microsoft (R) C/C++ Optimizing Compiler Version 18.00.30501 for x86
+  Copyright (C) Microsoft Corporation.  All rights reserved.
+  
+  cl /c /Zi /W3 /WX- /Od /Ob0 /Oy- /D WIN32 /D _WINDOWS /D _DEBUG /D "CMAKE_INTDIR=\"Debug\"" /D _MBCS /Gm- /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Fo"cmTryCompileExec1155500176.dir\Debug\\" /Fd"C:/Charith/Dropbox/Research/development/exalgo/preprocess/filter_funcs/build32/CMakeFiles/CMakeTmp/Debug/cmTryCompileExec1155500176.pdb" /Gd /TC /analyze- /errorReport:queue testCCompiler.c
+  
+  testCCompiler.c
+Link:
+  C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\link.exe /ERRORREPORT:QUEUE /OUT:"C:\Charith\Dropbox\Research\development\exalgo\preprocess\filter_funcs\build32\CMakeFiles\CMakeTmp\Debug\cmTryCompileExec1155500176.exe" /INCREMENTAL /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"C:/Charith/Dropbox/Research/development/exalgo/preprocess/filter_funcs/build32/CMakeFiles/CMakeTmp/Debug/cmTryCompileExec1155500176.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"C:/Charith/Dropbox/Research/development/exalgo/preprocess/filter_funcs/build32/CMakeFiles/CMakeTmp/Debug/cmTryCompileExec1155500176.lib" /MACHINE:X86 /SAFESEH  /machine:X86 /debug cmTryCompileExec1155500176.dir\Debug\testCCompiler.obj
+  cmTryCompileExec1155500176.vcxproj -> C:\Charith\Dropbox\Research\development\exalgo\preprocess\filter_funcs\build32\CMakeFiles\CMakeTmp\Debug\cmTryCompileExec1155500176.exe
+FinalizeBuildStatus:
+  Deleting file "cmTryCompileExec1155500176.dir\Debug\cmTryCom.1C522AF3.tlog\unsuccessfulbuild".
+  Touching "cmTryCompileExec1155500176.dir\Debug\cmTryCom.1C522AF3.tlog\cmTryCompileExec1155500176.lastbuildstate".
+Done Building Project "C:\Charith\Dropbox\Research\development\exalgo\preprocess\filter_funcs\build32\CMakeFiles\CMakeTmp\cmTryCompileExec1155500176.vcxproj" (default targets).
+
+Build succeeded.
+
+"C:\Charith\Dropbox\Research\development\exalgo\preprocess\filter_funcs\build32\CMakeFiles\CMakeTmp\cmTryCompileExec1155500176.vcxproj" (default target) (1) ->
+(PrepareForBuild target) -> 
+  C:\Program Files (x86)\MSBuild\Microsoft.Cpp\v4.0\V120\Microsoft.CppBuild.targets(396,5): warning MSB8029: The Intermediate directory or Output directory cannot reside under the Temporary directory as it could lead to issues with incremental build. [C:\Charith\Dropbox\Research\development\exalgo\preprocess\filter_funcs\build32\CMakeFiles\CMakeTmp\cmTryCompileExec1155500176.vcxproj]
+
+    1 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:03.24
+
+
+Detecting C compiler ABI info compiled with the following output:
+Change Dir: C:/Charith/Dropbox/Research/development/exalgo/preprocess/filter_funcs/build32/CMakeFiles/CMakeTmp
+
+Run Build Command:C:\PROGRA~2\MSBuild\12.0\Bin\MSBuild.exe cmTryCompileExec3939292509.vcxproj /p:Configuration=Debug /p:VisualStudioVersion=12.0
+Microsoft (R) Build Engine version 12.0.30501.0
+[Microsoft .NET Framework, version 4.0.30319.18444]
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+Build started 8/8/2014 11:26:15 PM.
+Project "C:\Charith\Dropbox\Research\development\exalgo\preprocess\filter_funcs\build32\CMakeFiles\CMakeTmp\cmTryCompileExec3939292509.vcxproj" on node 1 (default targets).
+PrepareForBuild:
+  Creating directory "cmTryCompileExec3939292509.dir\Debug\".
+C:\Program Files (x86)\MSBuild\Microsoft.Cpp\v4.0\V120\Microsoft.CppBuild.targets(396,5): warning MSB8029: The Intermediate directory or Output directory cannot reside under the Temporary directory as it could lead to issues with incremental build. [C:\Charith\Dropbox\Research\development\exalgo\preprocess\filter_funcs\build32\CMakeFiles\CMakeTmp\cmTryCompileExec3939292509.vcxproj]
+  Creating directory "C:\Charith\Dropbox\Research\development\exalgo\preprocess\filter_funcs\build32\CMakeFiles\CMakeTmp\Debug\".
+  Creating directory "cmTryCompileExec3939292509.dir\Debug\cmTryCom.E70C4CCC.tlog\".
+InitializeBuildStatus:
+  Creating "cmTryCompileExec3939292509.dir\Debug\cmTryCom.E70C4CCC.tlog\unsuccessfulbuild" because "AlwaysCreate" was specified.
+ClCompile:
+  C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\CL.exe /c /Zi /W3 /WX- /Od /Ob0 /Oy- /D WIN32 /D _WINDOWS /D _DEBUG /D "CMAKE_INTDIR=\"Debug\"" /D _MBCS /Gm- /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Fo"cmTryCompileExec3939292509.dir\Debug\\" /Fd"C:/Charith/Dropbox/Research/development/exalgo/preprocess/filter_funcs/build32/CMakeFiles/CMakeTmp/Debug/cmTryCompileExec3939292509.pdb" /Gd /TC /analyze- /errorReport:queue "C:\Program Files (x86)\CMake 2.8\share\cmake-2.8\Modules\CMakeCCompilerABI.c"
+  Microsoft (R) C/C++ Optimizing Compiler Version 18.00.30501 for x86
+  Copyright (C) Microsoft Corporation.  All rights reserved.
+  
+  cl /c /Zi /W3 /WX- /Od /Ob0 /Oy- /D WIN32 /D _WINDOWS /D _DEBUG /D "CMAKE_INTDIR=\"Debug\"" /D _MBCS /Gm- /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Fo"cmTryCompileExec3939292509.dir\Debug\\" /Fd"C:/Charith/Dropbox/Research/development/exalgo/preprocess/filter_funcs/build32/CMakeFiles/CMakeTmp/Debug/cmTryCompileExec3939292509.pdb" /Gd /TC /analyze- /errorReport:queue "C:\Program Files (x86)\CMake 2.8\share\cmake-2.8\Modules\CMakeCCompilerABI.c"
+  
+  CMakeCCompilerABI.c
+Link:
+  C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\link.exe /ERRORREPORT:QUEUE /OUT:"C:\Charith\Dropbox\Research\development\exalgo\preprocess\filter_funcs\build32\CMakeFiles\CMakeTmp\Debug\cmTryCompileExec3939292509.exe" /INCREMENTAL /NOLOGO /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"C:/Charith/Dropbox/Research/development/exalgo/preprocess/filter_funcs/build32/CMakeFiles/CMakeTmp/Debug/cmTryCompileExec3939292509.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"C:/Charith/Dropbox/Research/development/exalgo/preprocess/filter_funcs/build32/CMakeFiles/CMakeTmp/Debug/cmTryCompileExec3939292509.lib" /MACHINE:X86 /SAFESEH  /machine:X86 /debug cmTryCompileExec3939292509.dir\Debug\CMakeCCompilerABI.obj
+  cmTryCompileExec3939292509.vcxproj -> C:\Charith\Dropbox\Research\development\exalgo\preprocess\filter_funcs\build32\CMakeFiles\CMakeTmp\Debug\cmTryCompileExec3939292509.exe
+FinalizeBuildStatus:
+  Deleting file "cmTryCompileExec3939292509.dir\Debug\cmTryCom.E70C4CCC.tlog\unsuccessfulbuild".
+  Touching "cmTryCompileExec3939292509.dir\Debug\cmTryCom.E70C4CCC.tlog\cmTryCompileExec3939292509.lastbuildstate".
+Done Building Project "C:\Charith\Dropbox\Research\development\exalgo\preprocess\filter_funcs\build32\CMakeFiles\CMakeTmp\cmTryCompileExec3939292509.vcxproj" (default targets).
+
+Build succeeded.
+
+"C:\Charith\Dropbox\Research\development\exalgo\preprocess\filter_funcs\build32\CMakeFiles\CMakeTmp\cmTryCompileExec3939292509.vcxproj" (default target) (1) ->
+(PrepareForBuild target) -> 
+  C:\Program Files (x86)\MSBuild\Microsoft.Cpp\v4.0\V120\Microsoft.CppBuild.targets(396,5): warning MSB8029: The Intermediate directory or Output directory cannot reside under the Temporary directory as it could lead to issues with incremental build. [C:\Charith\Dropbox\Research\development\exalgo\preprocess\filter_funcs\build32\CMakeFiles\CMakeTmp\cmTryCompileExec3939292509.vcxproj]
+
+    1 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:01.39
+
+
+Determining if the CXX compiler works passed with the following output:
+Change Dir: C:/Charith/Dropbox/Research/development/exalgo/preprocess/filter_funcs/build32/CMakeFiles/CMakeTmp
+
+Run Build Command:C:\PROGRA~2\MSBuild\12.0\Bin\MSBuild.exe cmTryCompileExec3845125870.vcxproj /p:Configuration=Debug /p:VisualStudioVersion=12.0
+Microsoft (R) Build Engine version 12.0.30501.0
+[Microsoft .NET Framework, version 4.0.30319.18444]
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+Build started 8/8/2014 11:26:17 PM.
+Project "C:\Charith\Dropbox\Research\development\exalgo\preprocess\filter_funcs\build32\CMakeFiles\CMakeTmp\cmTryCompileExec3845125870.vcxproj" on node 1 (default targets).
+PrepareForBuild:
+  Creating directory "cmTryCompileExec3845125870.dir\Debug\".
+C:\Program Files (x86)\MSBuild\Microsoft.Cpp\v4.0\V120\Microsoft.CppBuild.targets(396,5): warning MSB8029: The Intermediate directory or Output directory cannot reside under the Temporary directory as it could lead to issues with incremental build. [C:\Charith\Dropbox\Research\development\exalgo\preprocess\filter_funcs\build32\CMakeFiles\CMakeTmp\cmTryCompileExec3845125870.vcxproj]
+  Creating directory "C:\Charith\Dropbox\Research\development\exalgo\preprocess\filter_funcs\build32\CMakeFiles\CMakeTmp\Debug\".
+  Creating directory "cmTryCompileExec3845125870.dir\Debug\cmTryCom.6ACEF864.tlog\".
+InitializeBuildStatus:
+  Creating "cmTryCompileExec3845125870.dir\Debug\cmTryCom.6ACEF864.tlog\unsuccessfulbuild" because "AlwaysCreate" was specified.
+ClCompile:
+  C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\CL.exe /c /Zi /W3 /WX- /Od /Ob0 /Oy- /D WIN32 /D _WINDOWS /D _DEBUG /D "CMAKE_INTDIR=\"Debug\"" /D _MBCS /Gm- /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /GR /Fo"cmTryCompileExec3845125870.dir\Debug\\" /Fd"C:/Charith/Dropbox/Research/development/exalgo/preprocess/filter_funcs/build32/CMakeFiles/CMakeTmp/Debug/cmTryCompileExec3845125870.pdb" /Gd /TP /analyze- /errorReport:queue testCXXCompiler.cxx
+  Microsoft (R) C/C++ Optimizing Compiler Version 18.00.30501 for x86
+  Copyright (C) Microsoft Corporation.  All rights reserved.
+  
+  cl /c /Zi /W3 /WX- /Od /Ob0 /Oy- /D WIN32 /D _WINDOWS /D _DEBUG /D "CMAKE_INTDIR=\"Debug\"" /D _MBCS /Gm- /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /GR /Fo"cmTryCompileExec3845125870.dir\Debug\\" /Fd"C:/Charith/Dropbox/Research/development/exalgo/preprocess/filter_funcs/build32/CMakeFiles/CMakeTmp/Debug/cmTryCompileExec3845125870.pdb" /Gd /TP /analyze- /errorReport:queue testCXXCompiler.cxx
+  
+  testCXXCompiler.cxx
+Link:
+  C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\link.exe /ERRORREPORT:QUEUE /OUT:"C:\Charith\Dropbox\Research\development\exalgo\preprocess\filter_funcs\build32\CMakeFiles\CMakeTmp\Debug\cmTryCompileExec3845125870.exe" /INCREMENTAL /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"C:/Charith/Dropbox/Research/development/exalgo/preprocess/filter_funcs/build32/CMakeFiles/CMakeTmp/Debug/cmTryCompileExec3845125870.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"C:/Charith/Dropbox/Research/development/exalgo/preprocess/filter_funcs/build32/CMakeFiles/CMakeTmp/Debug/cmTryCompileExec3845125870.lib" /MACHINE:X86 /SAFESEH  /machine:X86 /debug cmTryCompileExec3845125870.dir\Debug\testCXXCompiler.obj
+  cmTryCompileExec3845125870.vcxproj -> C:\Charith\Dropbox\Research\development\exalgo\preprocess\filter_funcs\build32\CMakeFiles\CMakeTmp\Debug\cmTryCompileExec3845125870.exe
+FinalizeBuildStatus:
+  Deleting file "cmTryCompileExec3845125870.dir\Debug\cmTryCom.6ACEF864.tlog\unsuccessfulbuild".
+  Touching "cmTryCompileExec3845125870.dir\Debug\cmTryCom.6ACEF864.tlog\cmTryCompileExec3845125870.lastbuildstate".
+Done Building Project "C:\Charith\Dropbox\Research\development\exalgo\preprocess\filter_funcs\build32\CMakeFiles\CMakeTmp\cmTryCompileExec3845125870.vcxproj" (default targets).
+
+Build succeeded.
+
+"C:\Charith\Dropbox\Research\development\exalgo\preprocess\filter_funcs\build32\CMakeFiles\CMakeTmp\cmTryCompileExec3845125870.vcxproj" (default target) (1) ->
+(PrepareForBuild target) -> 
+  C:\Program Files (x86)\MSBuild\Microsoft.Cpp\v4.0\V120\Microsoft.CppBuild.targets(396,5): warning MSB8029: The Intermediate directory or Output directory cannot reside under the Temporary directory as it could lead to issues with incremental build. [C:\Charith\Dropbox\Research\development\exalgo\preprocess\filter_funcs\build32\CMakeFiles\CMakeTmp\cmTryCompileExec3845125870.vcxproj]
+
+    1 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:01.95
+
+
+Detecting CXX compiler ABI info compiled with the following output:
+Change Dir: C:/Charith/Dropbox/Research/development/exalgo/preprocess/filter_funcs/build32/CMakeFiles/CMakeTmp
+
+Run Build Command:C:\PROGRA~2\MSBuild\12.0\Bin\MSBuild.exe cmTryCompileExec3937166099.vcxproj /p:Configuration=Debug /p:VisualStudioVersion=12.0
+Microsoft (R) Build Engine version 12.0.30501.0
+[Microsoft .NET Framework, version 4.0.30319.18444]
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+Build started 8/8/2014 11:26:20 PM.
+Project "C:\Charith\Dropbox\Research\development\exalgo\preprocess\filter_funcs\build32\CMakeFiles\CMakeTmp\cmTryCompileExec3937166099.vcxproj" on node 1 (default targets).
+PrepareForBuild:
+  Creating directory "cmTryCompileExec3937166099.dir\Debug\".
+C:\Program Files (x86)\MSBuild\Microsoft.Cpp\v4.0\V120\Microsoft.CppBuild.targets(396,5): warning MSB8029: The Intermediate directory or Output directory cannot reside under the Temporary directory as it could lead to issues with incremental build. [C:\Charith\Dropbox\Research\development\exalgo\preprocess\filter_funcs\build32\CMakeFiles\CMakeTmp\cmTryCompileExec3937166099.vcxproj]
+  Creating directory "C:\Charith\Dropbox\Research\development\exalgo\preprocess\filter_funcs\build32\CMakeFiles\CMakeTmp\Debug\".
+  Creating directory "cmTryCompileExec3937166099.dir\Debug\cmTryCom.AEBFEFF4.tlog\".
+InitializeBuildStatus:
+  Creating "cmTryCompileExec3937166099.dir\Debug\cmTryCom.AEBFEFF4.tlog\unsuccessfulbuild" because "AlwaysCreate" was specified.
+ClCompile:
+  C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\CL.exe /c /Zi /W3 /WX- /Od /Ob0 /Oy- /D WIN32 /D _WINDOWS /D _DEBUG /D "CMAKE_INTDIR=\"Debug\"" /D _MBCS /Gm- /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /GR /Fo"cmTryCompileExec3937166099.dir\Debug\\" /Fd"C:/Charith/Dropbox/Research/development/exalgo/preprocess/filter_funcs/build32/CMakeFiles/CMakeTmp/Debug/cmTryCompileExec3937166099.pdb" /Gd /TP /analyze- /errorReport:queue "C:\Program Files (x86)\CMake 2.8\share\cmake-2.8\Modules\CMakeCXXCompilerABI.cpp"
+  Microsoft (R) C/C++ Optimizing Compiler Version 18.00.30501 for x86
+  Copyright (C) Microsoft Corporation.  All rights reserved.
+  
+  cl /c /Zi /W3 /WX- /Od /Ob0 /Oy- /D WIN32 /D _WINDOWS /D _DEBUG /D "CMAKE_INTDIR=\"Debug\"" /D _MBCS /Gm- /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /GR /Fo"cmTryCompileExec3937166099.dir\Debug\\" /Fd"C:/Charith/Dropbox/Research/development/exalgo/preprocess/filter_funcs/build32/CMakeFiles/CMakeTmp/Debug/cmTryCompileExec3937166099.pdb" /Gd /TP /analyze- /errorReport:queue "C:\Program Files (x86)\CMake 2.8\share\cmake-2.8\Modules\CMakeCXXCompilerABI.cpp"
+  
+  CMakeCXXCompilerABI.cpp
+Link:
+  C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\link.exe /ERRORREPORT:QUEUE /OUT:"C:\Charith\Dropbox\Research\development\exalgo\preprocess\filter_funcs\build32\CMakeFiles\CMakeTmp\Debug\cmTryCompileExec3937166099.exe" /INCREMENTAL /NOLOGO /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"C:/Charith/Dropbox/Research/development/exalgo/preprocess/filter_funcs/build32/CMakeFiles/CMakeTmp/Debug/cmTryCompileExec3937166099.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"C:/Charith/Dropbox/Research/development/exalgo/preprocess/filter_funcs/build32/CMakeFiles/CMakeTmp/Debug/cmTryCompileExec3937166099.lib" /MACHINE:X86 /SAFESEH  /machine:X86 /debug cmTryCompileExec3937166099.dir\Debug\CMakeCXXCompilerABI.obj
+  cmTryCompileExec3937166099.vcxproj -> C:\Charith\Dropbox\Research\development\exalgo\preprocess\filter_funcs\build32\CMakeFiles\CMakeTmp\Debug\cmTryCompileExec3937166099.exe
+FinalizeBuildStatus:
+  Deleting file "cmTryCompileExec3937166099.dir\Debug\cmTryCom.AEBFEFF4.tlog\unsuccessfulbuild".
+  Touching "cmTryCompileExec3937166099.dir\Debug\cmTryCom.AEBFEFF4.tlog\cmTryCompileExec3937166099.lastbuildstate".
+Done Building Project "C:\Charith\Dropbox\Research\development\exalgo\preprocess\filter_funcs\build32\CMakeFiles\CMakeTmp\cmTryCompileExec3937166099.vcxproj" (default targets).
+
+Build succeeded.
+
+"C:\Charith\Dropbox\Research\development\exalgo\preprocess\filter_funcs\build32\CMakeFiles\CMakeTmp\cmTryCompileExec3937166099.vcxproj" (default target) (1) ->
+(PrepareForBuild target) -> 
+  C:\Program Files (x86)\MSBuild\Microsoft.Cpp\v4.0\V120\Microsoft.CppBuild.targets(396,5): warning MSB8029: The Intermediate directory or Output directory cannot reside under the Temporary directory as it could lead to issues with incremental build. [C:\Charith\Dropbox\Research\development\exalgo\preprocess\filter_funcs\build32\CMakeFiles\CMakeTmp\cmTryCompileExec3937166099.vcxproj]
+
+    1 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:02.83
+
+

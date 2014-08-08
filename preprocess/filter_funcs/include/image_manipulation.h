@@ -20,6 +20,6 @@ struct image_t {
 
 ULONG_PTR initialize_image_subsystem();
 void shutdown_image_subsystem(ULONG_PTR token);
-image_t * populate_imageinfo(char * filename);
+image_t * populate_imageinfo(const char * filename);
 
 #endif

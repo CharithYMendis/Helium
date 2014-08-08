@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include "node.h"
 #include "canonicalize.h"
-#include  "..\..\..\include\output.h"
+#include  "..\..\..\dr_clients\include\output.h"
 #include <fstream>
 
 #define MAX_FRONTIERS		1000
