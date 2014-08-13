@@ -4,8 +4,9 @@
 #include <stdint.h>
 #include <string>
 #include <iostream>
+#include <fstream>
 #include <vector>
-#include "defines.h"
+#include "common_defines.h"
 
 
 
@@ -59,9 +60,16 @@ struct moduleinfo_t{
 
 };
 
-moduleinfo_t * populate_moduleinfo(const char* filename);
-void print_moduleinfo(moduleinfo_t * module,const char * filename);
-void print_funcs(moduleinfo_t * module,const char * filename);
+moduleinfo_t * populate_moduleinfo(std::ifstream &file);
+
+moduleinfo_t * find_module(moduleinfo_t * head, uint64_t start_addr);
+moduleinfo_t * find_module(moduleinfo_t * head, std::string name);
+funcinfo_t * find_func_app_pc(moduleinfo_t * module, uint32_t app_pc);
+
+void print_moduleinfo(moduleinfo_t * module,std::ofstream &file);
+void print_funcs(moduleinfo_t * module,std::ofstream &file);
+
+void print_filter_file(std::ofstream &file, moduleinfo_t * head);
 
 
 #endif

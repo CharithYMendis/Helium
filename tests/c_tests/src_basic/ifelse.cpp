@@ -2,7 +2,7 @@
  
  int main(){
 	
-	bool first_if = false
+	 bool first_if = false;
 	bool second_if = true;
 	
 	int a;

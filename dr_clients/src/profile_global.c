@@ -77,6 +77,7 @@ typedef struct _client_arg_t {
 	char filter_filename[MAX_STRING_LENGTH];
 	uint filter_mode;
 	char output_folder[MAX_STRING_LENGTH];
+	char extra_info[MAX_STRING_LENGTH];
 
 } client_arg_t;
 
@@ -115,11 +116,12 @@ static char ins_pass_name[MAX_STRING_LENGTH];
 static bool parse_commandline_args(const char * args) {
 
 	client_arg = (client_arg_t *)dr_global_alloc(sizeof(client_arg_t));
-	if (dr_sscanf(args, "%s %d %s",
+	if (dr_sscanf(args, "%s %d %s %s",
 		&client_arg->filter_filename,
 		&client_arg->filter_mode,
-		&client_arg->output_folder
-		) != 3){
+		&client_arg->output_folder,
+		&client_arg->extra_info
+		) != 4){
 		return false;
 	}
 
@@ -141,7 +143,7 @@ void bbinfo_init(client_id_t id, const char * name,
 
 	DR_ASSERT(parse_commandline_args(arguments) == true);
 
-	populate_conv_filename(filename, client_arg->output_folder, name, NULL);
+	populate_conv_filename(filename, client_arg->output_folder, name, client_arg->extra_info);
 		
 	if(dr_file_exists(filename)){
 		dr_delete_file(filename);
@@ -211,12 +213,16 @@ bbinfo_thread_init(void *drcontext){
 
 	per_thread_data_t * data = (per_thread_data_t *)dr_thread_alloc(drcontext,sizeof(per_thread_data_t));
 	
+	DEBUG_PRINT("%s - initializing thread %d\n", ins_pass_name, dr_get_thread_id(drcontext));
+
 	/* initialize */
 	strncpy(data->module_name,"__init",MAX_STRING_LENGTH);
 	data->is_call_ins = false;
 	
 	/* store this in thread local storage */
 	drmgr_set_tls_field(drcontext, tls_index, data);
+
+	DEBUG_PRINT("%s - initializing thread done %d\n", ins_pass_name, dr_get_thread_id(drcontext));
 
 }
 
@@ -227,6 +233,8 @@ bbinfo_thread_exit(void *drcontext){
 	
 	/* clean up memory */
 	dr_thread_free(drcontext,data,sizeof(per_thread_data_t));
+
+	DEBUG_PRINT("%s - exiting thread done %d\n", ins_pass_name, dr_get_thread_id(drcontext));
 
 }
 
@@ -455,6 +463,8 @@ bbinfo_bb_instrumentation(void *drcontext, void *tag, instrlist_t *bb,
 		if(instr_current != first && instr_current != last)
 			return DR_EMIT_DEFAULT;
 
+		if (instr_current != first)
+			return DR_EMIT_DEFAULT;
 		
 		
 		//get the module data and if module + addr is present then add frequency counting
@@ -541,7 +551,7 @@ bbinfo_bb_instrumentation(void *drcontext, void *tag, instrlist_t *bb,
 
 
 		/* if instr current is the last -  get the call targets */
-		if (instr_current == last){
+		/*if (instr_current == last){
 
 			dr_insert_clean_call(drcontext, bb, instr_current, (void *)register_bb, false, 1, OPND_CREATE_INTPTR(bbinfo));
 			if (instr_is_call_direct(last)){
@@ -555,7 +565,7 @@ bbinfo_bb_instrumentation(void *drcontext, void *tag, instrlist_t *bb,
 				return DR_EMIT_DEFAULT;
 			}
 
-		}
+		}*/
 
 		/* optimize this to only run if module is not found */
 		md_lookup_module(info_head, module_name)->start_addr = module_data->start;

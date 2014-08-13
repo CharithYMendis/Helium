@@ -2,14 +2,14 @@
 project(halide_tests)
 cmake_minimum_required(VERSION 2.8)
 
-find_library(GDIPLUS gdiplus)
+message(${GDIPLUS})
 
 function(halide_project name library)
   
   message("ARGS\n ${ARGN}")
   
   add_executable("${name}" ${ARGN})
-  target_link_libraries("${name}" ${library} ${GDIPLUS})
+  target_link_libraries("${name}" ${library} Gdiplus.lib)
   if (WIN32)
     set_target_properties("${name}" PROPERTIES LINK_FLAGS "/STACK:8388608,1048576")
   else()

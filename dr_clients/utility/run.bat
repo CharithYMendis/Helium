@@ -5,7 +5,7 @@ if "%1"=="help" (
 	echo 	{arch} m32, m64
 	echo 	{exec} photoshop, halide, ctests, asm
 	echo 	{client_arg}
-	echo 	{test_name} 
+	echo 	{test_name}
 	exit /b
 )
 
@@ -35,8 +35,8 @@ set ASM_TEST=%EXALGO_TEST_FOLDER%\asm_tests\bin32\%4.exe
 set C_TEST=%EXALGO_TEST_FOLDER%\c_tests\bin32\%4.exe
 )
 
-set INPUT_IMAGE=%EXALGO_IMAGE_FOLDER%\forty.png
-set OUTPUT_IMAGE=%EXALGO_IMAGE_FOLDER%\output.png
+set INPUT_IMAGE=%EXALGO_IMAGE_FOLDER%\%IN_IMAGE%
+set OUTPUT_IMAGE=%EXALGO_IMAGE_FOLDER%\%OUT_IMAGE%
 
 set OUTPUT_FOLDER=%EXALGO_OUTPUT_FOLDER%
 

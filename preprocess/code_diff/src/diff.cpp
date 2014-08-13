@@ -314,7 +314,7 @@ void printToFile(ofstream &out, returnParse_t* data){
 	out << data->noOfModules << endl;
 	modules_t* modData = data->module;
 	for(int i=0;i<data->noOfModules;i++){
-		out << "\"" << modData[i].name << "\"" << endl;
+		out  << "\"" << modData[i].name << "\"" << endl;
 		out << modData[i].addresses.size() << endl;
 		for(int j=0;j<modData[i].addresses.size();j++){
 			out << modData[i].addresses[j] << endl;
@@ -329,6 +329,9 @@ int main(int argc, char ** argv){
     cout << "not enough arguments" << endl;
     return 1; 
   }
+
+
+  //first should be the one having more bbs - (first - second)
 
   //pass the two files
   string first(argv[1], find(argv[1], argv[1] + 400, '\0'));

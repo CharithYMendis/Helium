@@ -100,9 +100,11 @@ dr_init(client_id_t id)
 			if(strcmp(arguments[i].name,ins_pass[j].name) == 0){
 				//we can now register the call backs
 				DEBUG_PRINT("%s - registered\n", arguments[i].name);
-				
+
+				DEBUG_PRINT("%s - initializing...\n", arguments[i].name);
 				ins_pass[j].init_func(id,arguments[i].name, arguments[i].arguments);
-				
+				DEBUG_PRINT("%s - initialized\n", arguments[i].name);
+
 				//register thread events
 				if(ins_pass[j].thread_init != NULL)
 					drmgr_register_thread_init_event(ins_pass[j].thread_init);
@@ -139,7 +141,9 @@ static void process_exit_routine_call(void){
 	for( i=0 ; i<argument_length; i++){
 		for( j=0; j<pass_length; j++){
 			if(strcmp(arguments[i].name,ins_pass[j].name) == 0){
+				DEBUG_PRINT("%s - exiting....\n", ins_pass[j].name);
 				ins_pass[j].process_exit();
+				DEBUG_PRINT("%s - exited\n", ins_pass[j].name);
 			}
 		}
 	}

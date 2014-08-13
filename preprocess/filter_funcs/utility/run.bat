@@ -1,7 +1,7 @@
 @echo off
 
 if "%1" == "help" (
-	echo usage {mode} {exec} {images}...  
+	echo usage {mode} {exec} {in_image} {out_image} {debug} {debug-level} {help}  
 	echo {mode} - diff, oneim, twoim
 	echo {exec} - exexutable on which the DR client was run 
 	echo {images} - space seperated list of images

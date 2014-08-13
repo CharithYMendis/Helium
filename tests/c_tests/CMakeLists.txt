@@ -23,6 +23,14 @@ project(tests)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}")
 
+if( CMAKE_SIZEOF_VOID_P EQUAL 8 )
+    file(MAKE_DIRECTORY "${CMAKE_SOURCE_DIR}/bin64")
+	set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/bin64")
+else( CMAKE_SIZEOF_VOID_P EQUAL 8 )
+	file(MAKE_DIRECTORY "${CMAKE_SOURCE_DIR}/bin32")
+	set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/bin32")
+endif( CMAKE_SIZEOF_VOID_P EQUAL 8 )
+
 if ("${CMAKE_GENERATOR}" MATCHES "Visual Studio")
   # we don't support the Debug and Release subdirs
   foreach (config ${CMAKE_CONFIGURATION_TYPES})
@@ -36,13 +44,7 @@ if ("${CMAKE_GENERATOR}" MATCHES "Visual Studio")
   endforeach ()
 endif ()
 
-if( CMAKE_SIZEOF_VOID_P EQUAL 8 )
-    file(MAKE_DIRECTORY "${CMAKE_SOURCE_DIR}/bin64")
-	set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/bin64")
-else( CMAKE_SIZEOF_VOID_P EQUAL 8 )
-	file(MAKE_DIRECTORY "${CMAKE_SOURCE_DIR}/bin32")
-	set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/bin32")
-endif( CMAKE_SIZEOF_VOID_P EQUAL 8 )
+
 
 include_directories("include_image")
 include_directories("include")
@@ -53,6 +55,7 @@ add_executable(image_blur src_image/image_manipulation.cpp src_image/blur.cpp)
 add_executable(image_invert src_image/image_manipulation.cpp src_image/invert.cpp)
 
 target_link_libraries(image_blur Gdiplus.lib)
+target_link_libraries(image_invert Gdiplus.lib)
 
 #basic tests sources
 add_executable(basic_arith src_basic/arith.cpp)

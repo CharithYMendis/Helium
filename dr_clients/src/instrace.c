@@ -98,6 +98,7 @@ typedef struct _client_arg_t {
 	char output_folder[MAX_STRING_LENGTH];
 	uint static_info_size;
 	uint instrace_mode;
+	char extra_info[MAX_STRING_LENGTH];
 
 } client_arg_t;
 
@@ -154,7 +155,8 @@ static bool parse_commandline_args (const char * args) {
 									   &client_arg->filter_mode,
 									   &client_arg->output_folder,
 									   &client_arg->static_info_size,
-									   &client_arg->instrace_mode)!=5){
+									   &client_arg->instrace_mode,
+									   &client_arg->extra_info)!=6){
 		return false;
 	}
 
@@ -207,7 +209,7 @@ void instrace_exit_event()
 
 	int i;
 
-	DEBUG_PRINT("total amount of instructions - %d\n",num_refs);
+	DEBUG_PRINT("%s - total amount of instructions - %d\n",ins_pass_name, num_refs);
 
 	if (client_arg->instrace_mode == OPCODE_TRACE){
 		dr_printf("opcodes that were covered in this part of the code - \n");
@@ -236,13 +238,17 @@ void instrace_thread_init(void *drcontext)
     char outfilename[MAX_STRING_LENGTH];
 	char logfilename[MAX_STRING_LENGTH];
 	char thread_id[MAX_STRING_LENGTH];
+	char extra_info[MAX_STRING_LENGTH];
 
     char *dirsep;
     int len;
     per_thread_t *data;
+	char * mode;
 
 	uint * stack_base;
 	uint * deallocation_stack;
+
+	DEBUG_PRINT("%s - initializing thread %d\n", ins_pass_name, dr_get_thread_id(drcontext));
 
     /* allocate thread private data */
     data = dr_thread_alloc(drcontext, sizeof(per_thread_t));
@@ -258,17 +264,35 @@ void instrace_thread_init(void *drcontext)
      * the same directory as our library. We could also pass
      * in a path and retrieve with dr_get_options().
      */
+	dr_snprintf(thread_id, MAX_STRING_LENGTH, "%d", dr_get_thread_id(drcontext));
 	if (log_mode){
-		dr_snprintf(thread_id, MAX_STRING_LENGTH, "%d", dr_get_thread_id(drcontext));
 		populate_conv_filename(logfilename, logdir, ins_pass_name, thread_id);
 		data->logfile = dr_open_file(logfilename, DR_FILE_WRITE_OVERWRITE | DR_FILE_ALLOW_LARGE);
 	}
 
-	populate_conv_filename(outfilename, client_arg->output_folder, ins_pass_name, thread_id);
+	/* instrace types */
+	if (client_arg->instrace_mode == OPERAND_TRACE){
+		mode = "opnd";
+	}
+	else if (client_arg->instrace_mode == OPCODE_TRACE){
+		mode = "opcode";
+	}
+	else if (client_arg->instrace_mode == DISASSEMBLY_TRACE){
+		mode = "disasm";
+	}
+	else{
+		mode = "instr";
+	}
+	
+	
+
+	dr_snprintf(extra_info, MAX_STRING_LENGTH, "%s_%s_%s", client_arg->extra_info, mode, thread_id);
+
+	populate_conv_filename(outfilename, client_arg->output_folder, ins_pass_name, extra_info);
 	data->outfile = dr_open_file(outfilename, DR_FILE_WRITE_OVERWRITE | DR_FILE_ALLOW_LARGE);
 	DR_ASSERT(data->outfile != INVALID_FILE);
 
-	DEBUG_PRINT("thread id : %d, new thread logging at - %s\n",dr_get_thread_id(drcontext),logfilename);
+	DEBUG_PRINT("%s - thread id : %d, new thread logging at - %s\n",ins_pass_name, dr_get_thread_id(drcontext),logfilename);
 
 	data->static_array = (instr_t **)dr_thread_alloc(drcontext,sizeof(instr_t *)*client_arg->static_info_size);
 	data->static_array_size = client_arg->static_info_size;
@@ -288,8 +312,10 @@ void instrace_thread_init(void *drcontext)
 		mov [EBX], EAX
 	}
 
-	DEBUG_PRINT("thread %d stack information - stack_base %x stack_reserve %x\n",
+	DEBUG_PRINT("%s - thread %d stack information - stack_base %x stack_reserve %x\n", ins_pass_name,
 		dr_get_thread_id(drcontext), data->stack_base, data->deallocation_stack);
+
+	DEBUG_PRINT("%s - initializing thread done %d\n", ins_pass_name, dr_get_thread_id(drcontext));
 
 
 }
@@ -317,7 +343,7 @@ instrace_thread_exit(void *drcontext)
 	dr_thread_free(drcontext, data->buf_base, INSTR_BUF_SIZE);
 	dr_thread_free(drcontext, data->output_array, OUTPUT_BUF_SIZE);
 
-	DEBUG_PRINT("thread id : %d, cloned instructions freeing now - %d\n",dr_get_thread_id(drcontext),data->static_ptr);
+	DEBUG_PRINT("%s - thread id : %d, cloned instructions freeing now - %d\n",ins_pass_name, dr_get_thread_id(drcontext),data->static_ptr);
 
 	for(i=0 ; i<data->static_ptr; i++){
 		instr_destroy(dr_get_current_drcontext(),data->static_array[i]);
@@ -325,6 +351,8 @@ instrace_thread_exit(void *drcontext)
 
 	dr_thread_free(drcontext, data->static_array, sizeof(instr_t *)*client_arg->static_info_size);
     dr_thread_free(drcontext, data, sizeof(per_thread_t));
+
+	DEBUG_PRINT("%s - exiting thread done %d\n", ins_pass_name, dr_get_thread_id(drcontext));
 
 }
 

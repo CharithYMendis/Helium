@@ -21,88 +21,154 @@
 #include "tree_transformations.h"
 #include "build_abs_tree.h"
 #include "print_halide.h"
+#include <sys/stat.h>
+#include <sys/types.h>
+#include "utilities.h"
 
-#define MAX_STRING_LENGTH 200
- 
  using namespace std;
 
-
- string get_filename(string folder, string filename, int number ,string extension){
-
-	 if (number == -1){
-		 return folder + "\\" + filename + "." + extension;
-	 }
-	 else{
-		 return folder + "\\" + filename + "_" + to_string(number) + "." + extension;
-	 }
- }
+ bool debug = false;
+ uint32_t debug_level = 0;
+ ofstream log_file;
 
  int main(int argc, char ** argv){
 
-	ifstream in;
-	ofstream out;
-	ofstream halide_out;
+	 /* setting up the files and other inputs and outputs for the program */
 
-
-	string folder;
-	string out_prefix; 
-
-	int start_trace;
-	unsigned long long dest_to_track;
-	int end_trace;
-
-	bool given_start = false;
-	bool given_end = false;
-
-	//argc should satisfy this assertion
-	ASSERT_MSG((argc >= 3) && (argc != 6),("ERROR: incorrect number of arguments\n"));
-
-	/* argument processing */
+	 string process_name(argv[0]);
+	 string exec;
+	 string in_image;
+	 string out_image;
+	 string config;
 	
-	/* folder */
-	if (argc >= 2){
-		folder.assign(argv[1]);
-	}
+	 int32_t start_trace = -1;
+	 uint64_t dest = 0;
+	 int32_t end_trace = -1;
+	 int32_t thread_id = -1;
 
-	/* input file - instrace */
-	if (argc >= 3){
-		string name = get_filename(folder, argv[2], -1, "txt");
-		in.open(name, std::ifstream::in);
-		ASSERT_MSG(in.good(), ("%s file not existing?\n", name));
-		DEBUG_PRINT(("exploring trace for file - %s\n",name.c_str()), 1);
-	}
 
-	/* expression output filename prefix */
-	if (argc >= 4){
-		out_prefix.assign(argv[3]);
-	}
+	 /***************************** command line args processing ************************/
+	 vector<cmd_args_t *> args = get_command_line_args(argc, argv);
+	 
+	 for (int i = 0; i < args.size(); i++){
+		 if (args[i]->name.compare("exec") == 0){
+			 exec = args[i]->value;
+		 }
+		 else if (args[i]->name.compare("thread_id") == 0){
+			 thread_id = atoi(args[i]->value.c_str());
+		 }
+		 else if (args[i]->name.compare("start_line") == 0){
+			 start_trace = atoi(args[i]->value.c_str());
+		 }
+		 else if (args[i]->name.compare("dest") == 0){
+			 dest = strtoull(args[i]->value.c_str(), NULL, 10);
+		 }
+		 else if (args[i]->name.compare("end_line") == 0){
+			 end_trace = atoi(args[i]->value.c_str());
+		 }
+		 else if (args[i]->name.compare("in_image") == 0){
+			 in_image = args[i]->value;
+		 }
+		 else if (args[i]->name.compare("out_image") == 0){
+			 out_image = args[i]->value;
+		 }
+		 else if (args[i]->name.compare("config") == 0){
+			 config = args[i]->value;
+		 }
+		 else if (args[i]->name.compare("debug") == 0){
+			 debug = args[i]->value[0] - '0';
+		 }
+		 else if (args[i]->name.compare("debug-level") == 0){
+			 debug_level = args[i]->value[0] - '0';
+		 }
+	 }
 
-	/* halide output */
-	if (argc >= 5){
-		string name = get_filename(folder, argv[4], -1, "cpp");
-		halide_out.open(name, std::ofstream::out);
-		ASSERT_MSG(halide_out.good(), ("%s file not existing?\n", name));
-		DEBUG_PRINT(("halide output file - %s\n", name.c_str()), 1);
-	}
+	 ASSERT_MSG(!exec.empty(), ("exec must be specified\n"));
+	 ASSERT_MSG((!in_image.empty()) && (!out_image.empty()), ("image must be specified\n"));
+	 ASSERT_MSG(!config.empty(), ("config file must be specified\n"));
+	 
+	 /********************************open the files************************************/
 
-	/* starting line no and destination */
-	if (argc >= 7){
-		start_trace = atoi(argv[5]);
-		dest_to_track = stoull(argv[6]);
-		DEBUG_PRINT(("starting trace from line %d for %llu destination\n", start_trace, dest_to_track),1);
-		given_start = true;
-	}
+	 /*get all the files in output folder*/
+	 string output_folder = get_standard_folder("output");
+	 vector<string> files = get_all_files_in_folder(output_folder);
+	 
+	 /* inputs */
+	 ifstream		  instrace_file;
+	 ifstream		  app_pc_file;
+	 ifstream		  config_file;
+	 string			  in_image_filename;
+	 string			  out_image_filename;
+	 
 
-	/* ending line number */
-	if (argc >= 8){
-		end_trace = atoi(argv[7]);
-		DEBUG_PRINT(("ending trace at line %d\n", end_trace),1);
-		given_end = true;
-	}
+	 if (thread_id != -1){ /* here we can get a specific instrace file*/
+		 instrace_file.open(get_standard_folder("output") + "\\instrace_" + exec + "_" + to_string(thread_id) + ".log", ifstream::in);
+	 }
+	 else{ /* get the instrace file with the largest size */
+		 struct _stat buf;
+		 int64_t max_size = -1;
+		 string instrace_filename;
+		 /* get the instrace files for this exec */
+		 for (int i = 0; i < files.size(); i++){
+			 if (is_prefix(files[i], "instrace_" + exec)){
+				 /*open the file*/
+				 string file = output_folder + "\\" + files[i];
+				 _stat(file.c_str(), &buf);
+				 if (max_size < buf.st_size){
+					 max_size = buf.st_size;
+					 instrace_filename = file;
+				 }
 
+			 }
+		 }
+		 ASSERT_MSG((!instrace_filename.empty()), ("suitable instrace file cannot be located; please specify manually\n"));
+		 instrace_file.open(instrace_filename, ifstream::in);
+	 }
+	 ASSERT_MSG(instrace_file.good(), ("instrace file cannot be opened\n"));
+
+	 /* get the images */
+	 in_image = get_standard_folder("image") + "\\" + in_image_filename;
+	 out_image = get_standard_folder("image") + "\\" + out_image_filename;
+	 /* get the app_pcs to track files */
+	 app_pc_file.open(output_folder + "\\filter_funcs_" + exec + ".exe_app_pc.log", ifstream::in);
+	 /* get the image mem config files - these have common configs for a given image processing program like Photoshop (hardcoded)  */
+	 config_file.open(get_standard_folder("config") + "\\config_" + config + ".log", ifstream::in);
+
+	 /* outputs */
+	 ofstream concrete_tree_file;
+	 ofstream compound_tree_file;
+	 ofstream abs_tree_file;
+	 ofstream expression_file;
+	 ofstream halide_file;
+
+	 string file_substr("\\" + process_name + "_" + exec);
+
+	 if (debug){
+		 /* get the log file */
+		 log_file.open(get_standard_folder("log") + file_substr + ".log", ofstream::out);
+		 /* get the concrete tree file - dot file */
+		 concrete_tree_file.open(output_folder + file_substr + "_conctree.dot", ofstream::out);
+		 /* get the compound tree file */
+		 compound_tree_file.open(output_folder + file_substr + "_comptree.dot", ofstream::out);
+		 /* get the abstract tree file */
+		 abs_tree_file.open(output_folder + file_substr + "_abstree.dot", ofstream::out);
+	     /* get the pseudo expression file */
+		 expression_file.open(output_folder + file_substr + "_expression.log", ofstream::out);
+	 }
+
+	 /* create halide output file */
+	 ofstream halide_file(get_standard_folder("halide") + file_substr + "_halide.cpp", ofstream::out);
 
 	
-	/* main application logic starts here */
+	 /**************************algorithm********************************************/
+
+	 /* main application logic starts here */
+
+	 /* 1. reconstruct the memory layout from the instraces */
+	 vector<pc_mem_region_t *> pc_mem_regions;
+	 create_mem_layout(instrace_file, pc_mem_regions);
+	 print_mem_layout(pc_mem_regions);
+	 
 
 	if (given_start){
 

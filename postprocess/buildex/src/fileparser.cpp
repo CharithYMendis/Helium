@@ -11,6 +11,7 @@
 #include "defines.h"
 #include <stdint.h>
 #include <vector>
+#include "utilities.h"
 #include "print_common.h"
 
 
@@ -19,8 +20,6 @@
 using namespace std;
 
 void print_cinstr(cinstr_t * instr);
-std::vector<std::string> &split(const std::string &s, char delim, std::vector<std::string> &elems);
-std::vector<std::string> split(const std::string &s, char delim);
 
 
 /* main file parsing functions */
@@ -242,22 +241,7 @@ void reverse_file(ofstream &out, ifstream &in){
 	}
 	
  }
- 
-/* debug and helper functions */
-std::vector<std::string> &split(const std::string &s, char delim, std::vector<std::string> &elems) {
-	std::stringstream ss(s);
-	std::string item;
-	while (std::getline(ss, item, delim)) {
-		elems.push_back(item);
-	}
-	return elems;
-}
 
-std::vector<std::string> split(const std::string &s, char delim) {
-	std::vector<std::string> elems;
-	split(s, delim, elems);
-	return elems;
-}
 
 void print_cinstr(cinstr_t * instr){
 	cout << instr->opcode << ",";

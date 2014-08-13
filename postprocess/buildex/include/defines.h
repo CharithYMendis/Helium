@@ -3,6 +3,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include "common_defines.h"
 
 
 enum {
@@ -1424,28 +1425,6 @@ enum {
 	EFLAGS_DF = 0x00000400, /**< The bit in the eflags register of DF (Direction Flag). */
 	EFLAGS_OF = 0x00000800, /**< The bit in the eflags register of OF (Overflow Flag). */
 };
-
-#define DEBUG
-#define DEBUG_LEVEL 1
-
-#define ASSERT_MSG(x,s)	      \
-	if(!(x)){				  \
-		printf s;			  \
-		exit(1);			  \
-	}
-
-#ifdef DEBUG
-#define DEBUG_PRINT(s,l) if(l <= DEBUG_LEVEL) { printf s ; }
-#else
-#define DEUBG_PRINT(s)
-#endif
-
-#define IF_PRINT(x,s) \
-	  if((x)){        \
-		printf s ;    \
-	  	  }   
-	
-
 
 
 #endif

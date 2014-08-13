@@ -62,6 +62,7 @@ typedef struct _client_arg_t{
 	char filter_filename[MAX_STRING_LENGTH];
 	uint filter_mode;
 	char output_folder[MAX_STRING_LENGTH];
+	char extra_info[MAX_STRING_LENGTH];
 
 } client_arg_t;
 
@@ -98,9 +99,10 @@ static bool parse_commandline_args (const char * args);
 static bool parse_commandline_args (const char * args) {
 
 	client_arg = (client_arg_t *)dr_global_alloc(sizeof(client_arg_t));
-	if(dr_sscanf(args,"%s %d %s",&client_arg->filter_filename,
+	if(dr_sscanf(args,"%s %d %s %s",&client_arg->filter_filename,
 								&client_arg->filter_mode,
-								&client_arg->output_folder)!=3){
+								&client_arg->output_folder,
+								&client_arg->extra_info)!=4){
 		return false;
 	}
 	
@@ -113,7 +115,6 @@ void memtrace_init(client_id_t id,const char * name, const char * arguments)
 	char logfilename[MAX_STRING_LENGTH];
 	file_t in_file;
 
-	DEBUG_PRINT("memtrace - initializing\n");
 
 	drmgr_init();
     drutil_init();
@@ -144,7 +145,6 @@ void memtrace_init(client_id_t id,const char * name, const char * arguments)
 	}
 	strncpy(ins_pass_name, name, MAX_STRING_LENGTH);
 
-	DEBUG_PRINT("memtrace - initialized\n");
 }
 
 void memtrace_exit_event()
@@ -167,6 +167,7 @@ void memtrace_thread_init(void *drcontext)
     char logfilename[MAX_STRING_LENGTH];
 	char outfilename[MAX_STRING_LENGTH];
 	char thread_id[MAX_STRING_LENGTH];
+	char extra_info[MAX_STRING_LENGTH];
 
     char *dirsep;
     int len;
@@ -176,6 +177,8 @@ void memtrace_thread_init(void *drcontext)
 	uint * deallocation_stack;
 
 	int i = 0;
+
+	DEBUG_PRINT("%s - initializing thread %d\n", ins_pass_name, dr_get_thread_id(drcontext));
 
     /* allocate thread private data */
     data = dr_thread_alloc(drcontext, sizeof(per_thread_t));
@@ -191,13 +194,19 @@ void memtrace_thread_init(void *drcontext)
      * the same directory as our library. We could also pass
      * in a path and retrieve with dr_get_options().
      */
+
+	dr_snprintf(thread_id, MAX_STRING_LENGTH, "%d", dr_get_thread_id(drcontext));
+
 	if (log_mode){
-		dr_snprintf(thread_id, MAX_STRING_LENGTH, "%d", dr_get_thread_id(drcontext));
 		populate_conv_filename(logfilename, logdir, ins_pass_name, thread_id);
 		data->logfile = dr_open_file(logfilename, DR_FILE_WRITE_OVERWRITE | DR_FILE_ALLOW_LARGE);
 	}
 
-	populate_conv_filename(outfilename, client_arg->output_folder, ins_pass_name, thread_id);
+
+
+	dr_snprintf(extra_info, MAX_STRING_LENGTH, "%s_%s", client_arg->extra_info, thread_id);
+
+	populate_conv_filename(outfilename, client_arg->output_folder, ins_pass_name, extra_info);
 	data->outfile = dr_open_file(outfilename, DR_FILE_WRITE_OVERWRITE | DR_FILE_ALLOW_LARGE);
 	DR_ASSERT(data->outfile != INVALID_FILE);
 
@@ -214,8 +223,9 @@ void memtrace_thread_init(void *drcontext)
 			mov[EBX], EAX
 	}
 
-	DEBUG_PRINT("stack boundaries - %x,%x\n", data->stack_base, data->stack_limit);
+	DEBUG_PRINT("%s - stack boundaries - %x,%x\n", ins_pass_name, data->stack_base, data->stack_limit);
 
+	DEBUG_PRINT("%s - initializing thread done %d\n", ins_pass_name, dr_get_thread_id(drcontext));
 
 }
 
@@ -235,6 +245,8 @@ void memtrace_thread_exit(void *drcontext)
 	dr_close_file(data->outfile);
     dr_thread_free(drcontext, data->buf_base, MEM_BUF_SIZE);
     dr_thread_free(drcontext, data, sizeof(per_thread_t));
+
+	DEBUG_PRINT("%s - exiting thread done %d\n", ins_pass_name, dr_get_thread_id(drcontext));
 }
 
 

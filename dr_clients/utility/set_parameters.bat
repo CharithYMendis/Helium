@@ -21,10 +21,10 @@
 :: module, bb, range, func, neg_module, app_pc, none
 
 if "%1" == "module" (
-	set FILTER_MODE=1
+	set FILTER_MODE=2
 )
 if "%1" == "bb" (
-	set FILTER_MODE=2
+	set FILTER_MODE=1
 )
 if "%1" == "range" (
 	set FILTER_MODE=3
@@ -36,10 +36,10 @@ if "%1" == "neg_module" (
 	set FILTER_MODE=5
 )
 if "%1" == "app_pc" (
-	set FILTER_MODE=6
+	set FILTER_MODE=7
 )
 if "%1" == "none" (
-	set FILTER_MODE=7
+	set FILTER_MODE=6
 )
 
 :: set instrace modes

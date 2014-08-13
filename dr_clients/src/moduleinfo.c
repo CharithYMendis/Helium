@@ -37,7 +37,10 @@ static module_t * get_tail (module_t * head){
 }
 
 /* adds an address to the linear list with addresses */
-static bbinfo_t * add_bb_to_list (bbinfo_t * bb_list, unsigned int addr, bool extra_info){
+static bbinfo_t * add_bb_to_list (bbinfo_t * bb_list, unsigned int addr, bool extra_info, uint size){
+
+	DR_ASSERT(size > bb_list[0].start_addr);
+	
 
 	bb_list[0].start_addr++;  //first element of the start address will have the length
 	bb_list[bb_list[0].start_addr].start_addr = addr;
@@ -179,13 +182,13 @@ bbinfo_t * md_add_bb_to_module(module_t * head,
 	module_t * module = md_lookup_module(head,name);
 	module_t * new_module;
 	if(module != NULL){
-		return add_bb_to_list(module->bbs,addr,extra_info);
+		return add_bb_to_list(module->bbs,addr,extra_info, module->size_bbs);
 	}
 	else{
 		module = get_tail (head);
 		new_module = new_elem(name,length_list_bbs);
 		module->next = new_module;
-		return add_bb_to_list(new_module->bbs,addr,extra_info);
+		return add_bb_to_list(new_module->bbs,addr,extra_info,new_module->size_bbs);
 	}
 }
 
@@ -311,7 +314,7 @@ void md_read_from_file (module_t * head, file_t file, bool extra_info){
 			line++; //start of the next line
 			dr_sscanf(line,"%u\n",&addr);
 			//dr_printf(line,"%x\n",addr); //debug
-			add_bb_to_list(head->bbs,addr, extra_info);
+			add_bb_to_list(head->bbs,addr, extra_info, head->size_bbs);
 		}
 
 	}

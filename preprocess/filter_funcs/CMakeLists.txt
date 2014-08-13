@@ -36,18 +36,19 @@ if ("${CMAKE_GENERATOR}" MATCHES "Visual Studio")
   endforeach ()
 endif ()
 
-find_library(GDIPLUS gdiplus)
-
 include_directories("include")
+include_directories("../../common/include")
 add_executable(filter
 
-src/main.cpp 
-src/meminfo.cpp
+src/main.cpp
 src/moduleinfo.cpp
-src/image_manipulation.cpp
-src/utilities.cpp
 src/filter_logic.cpp
+src/memlayout.cpp
+
+../../common/src/imageinfo.cpp
+../../common/src/meminfo.cpp
+../../common/src/utilities.cpp
 
 )
 
-target_link_libraries(filter ${GDIPLUS})
+target_link_libraries(filter Gdiplus.lib)

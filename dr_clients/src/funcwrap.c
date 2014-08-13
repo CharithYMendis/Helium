@@ -107,6 +107,7 @@ void funcwrap_thread_init(void *drcontext){
 	char logfilename[MAX_STRING_LENGTH];
 	char thread_id[MAX_STRING_LENGTH];
 
+	DEBUG_PRINT("%s - initializing thread %d\n", ins_pass_name, dr_get_thread_id(drcontext));
 	
 	data = dr_thread_alloc(drcontext, sizeof(per_thread_t));
 	if (log_mode){
@@ -115,9 +116,13 @@ void funcwrap_thread_init(void *drcontext){
 		data->logfile = dr_open_file(logfilename, DR_FILE_WRITE_OVERWRITE);
 	}
 
+	
+
 	data->filter_func = false;
 	data->nesting = 0;
 	drmgr_set_tls_field(drcontext, tls_index, data);
+
+	DEBUG_PRINT("%s - initializing thread done %d\n", ins_pass_name, dr_get_thread_id(drcontext));
 
 }
 
@@ -129,6 +134,8 @@ funcwrap_thread_exit(void *drcontext){
 		dr_close_file(data->logfile);
 	}
 	dr_thread_free(drcontext, data, sizeof(per_thread_t));
+
+	DEBUG_PRINT("%s - exiting thread done %d\n", ins_pass_name, dr_get_thread_id(drcontext));
 
 }
 

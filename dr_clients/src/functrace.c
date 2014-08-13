@@ -37,6 +37,8 @@ typedef struct {
 	file_t logfile; 
 	bool jmp_to_outside;
 	int jmp_cnt;
+	bool call_to_outside;
+
 
 } per_thread_t;
 
@@ -44,6 +46,7 @@ static client_arg_t * client_arg;
 static module_t * head;
 static function_t * functions;
 static int tls_index;
+static bool init = false;
 
 static file_t logfile;
 static char ins_pass_name[MAX_STRING_LENGTH];
@@ -71,7 +74,6 @@ void functrace_init(client_id_t id, const char * name, const char * arguments)
 	file_t in_file;
 	char logfilename[MAX_STRING_LENGTH];
 
-	DEBUG_PRINT("functrace - initializing functrace\n");
 	drmgr_init();
 
 	DR_ASSERT(parse_commandline_args(arguments) == true);
@@ -92,16 +94,13 @@ void functrace_init(client_id_t id, const char * name, const char * arguments)
 		dr_close_file(in_file);
 	}
 
-	
+	init = true;
 
 
 }
 
 void functrace_exit_event(void)
 {
-
-
-	DEBUG_PRINT("functrace - exiting\n");
 
 	if (log_mode){
 		dr_close_file(logfile);
@@ -112,13 +111,18 @@ void functrace_exit_event(void)
 	drmgr_unregister_tls_field(tls_index);
 	drmgr_exit();
 
+
 }
 
 function_t * get_current_function(void * drcontext){
 
 	per_thread_t * data = drmgr_get_tls_field(drcontext, tls_index);
-	return stack_peek(data->stack);
-
+	if (init){
+		return stack_peek(data->stack);
+	}
+	else{
+		return NULL;
+	}
 }
 
 void delete_function_t(void * func){
@@ -136,6 +140,8 @@ void functrace_thread_init(void *drcontext){
 	char logfilename[MAX_STRING_LENGTH];
 	char thread_id[MAX_STRING_LENGTH];
 
+	DEBUG_PRINT("%s - initializing thread %d\n", ins_pass_name, dr_get_thread_id(drcontext));
+
 	data = dr_thread_alloc(drcontext, sizeof(per_thread_t));
 
 	if (log_mode){
@@ -144,15 +150,14 @@ void functrace_thread_init(void *drcontext){
 		data->logfile = dr_open_file(logfilename, DR_FILE_WRITE_OVERWRITE);
 	}
 	data->jmp_to_outside = false;
+	data->call_to_outside = false;
 	data->jmp_cnt = 0;
-
-	LOG_PRINT(data->logfile, "functrace - initializing thread %d\n", dr_get_thread_id(drcontext));
 	
 	DR_ASSERT(stack_init(&(data->stack), INIT_CAPACITY, delete_function_t));
 
 	drmgr_set_tls_field(drcontext, tls_index, data);
 
-	LOG_PRINT(data->logfile,"functrace - initializing thread done %d\n",dr_get_thread_id(drcontext));
+	DEBUG_PRINT("%s - initializing thread done %d\n", ins_pass_name, dr_get_thread_id(drcontext));
 
 }
 
@@ -167,12 +172,13 @@ functrace_thread_exit(void *drcontext){
 
 	//stack_delete(data->stack);
 
-	LOG_PRINT(data->logfile, "functrace - exiting thread done %d\n", dr_get_thread_id(drcontext));
 	if (log_mode){
 		dr_close_file(data->logfile);
 	}
 
 	dr_thread_free(drcontext, data, sizeof(per_thread_t));
+
+	DEBUG_PRINT("%s - exiting thread done %d\n", ins_pass_name, dr_get_thread_id(drcontext));
 
 	
 
@@ -194,9 +200,7 @@ void print_all(stack_t * stack){
 
 }
 
-
 /* clean calls */
-
 static void
 at_call(app_pc instr_addr,app_pc target_addr){
 
@@ -209,11 +213,13 @@ at_call(app_pc instr_addr,app_pc target_addr){
 
 	app_pc offset;
 
-
 	module_data = dr_lookup_module(instr_addr);
 	target_module_data = dr_lookup_module(target_addr);
 
-	if (target_module_data != NULL){
+	if (module_data == NULL) dr_printf("instr null\n");
+	if (target_module_data == NULL) dr_printf("target null\n");
+
+	if (target_module_data != NULL && module_data != NULL){
 
 		/* call in after a jmp go back to normal tracking */
 		if (!filter_from_module_name(head, module_data->full_path, client_arg->filter_mode)
@@ -223,6 +229,8 @@ at_call(app_pc instr_addr,app_pc target_addr){
 			LOG_PRINT(data->logfile,"call in after jmp\n");
 			data->jmp_to_outside = false;
 		}
+
+		
 
 		if (filter_from_module_name(head, target_module_data->full_path, client_arg->filter_mode)){
 
@@ -270,19 +278,19 @@ at_return(app_pc instr_addr, app_pc target_addr){
 	if (module_data == NULL) dr_printf("instr null\n");
 	if (target_module_data == NULL) dr_printf("target null\n");
 
-	if (module_data != NULL){
+	if (module_data != NULL && target_module_data != NULL){
 
 		/* return back to non filtered go back to jump mode */
+		
 		if (filter_from_module_name(head, module_data->full_path, client_arg->filter_mode)
 			&& !filter_from_module_name(head, target_module_data->full_path, client_arg->filter_mode)
 			&& data->jmp_cnt){
-			LOG_PRINT(data->logfile,"ret out after jmp\n");
+			LOG_PRINT(data->logfile, "ret out after jmp\n");
 			data->jmp_to_outside = true;
 
 		}
-		
-		handle_jmp = (target_module_data != NULL)
-			&& !filter_from_module_name(head, module_data->full_path, client_arg->filter_mode)
+
+		handle_jmp = !filter_from_module_name(head, module_data->full_path, client_arg->filter_mode)
 			&& filter_from_module_name(head, target_module_data->full_path, client_arg->filter_mode)
 			&& data->jmp_to_outside;
 
@@ -291,7 +299,7 @@ at_return(app_pc instr_addr, app_pc target_addr){
 			func = stack_pop(data->stack);
 
 
-			LOG_PRINT(data->logfile,"pop:%d\n", data->stack->head);
+			LOG_PRINT(data->logfile, "pop:%d\n", data->stack->head);
 			if (target_module_data != NULL){
 				offset = target_addr - target_module_data->start;
 				LOG_PRINT(data->logfile, "at_ret_target:%s,%x\n", target_module_data->full_path, offset);
@@ -309,7 +317,6 @@ at_return(app_pc instr_addr, app_pc target_addr){
 			}
 		}
 		
-
 	}
 
 	dr_free_module_data(module_data);
@@ -343,6 +350,8 @@ at_cti(app_pc instr_addr, app_pc target_addr){
 			data->jmp_cnt++;
 
 			offset = instr_addr - module_data->start;
+
+			//DEBUG_PRINT("out jmp\n");
 			LOG_PRINT(data->logfile,"out jmp\n");
 			LOG_PRINT(data->logfile, "at_cti_instr:%s,%x\n", module_data->full_path, offset);
 			offset = target_addr - target_module_data->start;
@@ -353,6 +362,8 @@ at_cti(app_pc instr_addr, app_pc target_addr){
 		else if (!filter_from_module_name(head, module_data->full_path, client_arg->filter_mode)
 			&& filter_from_module_name(head, target_module_data->full_path, client_arg->filter_mode)){
 			
+			DEBUG_PRINT("in jmp %d\n",data->jmp_cnt);
+
 			data->jmp_cnt--;
 			if (data->jmp_cnt){
 				data->jmp_to_outside = false;
@@ -360,6 +371,7 @@ at_cti(app_pc instr_addr, app_pc target_addr){
 			
 			DR_ASSERT(data->jmp_cnt >= 0);
 
+			
 			LOG_PRINT(data->logfile,"in jmp\n");
 			offset = instr_addr - module_data->start;
 			LOG_PRINT(data->logfile, "at_cti_instr:%s,%x\n", module_data->full_path, offset);

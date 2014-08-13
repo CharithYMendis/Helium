@@ -6,27 +6,10 @@
 #include <sstream>
 #include <stdio.h>
 #include <assert.h>
+#include "utilities.h"
 
 using namespace std;
 
-std::vector<std::string> &split(const std::string &s, char delim, std::vector<std::string> &elems);
-std::vector<std::string> split(const std::string &s, char delim);
-
-/* debug and helper functions */
-std::vector<std::string> &split(const std::string &s, char delim, std::vector<std::string> &elems) {
-	std::stringstream ss(s);
-	std::string item;
-	while (std::getline(ss, item, delim)) {
-		elems.push_back(item);
-	}
-	return elems;
-}
-
-std::vector<std::string> split(const std::string &s, char delim) {
-	std::vector<std::string> elems;
-	split(s, delim, elems);
-	return elems;
-}
 
 void populate_func_freq(moduleinfo_t * module){
 
@@ -57,10 +40,30 @@ void populate_func_freq(moduleinfo_t * module){
 
 }
 
-bbinfo_t * find_bb(funcinfo_t * func, uint32_t start_addr){
+moduleinfo_t * find_module(moduleinfo_t * head,  uint64_t start_addr){
+	while (head != NULL){
+		if (head->start_addr == start_addr){
+			return head;
+		}
+		head = head->next;
+	}
+	return NULL;
+}
+
+moduleinfo_t * find_module(moduleinfo_t * head, string name){
+	while (head != NULL){
+		if (strcmp(head->name,name.c_str()) == 0){
+			return head;
+		}
+		head = head->next;
+	}
+	return NULL;
+}
+
+bbinfo_t * find_bb(funcinfo_t * func, uint32_t addr){
 
 	for (int i = 0; i < func->bbs.size(); i++){
-		if (func->bbs[i]->start_addr == start_addr){
+		if ( (func->bbs[i]->start_addr >= addr) && (addr < func->bbs[i]->start_addr + func->bbs[i]->size) ){
 			return func->bbs[i];
 		}
 	}
@@ -77,30 +80,31 @@ funcinfo_t * find_func(moduleinfo_t * module,uint32_t start_addr){
 	return NULL;
 }
 
-void print_funcs(moduleinfo_t * module,const char * filename){
+funcinfo_t * find_func_app_pc(moduleinfo_t * module, uint32_t app_pc){
+	for (int i = 0; i < module->funcs.size(); i++){
+		if (find_bb(module->funcs[i], app_pc) != NULL){
+			return module->funcs[i];
+		}
+	}
+	return NULL;
+}
 
-	FILE * file;
-	file = fopen(filename, "w");
+void print_funcs(moduleinfo_t * module,ofstream &file){
 
-	assert(file != NULL);
+	assert(file.good());
 
 	while (module != NULL){
-		fprintf(file, "%s\n", module->name);
+		file << module->name << endl;
 		for (int i = 0; i < module->funcs.size(); i++){
-			fprintf(file, "%x-%d\n", module->funcs[i]->start_addr, module->funcs[i]->freq);
+			file << hex << module->funcs[i]->start_addr << "-" << dec << module->funcs[i]->freq << endl;
 		}
 		module = module->next;
 	}
-
-	fclose(file);
 }
 
-void print_moduleinfo(moduleinfo_t * module,const char * filename){
+void print_moduleinfo(moduleinfo_t * module,ofstream &file){
 
-	FILE * file;
-	file = fopen(filename, "w");
-
-	assert(file != NULL);
+	assert(file.good());
 
 	//get the number of modules
 	moduleinfo_t * local = module;
@@ -110,38 +114,42 @@ void print_moduleinfo(moduleinfo_t * module,const char * filename){
 		local = local->next;
 	}
 	
-	fprintf(file, "%d\n", number_modules);
+	file << number_modules << endl;
 	while (module != NULL){
-		fprintf(file, "%s\n%x\n", module->name,module->start_addr);
+		file << module->name << endl;
+		file << hex << module->start_addr << endl;
 		
 		for (int i = 0; i < module->funcs.size(); i++){
-			fprintf(file, "func-%x-%d-%d\n", module->funcs[i]->start_addr,module->funcs[i]->bbs.size(),module->funcs[i]->freq);
+
+			file << "func-" << hex << module->funcs[i]->start_addr << dec << "-" << module->funcs[i]->bbs.size() << "-" << module->funcs[i]->freq << endl;
+
 			funcinfo_t * func = module->funcs[i];
 			for (int j = 0; j < func->bbs.size(); j++){
-				fprintf(file, "%x,%d,%d,", func->bbs[j]->start_addr, func->bbs[j]->size, func->bbs[j]->freq);
+
+				file << hex << func->bbs[j]->start_addr << "," << dec << func->bbs[j]->size << "," << func->bbs[j]->freq << ",";
 				bbinfo_t * bb = func->bbs[j];
 				
-				fprintf(file, "%d,", bb->from_bbs.size());
+				file << bb->from_bbs.size() << "," ;
 				for (int k = 0; k < bb->from_bbs.size(); k++){
-					fprintf(file, "%x,%d,", bb->from_bbs[k]->target, bb->from_bbs[k]->freq);
+					file << hex << bb->from_bbs[k]->target << "," << dec << bb->from_bbs[k]->freq << ",";
 				}
 
-				fprintf(file, "%d,", bb->to_bbs.size());
+				file << bb->to_bbs.size() << ",";
 				for (int k = 0; k < bb->to_bbs.size(); k++){
-					fprintf(file, "%x,%d,", bb->to_bbs[k]->target, bb->to_bbs[k]->freq);
+					file << hex << bb->to_bbs[k]->target << "," << dec << bb->to_bbs[k]->freq << ",";
 				}
 
-				fprintf(file, "%d,", bb->callees.size());
+				file << bb->callees.size() << ",";
 				for (int k = 0; k < bb->callees.size(); k++){
-					fprintf(file, "%x,%d,", bb->callees[k]->target, bb->callees[k]->freq);
+					file << hex << bb->callees[k]->target << "," << dec << bb->callees[k]->freq << ",";
 				}
 
-				fprintf(file, "%d,", bb->callers.size());
+				file << bb->callers.size() << ",";
 				for (int k = 0; k < bb->callers.size(); k++){
-					fprintf(file, "%x,%d,", bb->callers[k]->target, bb->callers[k]->freq);
+					file << hex << bb->callers[k]->target << "," << dec << bb->callers[k]->freq << ",";
 				}
 
-				fprintf(file, "\n");
+				file << endl;
 
 			}
 		}
@@ -150,15 +158,12 @@ void print_moduleinfo(moduleinfo_t * module,const char * filename){
 
 	}
 
-	fclose(file);
 
 }
 
-moduleinfo_t * populate_moduleinfo(const char* filename){
+moduleinfo_t * populate_moduleinfo(ifstream &file){
 
 	moduleinfo_t * head = new moduleinfo_t();
-	ifstream file;
-	file.open(filename);
 
 	assert(file.good());
 
@@ -167,8 +172,6 @@ moduleinfo_t * populate_moduleinfo(const char* filename){
 	//get the number of modules
 	file.getline(string_val, MAX_STRING_LENGTH);
 	int no_modules = atoi(string_val);
-
-
 	
 	moduleinfo_t * current_module = NULL;
 
@@ -263,11 +266,37 @@ moduleinfo_t * populate_moduleinfo(const char* filename){
 		}
 	}
 
-	file.close();
-
 	populate_func_freq(head);
 
 	return head;
+
+}
+
+void print_filter_file(ofstream &file, moduleinfo_t * head){
+
+	/* get the number of modules */
+	moduleinfo_t * count_mod = head;
+	uint32_t count = 0;
+
+	while (count_mod != NULL){
+		count++;
+		count_mod = count_mod->next;
+	}
+
+	file << count << endl;
+
+	while (head != NULL){
+
+		file << head->name << endl;
+		file << head->funcs.size() << endl;
+		for (int i = 0; i < head->funcs.size(); i++){
+			file << head->funcs[i]->start_addr << endl;
+		}
+
+
+		head = head->next;
+	}
+
 
 }
 

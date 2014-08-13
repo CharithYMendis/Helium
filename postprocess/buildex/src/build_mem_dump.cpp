@@ -4,9 +4,110 @@
 #include <string>
 #include "defines.h"
 #include <stdlib.h>
+#include "utilities.h"
 
-//#define DP_KERNAL
-#define BLUR_KERNAL
+void get_input_output_mem_regions(ofstream &dump_in, ofstream &dump_out,
+	image_t * in_image, image_t * out_image, vector<mem_regions_t *> &mem_regions){
+
+}
+
+/* read the config file to fill in the information  */
+void populate_mem_region_from_config(ifstream &config, mem_regions_t * region){
+	/*layout, padding*/
+	while (!config.eof()){
+		string line;
+		getline(config, line);
+		if (!line.empty()){
+			vector<string> splitted = split(line, '=');
+			ASSERT_MSG(splitted.size() == 2, ("expected a name / value pair\n"));
+
+			string name = splitted[0];
+			string value = splitted[1];
+
+			/* now process the string */
+			if (name.compare("layout") == 0){
+				if (value.compare("col-major") == 0) region->layout = COLUMN_MAJOR;
+				else if (value.compare("row-major") == 0) region->layout = ROW_MAJOR;
+			}
+			else if (name.compare("padding") == 0){
+				region->padding = atoi(value.c_str());
+			}
+
+		}
+	}
+}
+
+
+void get_input_output_mem_regions(vector<mem_info_t *> &mem, vector<mem_regions_t *> &mem_regions,
+	ifstream &config, image_t * in_image, image_t * out_image){
+
+	uint inputs = 0;
+	uint outputs = 0;
+	uint intermediates = 0;
+
+
+	for (int i = 0; i < mem.size(); i++){
+		if (mem[i]->type == MEM_HEAP_TYPE){
+
+			mem_regions_t * region = new mem_regions_t();
+			if (mem[i]->direction == MEM_INPUT){
+				region->type = IMAGE_INPUT;
+				region->name = "input_" + to_string(++inputs);
+			}
+			else if (mem[i]->direction == MEM_OUTPUT){
+				region->type = IMAGE_OUTPUT;
+				region->name = "output_" + to_string(++outputs);
+			}
+			else{
+				region->type = IMAGE_INTERMEDIATE;
+				region->name = "inter_" + to_string(++intermediates);
+			}
+
+			region->start = mem[i]->start;
+			region->end = mem[i]->end;
+			region->stride = mem[i]->prob_stride;
+			region->size = (mem[i]->end - mem[i]->start) / region->stride;
+
+			/* select the image that matches this mem */
+
+
+
+			/* get non volatile (relatively) values from the config file */
+			populate_mem_region_from_config(config,region);
+
+
+#ifdef DP_KERNAL
+			region->colors = 1;
+			region->bytes_per_color = 4;
+			region->layout = XY_LAYOUT;
+			region->padding = 0;
+			region->width = 10;
+			region->height = 10;
+#endif
+#ifdef BLUR_KERNAL
+			region->colors = 3;
+			region->bytes_per_color = 1;
+			region->layout = XY_LAYOUT;
+			region->padding = 0;
+			region->width = 30;
+			region->height = 30;
+#endif
+
+
+			if (region->layout & XY_LAYOUT == XY_LAYOUT){
+				region->scanline_width = region->colors * region->bytes_per_color * region->width + region->padding;
+			}
+			else if (region->layout & YX_LAYOUT == YX_LAYOUT){
+				region->scanline_width = region->colors * region->bytes_per_color * region->height + region->padding;
+			}
+
+			mem_regions.push_back(region);
+
+		}
+	}
+
+
+}
 
 void get_input_output_mem_regions(vector<mem_info_t *> &mem, vector<mem_regions_t *> &mem_regions){
 

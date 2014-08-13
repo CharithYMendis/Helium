@@ -1,4 +1,4 @@
-#include "image_manipulation.h"
+#include "imageinfo.h"
 
 using namespace std;
 

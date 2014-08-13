@@ -39,6 +39,7 @@ endif ()
 
 
 include_directories("include")
+include_directories("../../common/include")
 add_executable(buildex 
 
 src/main.cpp 
@@ -55,7 +56,11 @@ src/build_abs_tree.cpp
 
 src/print_common.cpp 
 src/print_halide.cpp 
-src/print_dot.cpp 
-src/imageparser.cpp
+src/print_dot.cpp
+
+../../common/src/imageinfo.cpp
+../../common/src/meminfo.cpp
+../../common/src/utilities.cpp
+
 
 )
