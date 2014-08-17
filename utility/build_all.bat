@@ -1,6 +1,11 @@
 :: build the entire project
 @echo off
 
+if "%1" == "help" (
+	echo {m32/m64} {debug/release} {library}
+	exit /b
+)
+
 set ARCH=%1
 set MODE=%2
 set LIBRARY=%3

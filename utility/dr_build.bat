@@ -3,6 +3,11 @@
 :: library locations
 @echo off
 
+if "%1" == "help" (
+	echo {library} {dr_folder_name}
+	exit /b
+)
+
 set CURRENT_DIR=%CD%
 
 if "%1" == "" (

@@ -1,6 +1,11 @@
 :: build the entire project
 @echo off
 
+if "%1" == "help" (
+	echo {m32/m64} {debug/release} {halide_dir}
+	exit /b
+)
+
 set ARCH=%1
 set MODE=%2
 set HALIDE_DIRECTORY=%3
