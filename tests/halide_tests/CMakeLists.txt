@@ -2,8 +2,6 @@
 project(halide_tests)
 cmake_minimum_required(VERSION 2.8)
 
-message(${GDIPLUS})
-
 function(halide_project name library)
   
   message("ARGS\n ${ARGN}")
@@ -36,13 +34,13 @@ endmacro(change_config)
 #end of functions
 
 
-set(HALIDE_OWN_BUILD OFF)
+# set(HALIDE_OWN_BUILD OFF)
 
-if(HALIDE_OWN_BUILD)
-	set(HALIDE_DIRECTORY "C:/Charith/libraries/Halide_build")
-else(HALIDE_OWN_BUILD)
-	set(HALIDE_DIRECTORY "C:/Charith/libraries/Halide_prebuilt")
-endif(HALIDE_OWN_BUILD)
+# if(HALIDE_OWN_BUILD)
+	# set(HALIDE_DIRECTORY "C:/Charith/libraries/Halide_build")
+# else(HALIDE_OWN_BUILD)
+	# set(HALIDE_DIRECTORY "C:/Charith/libraries/Halide_prebuilt")
+# endif(HALIDE_OWN_BUILD)
 
 message(STATUS "${TYPE}")
 

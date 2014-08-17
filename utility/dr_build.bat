@@ -3,13 +3,23 @@
 :: library locations
 @echo off
 
+set CURRENT_DIR=%CD%
+
 if "%1" == "" (
-	echo please give out DR directory..
+	echo please give out library directory..
 	exit /b
 )
 
-set DR_HOME=%1
-set CURRENT=%CD%
+set DR_HOME=%1\%2
+if "%2" == "" (
+	set DR_HOME=%1\dynamorio
+)
+
+if NOT EXIST %DR_HOME%\NUL (
+	mkdir %DR_HOME%
+	cd %DR_HOME%
+	svn co http://dynamorio.googlecode.com/svn/trunk/ .
+)
 
 :: setting up dynamorio environment variables
 setx DYNAMORIO_32_DEBUG_HOME %DR_HOME%\build_debug_32
@@ -64,4 +74,4 @@ cmake -G"Visual Studio 12 Win64" ..
 cmake --build . --config RelWithDebInfo
 echo release_64_done 1>&2
 
-cd %CURRENT%
+cd %CURRENT_DIR%

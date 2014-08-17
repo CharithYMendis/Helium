@@ -18,10 +18,10 @@ if NOT EXIST ..\build64\NUL mkdir ..\build64
 cd ..\build64
 if EXIST CMakeCache.txt del CMakeCache.txt
 if "%2"=="1" (
-cmake -G"Visual Studio 12 Win64" -DTYPE=x64 -DFIRST=1 .. 
+cmake -G"Visual Studio 12 Win64" -DTYPE=x64 -DFIRST=1 -DHALIDE_DIRECTORY=%3 .. 
 )
 if "%2"=="0" (
-cmake -G"Visual Studio 12 Win64" -DTYPE=x64 ..
+cmake -G"Visual Studio 12 Win64" -DTYPE=x64 -DHALIDE_DIRECTORY=%3 ..
 )
 )
 
@@ -30,10 +30,10 @@ if NOT EXIST ..\build32\NUL mkdir ..\build32
 cd ..\build32
 if EXIST CMakeCache.txt del CMakeCache.txt
 if "%2"=="1" (
-cmake -G"Visual Studio 12" -DTYPE=x86 -DFIRST=1 ..
+cmake -G"Visual Studio 12" -DTYPE=x86 -DFIRST=1 -DHALIDE_DIRECTORY=%3 ..
 )
 if "%2"=="0" (
-cmake -G"Visual Studio 12" -DTYPE=x86 ..
+cmake -G"Visual Studio 12" -DTYPE=x86 -DHALIDE_DIRECTORY=%3 ..
 )
 )
 

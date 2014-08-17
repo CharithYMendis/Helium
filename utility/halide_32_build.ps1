@@ -1,8 +1,27 @@
-param([int]$clean=0,[int]$cmakeclean=0,[string]$library="",[string]$halide="")
+param([int]$clean=0,[int]$cmakeclean=0,[string]$library="",[string]$halide="halide_build",[string]$llvm="llvm")
 
 # Set the root dir of the Halide checkout
 $LIBRARIES = $library
 $ROOT = "$library\$halide"
+$LLVM = "$library\$llvm"
+
+if ( $library -eq "" ){
+	echo Please give the library folder location
+	exit /b
+}
+
+if ( !(Test-path $LLVM) ){
+	cd $library
+	svn co http://llvm.org/svn/llvm-project/llvm/trunk $llvm
+	svn co http://llvm.org/svn/llvm-project/cfe/trunk $llvm\tools\clang
+}
+
+
+if ( !(Test-path $ROOT) ) {
+	cd $library
+	git clone https://github.com/halide/Halide.git
+}
+
 
 $ErrorActionPreference = "Continue"
 
@@ -25,12 +44,13 @@ $env:PATH += ";C:\Program Files (x86)\Git\bin"
 $env:PATH += ";C:\Program Files (x86)\MSBuild\12.0\bin"
 
 # Update source
-svn up $LIBRARIES\llvm\tools\clang
-svn up $LIBRARIES\llvm
+svn up $LIBRARIES\$llvm\tools\clang
+svn up $LIBRARIES\$llvm
+cd $ROOT
 git pull
 
 # Build latest llvm
-cd $LIBRARIES\llvm
+cd $LIBRARIES\$llvm
 if (! (Test-Path build-32)) {
   mkdir build-32
 }
@@ -58,15 +78,15 @@ if ($LastExitCode) {
 
 # Build Halide
 cd $ROOT
-if (! (Test-Path build_32)) {
-  mkdir build_32
+if (! (Test-Path build-32)) {
+  mkdir build-32
 }
 elseif ( $clean -eq 1 ) {
   rmdir build-32 /s /q
   mkdir build-32
 }
 
-cd build_32
+cd build-32
 cmake -D LLVM_BIN=$LIBRARIES\llvm\build-32\Release\bin -D LLVM_INCLUDE="$LIBRARIES\llvm\include;$LIBRARIES\llvm\build-32\include" -D LLVM_LIB=$LIBRARIES\llvm\build-32\Release\lib -D LLVM_VERSION=35 -D TARGET_ARM=ON -D TARGET_NATIVE_CLIENT=OFF -D TARGET_OPENCL=ON -D TARGET_PTX=ON -D TARGET_SPIR=ON -D TARGET_X86=ON -D WITH_TEST_CORRECTNESS=ON -D WITH_TEST_ERROR=ON -D WITH_TEST_WARNING=ON -D WITH_TEST_PERFORMANCE=ON -D HALIDE_SHARED_LIBRARY=ON -G "Visual Studio 12" ..
 
 if ($cmakeclean -eq 1){
@@ -87,19 +107,19 @@ cd $ROOT
 # $COMMIT = git show HEAD | head -n1 | cut -b8-
 # $DATE = date +%Y_%m_%d
 
-if (! (Test-Path distrib_32)) {
+if (! (Test-Path x86)) {
   mkdir x86
 }
 cd x86
-cp ..\build_32\include\Halide.h .
-cp ..\build_32\lib\Release\Halide.lib .
-cp ..\build_32\bin\Release\Halide.dll .
+cp ..\build-32\include\Halide.h .
+cp ..\build-32\lib\Release\Halide.lib .
+cp ..\build-32\bin\Release\Halide.dll .
 # &7z a Halide_Windows_64_trunk_${COMMIT}_${DATE}.zip Halide.h Halide.lib Halide.dll
 
 # Run the tests
 $env:HL_JIT_TARGET = "host"
 
-cd $ROOT\build_32\bin\Release
+cd $ROOT\build-32\bin\Release
 
 Get-ChildItem . -filter correctness*.exe | ForEach { 
   echo ""
