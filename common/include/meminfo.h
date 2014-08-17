@@ -9,6 +9,10 @@
 #define MEM_INPUT		0x1
 #define MEM_OUTPUT		0x2
 
+//linking mode
+#define GREEDY			1
+#define DYNAMIC_PROG	2
+
 /* input typedef */
 struct mem_input_t {
 
@@ -53,18 +57,19 @@ struct pc_mem_region_t {
 /* pc mem region related functions - most use the mem_info_t for actual work */
 void				 update_mem_regions(std::vector<pc_mem_region_t *> &pc_mems, mem_input_t * input); /* done */
 void				 postprocess_mem_regions(std::vector<pc_mem_region_t *> &mem); /* done */
-void				 print_mem_layout(std::vector<pc_mem_region_t *> &pc_mems); /* done */
+void				 print_mem_layout(std::ostream &file, std::vector<pc_mem_region_t *> &pc_mems); /* done */
 bool				 random_dest_select(std::vector<pc_mem_region_t *> &pc_mems, std::string module, uint64_t app_pc, uint64_t * dest, uint32_t * stride); /* done */
-void				 link_mem_regions(std::vector<pc_mem_region_t *> &pc_mems); /* done */
+void				 link_mem_regions(std::vector<pc_mem_region_t *> &pc_mems, uint32_t mode); /* done */
 std::vector<mem_info_t *> extract_mem_regions(std::vector<pc_mem_region_t *> &pc_mems); /* done */
 void				 populate_memory_dependancies(std::vector<pc_mem_region_t *> &regions);
 
 /* mem info related functions */
 void				 update_mem_regions(std::vector<mem_info_t *> &mem_info, mem_input_t * input); /* done */
 void				 postprocess_mem_regions(std::vector<mem_info_t *> &mem); /* done */
-void				 print_mem_layout(std::vector<mem_info_t *> &mem); /* done */
+void				 print_mem_layout(std::ostream &file, std::vector<mem_info_t *> &mem); /* done */
 bool				 random_dest_select(std::vector<mem_info_t *> &mem, uint64_t * dest, uint32_t * stride); /* done */
 bool				 link_mem_regions(std::vector<mem_info_t *> &mem, uint32_t app_pc);
+bool				 link_mem_regions_greedy(std::vector<mem_info_t *> &mem, uint32_t app_pc);
 
 
 

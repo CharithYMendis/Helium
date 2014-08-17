@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include "common_defines.h"
 #include "meminfo.h"
+#include "utilities.h"
 #include <algorithm>
 
 struct cregions{
@@ -188,6 +189,7 @@ static void defragment_regions(vector<mem_info_t *> &mem_info){
 					if ((candidate->start >= current->start) && (candidate->end <= current->end)){
 						current->direction |= candidate->direction;
 						update_stride_from_vector(current->stride_freqs, candidate->stride_freqs);
+						delete mem_info[i];
 						mem_info.erase(mem_info.begin() + i--);
 						break;
 					}
@@ -209,6 +211,7 @@ static void defragment_regions(vector<mem_info_t *> &mem_info){
 					if (merged){
 						candidate->direction |= current->direction;
 						update_stride_from_vector(candidate->stride_freqs, current->stride_freqs);
+						delete mem_info[j];
 						mem_info.erase(mem_info.begin() + j--);
 					}
 
@@ -317,12 +320,12 @@ vector<mem_info_t *> merge_mem_regions(vector<mem_info_t *> first_mem, vector<me
 				}
 
 				/* if there is an overlap then second is deleted and merged into the first */
-				else if (first->start <= second->start && first->end <= second->end){
+				else if (first->start <= second->start && first->end >= second->start){
 					first->end = second->end;
 					second_mem.erase(second_mem.begin() + j--);
 					merge_info_to_first(first, second);
 				}
-				else if (first->start >= second->start && first->end >= second->end){
+				else if (first->start >= second->start && first->start <= second->end){
 					first->start = second->start;
 					second_mem.erase(second_mem.begin() + j--);
 					merge_info_to_first(first, second);
@@ -356,12 +359,14 @@ vector<mem_info_t *> extract_mem_regions(vector<pc_mem_region_t *> &pc_mems){
 
 }
 
-void print_mem_layout(vector<pc_mem_region_t *> &pc_mems){
+void print_mem_layout(ostream &file, vector<pc_mem_region_t *> &pc_mems){
 	
 	for (int i = 0; i < pc_mems.size(); i++){
-		IF_PRINT(!pc_mems[i]->module.empty(), ("module name - %s\n", pc_mems[i]->module.c_str()));
-		printf("app_pc - %x\n", pc_mems[i]->pc);
-		print_mem_layout(pc_mems[i]->regions); /* print mem layout has the seperation line */
+		if (!pc_mems[i]->module.empty()){
+			file << "module name - " << pc_mems[i]->module.c_str() << endl;
+		}
+		file << "app_pc - " << hex << pc_mems[i]->pc << " mem regions - " << pc_mems[i]->regions.size() << endl;
+		print_mem_layout(file,pc_mems[i]->regions); /* print mem layout has the seperation line */
 	}
 
 }
@@ -379,17 +384,33 @@ bool random_dest_select(vector<pc_mem_region_t *> &pc_mems, string module, uint3
 }
 
 void postprocess_mem_regions(vector<pc_mem_region_t *> &pc_mem){
+
+	DEBUG_PRINT((" found %d pc mem regions for post processing \n", pc_mem.size()), 5);
+	uint32_t count = 0;
 	for (int i = 0; i < pc_mem.size(); i++){
+
+		DEBUG_PRINT((" app_pc %x mem region size before %d \n",pc_mem[i]->pc, pc_mem[i]->regions.size()), 5);
 		defragment_regions(pc_mem[i]->regions);
 		update_most_prob_stride(pc_mem[i]->regions);
+		DEBUG_PRINT((" mem region size after %d \n", pc_mem[i]->regions.size()), 5);
+		print_progress(&count, 1);
+
 	}
 	
 }
 
-void link_mem_regions(vector<pc_mem_region_t *> &pc_mems){
+
+void link_mem_regions(vector<pc_mem_region_t *> &pc_mems, uint32_t mode){
 
 	for (int i = 0; i < pc_mems.size(); i++){
-		link_mem_regions(pc_mems[i]->regions, pc_mems[i]->pc);
+
+		if (mode == DYNAMIC_PROG){
+			link_mem_regions(pc_mems[i]->regions, pc_mems[i]->pc);
+		}
+		else if(mode == GREEDY){
+			link_mem_regions_greedy(pc_mems[i]->regions, pc_mems[i]->pc);
+		}
+		
 	}
 }
 
@@ -443,32 +464,33 @@ bool random_dest_select(vector<mem_info_t *> &mem_info, uint64_t * dest, uint32_
 
 }
 
-void print_mem_layout(vector<mem_info_t *> &mem_info){
+void print_mem_layout(ostream &file, vector<mem_info_t *> &mem_info){
 
 	for (int i = 0; i < mem_info.size(); i++){
 		mem_info_t * info = mem_info[i];
 
 		/* print out the type */
-		IF_PRINT((info->type == MEM_HEAP_TYPE), ("type - heap\n"));
-		IF_PRINT((info->type == MEM_STACK_TYPE), ("type - stack\n"));
+		if (info->type == MEM_HEAP_TYPE) file << "type - heap" << endl;
+		if (info->type == MEM_STACK_TYPE) file << "type - stack" << endl;
+
 
 		/* print out the direction */
-		IF_PRINT((info->direction & MEM_INPUT) == MEM_INPUT, ("dir - input\n"));
-		IF_PRINT((info->direction & MEM_OUTPUT) == MEM_OUTPUT, ("dir - output\n"));
+		if ((info->direction & MEM_INPUT) == MEM_INPUT) file << "dir - input" << endl;
+		if ((info->direction & MEM_OUTPUT) == MEM_OUTPUT) file << "dir - output\n" << endl;
 
-		printf("start - %x\n", info->start);
-		printf("end - %x\n", info->end);
+		file << "start - " << hex << info->start << endl;
+		file << "end - " << hex << info->end << endl;
 
 		uint stride = get_most_probable_stride(info->stride_freqs);
 
-		printf("stride (most) - %d\n", stride);
+		file << "stride (most) - " << dec << stride << endl;
 
 		for (int i = 0; i < info->stride_freqs.size(); i++){
-			printf("stride - %d, freq - %d\n", info->stride_freqs[i].first, info->stride_freqs[i].second);
+			file << "stride - " << dec << info->stride_freqs[i].first << ", freq - " << info->stride_freqs[i].second << endl;
 		}
 
-		printf("estimated size - %d\n", (info->end - info->start) / (stride));
-		printf("--------------------------------------------------------------------------\n");
+		file << "estimated size - " << dec << (info->end - info->start) / (stride) << endl;
+		file << "--------------------------------------------------------------------------" << endl;
 
 	}
 }
@@ -477,6 +499,62 @@ bool compare_mem_regions(mem_info_t * first, mem_info_t * second){
 
 	return (first->start <= second->start);
 
+}
+
+/*
+* this is a greedy (non-optimal) coalescing of mem regions
+*/
+
+bool link_mem_regions_greedy(vector<mem_info_t *> &mem, uint32_t app_pc){
+
+	sort(mem.begin(), mem.end(), compare_mem_regions);
+
+
+	bool ret = true;
+
+	while (ret){
+
+		ret = false;
+		for (int i = 0; i < mem.size(); i++){
+
+			if (i + 2 >= mem.size()) continue; //at least three regions should be connected
+			int32_t gap_first = mem[i + 1]->start - mem[i]->end;
+			int32_t gap_second = mem[i + 2]->start - mem[i + 1]->end;
+
+			if (gap_first == gap_second){ /* ok we can now merge the regions */
+				int32_t gap = gap_first;
+				//cout << mem[i+1]->start << " "<< mem[i]-> end<< endl;
+				mem[i]->end = mem[i + 2]->end;
+				merge_info_to_first(mem[i], mem[i + 1]);
+				merge_info_to_first(mem[i], mem[i + 2]);
+				uint32_t index = i + 2;
+				for (int j = i + 3; j < mem.size(); j++){
+					int32_t gap_now = mem[j]->start - mem[i]->end;
+					//cout << gap << " " << gap_now << endl;
+					if (gap_now == gap){
+						mem[i]->end = mem[j]->end;
+						merge_info_to_first(mem[i], mem[j]);
+						index = j;
+					}
+					else{
+						break;
+					}
+				}
+
+				DEBUG_PRINT(("app_pc %x merged indexes from %d to %d\n", app_pc, i, index), 5);
+				for (int j = i + 1; j <= index; j++){
+					delete mem[i + 1];
+					mem.erase(mem.begin() + i + 1);
+				}
+
+				ret = true;
+
+
+			}
+		}
+	}
+
+	return ret;
 }
 
 /* this is to coalesce regions into big input output chuncks; this is inference and may be wrong

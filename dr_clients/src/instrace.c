@@ -150,7 +150,7 @@ void operand_trace(instr_t * instr, void * drcontext);
 static bool parse_commandline_args (const char * args) {
 
 	client_arg = (client_arg_t *)dr_global_alloc(sizeof(client_arg_t));
-	if(dr_sscanf(args,"%s %d %s %d %d",
+	if(dr_sscanf(args,"%s %d %s %d %d %s",
 									   &client_arg->filter_filename,
 									   &client_arg->filter_mode,
 									   &client_arg->output_folder,

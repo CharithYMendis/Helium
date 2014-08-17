@@ -42,7 +42,7 @@ call set_parameters %FILTER_MODE_STRING% %INSTRACE_MODE_STRING%
 
 set CURRENT_DIR=%CD%
 
-set CLIENT_ARGUMENTS=-logdir %EXALGO_LOG_FOLDER% -debug %DEBUG% -log 0
+set CLIENT_ARGUMENTS=-logdir %EXALGO_LOG_FOLDER% -debug %DEBUG% -log 1 -exec %EXEC%
 for %%a in (%PHASE%) do (
 	if "%%a" == "functrace" (
 		set CLIENT_ARGUMENTS=!CLIENT_ARGUMENTS! -functrace %FILTER_FILE% %FILTER_MODE%

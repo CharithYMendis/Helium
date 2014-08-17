@@ -283,11 +283,25 @@ memtrace_bb_instrumentation(void *drcontext, void *tag, instrlist_t *bb,
     int i;
 	reg_id_t reg;
 	file_t out_file;
-
+	instr_t * first = NULL;
+	instr_t * current;
+ 
 	DR_ASSERT(instr_ok_to_mangle(instr));
 
 	if (instr_ok_to_mangle(instr)){
-		if (filter_from_list(head, instr, client_arg->filter_mode)){
+		/* FIXME - need to generalize the filtering library */
+
+
+
+		for (current = instrlist_first(bb); current != NULL; current = instr_get_next(current)){
+			if (instr_ok_to_mangle(current)){
+				first = current;
+				break;
+			}
+		}
+
+
+		if ((first != NULL) && filter_from_list(head, first, client_arg->filter_mode)){
 
 
 			if (instr_reads_memory(instr)) {

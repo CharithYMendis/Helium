@@ -14,8 +14,6 @@ void filter_based_on_freq(moduleinfo_t * head, image_t * image, uint32_t min_thr
 
 	uint32_t size = image->height * image->width;
 	uint32_t min_size = ( (double)size * ((double)min_threshold / 100.0) );
-	std::cout << size << std::endl;
-	std::cout << min_size << std::endl;
 
 	while (head != NULL){
 
@@ -34,6 +32,33 @@ void filter_based_on_freq(moduleinfo_t * head, image_t * image, uint32_t min_thr
 			if (!keep){
 				head->funcs.erase(head->funcs.begin() + i--);
 			}
+		}
+
+		head = head->next;
+	}
+
+
+}
+
+void filter_bbs_based_on_freq(moduleinfo_t * head, image_t * image, uint32_t min_threshold){
+
+	uint32_t size = image->height * image->width;
+	uint32_t min_size = ((double)size * ((double)min_threshold / 100.0));
+
+
+	while (head != NULL){
+
+		for (int i = 0; i < head->funcs.size(); i++){
+
+			bool keep = false;
+			funcinfo_t * func = head->funcs[i];
+			for (int j = 0; j < func->bbs.size(); j++){
+				bbinfo_t * bb = func->bbs[j];
+				if (bb->freq < min_size){
+					func->bbs.erase(func->bbs.begin() + j--);
+				}
+			}
+
 		}
 
 		head = head->next;
@@ -95,6 +120,7 @@ void filter_mem_regions(vector<mem_info_t *> &mems, image_t * in_image, image_t 
 
 	for (int i = 0; i < mems.size(); i++){
 		uint32_t size = (mems[i]->end - mems[i]->start) / (mems[i]->prob_stride);
+		//if (size < 10){
 		if (size <  (min_area * min_threshold / 100) ){
 			mems.erase(mems.begin() + i--);
 		}

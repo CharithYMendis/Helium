@@ -175,6 +175,8 @@ moduleinfo_t * populate_moduleinfo(ifstream &file){
 	
 	moduleinfo_t * current_module = NULL;
 
+	uint32_t count = 0;
+
 	for (int i = 0; i < no_modules; i++){
 
 		if (current_module == NULL){
@@ -187,19 +189,21 @@ moduleinfo_t * populate_moduleinfo(ifstream &file){
 
 		//module name
 		file.getline(current_module->name, MAX_STRING_LENGTH);
-
+		count++;
 
 		//module start addr;
 		file.getline(string_val, MAX_STRING_LENGTH);
 		current_module->start_addr = strtoull(string_val, NULL, 16);
-
+		count++;
 
 		//number of bbs
 		file.getline(string_val, MAX_STRING_LENGTH);
 		int no_bbs = atoi(string_val);
-
+		count++;
 
 		for (int j = 0; j < no_bbs; j++){
+
+			
 
 			/*func, bb_addr, size, freq, <from_bbs_count>, from_bb, freq, .., <caller_count>, caller, freq, ..., <to_bbs_count>, to_bbs, freq, ..., <callee_count>, callee, freq*/
 
@@ -260,7 +264,8 @@ moduleinfo_t * populate_moduleinfo(ifstream &file){
 				new_bb->callers.push_back(info);
 			}
 
-
+			count++;
+			
 			
 
 		}

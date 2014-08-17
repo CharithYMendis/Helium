@@ -70,6 +70,38 @@ void get_input_output_mem_regions(vector<mem_info_t *> &mem, vector<mem_regions_
 
 			/* select the image that matches this mem */
 
+			/* select the image with the lowest percentage error and assign width and height */
+			double out_size = out_image->height * out_image->width;
+			double in_size = in_image->width * in_image->height;
+
+			double err_in = (abs((double)region->size - in_size) / (double)region->size);
+			double err_out = (abs((double)region->size - out_size) / (double)region->size);
+
+			if (err_in > 3 && err_out > 3){ //300% error
+				delete region;
+				continue;
+			}
+			else{
+				if (region->type == IMAGE_INPUT){
+					region->width = in_image->width;
+					region->height = in_image->height;
+				}
+				else if(region->type == IMAGE_OUTPUT){
+					region->width = out_image->width;
+					region->height = out_image->height;
+				}
+				else{
+					if (err_in < err_out){
+						region->width = in_image->width;
+						region->height = in_image->height;
+					}
+					else{
+						region->width = out_image->width;
+						region->height = out_image->height;
+					}
+				}
+			
+			}
 
 
 			/* get non volatile (relatively) values from the config file */

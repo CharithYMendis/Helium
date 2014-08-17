@@ -18,9 +18,9 @@
 
 #define ARGUMENT_LENGTH 10
 
-typedef void (*thread_func_t) (void * drcontext);
-typedef void (*init_func_t) (client_id_t id, const char * name, const char * arguments);
-typedef void (*exit_func_t) (void);
+typedef void(*thread_func_t) (void * drcontext);
+typedef void(*init_func_t) (client_id_t id, const char * name, const char * arguments);
+typedef void(*exit_func_t) (void);
 typedef void(*module_load_t) (void * drcontext, const module_data_t * info, bool loaded);
 typedef void(*module_unload_t) (void * drcontext, const module_data_t * info);
 
@@ -42,9 +42,9 @@ typedef struct _instrumentation_pass_t {
 } instrumentation_pass_t;
 
 typedef struct _cmdarguments_t {
-	
+
 	char name[MAX_STRING_LENGTH];
-	char arguments[10*MAX_STRING_LENGTH];
+	char arguments[10 * MAX_STRING_LENGTH];
 
 } cmdarguments_t;
 
@@ -65,13 +65,14 @@ bool log_mode = false;
 file_t global_logfile;
 
 static char global_logfilename[MAX_STRING_LENGTH];
+static char exec[MAX_STRING_LENGTH];
 
 
 
-DR_EXPORT void 
+DR_EXPORT void
 dr_init(client_id_t id)
 {
-	
+
 	int i = 0;
 	int j = 0;
 
@@ -81,16 +82,27 @@ dr_init(client_id_t id)
 	setupInsPasses();
 	doCommandLineArgProcessing(id);
 
-	
+
 	DEBUG_PRINT("argument length - %d\n", argument_length);
 	for (i = 0; i < argument_length; i++){
 		DEBUG_PRINT("\"%s - %s\"\n", arguments[i].name, arguments[i].arguments);
 	}
-	
-	if (log_mode){
+
+	/*if (log_mode){
 		populate_conv_filename(global_logfilename, logdir, "global", NULL);
 		global_logfile = dr_open_file(global_logfilename, DR_FILE_WRITE_OVERWRITE);
 		DR_ASSERT(global_logfile != INVALID_FILE);
+	}*/
+
+
+	DEBUG_PRINT("%s is starting\n", dr_get_application_name());
+	/* if you are using it only for photoshop do no instrument other exes */
+	if (strcmp(exec, "photoshop") == 0){
+		DEBUG_PRINT("photoshop detected only instrumenting Photoshop.exe\n");
+		if(strcmp(dr_get_application_name(), "Photoshop.exe") != 0){
+			return;
+		}
+		DEBUG_PRINT("starting to instrument Photoshop.exe\n");
 	}
 
 	
@@ -147,7 +159,9 @@ static void process_exit_routine_call(void){
 			}
 		}
 	}
-
+	/*if (log_mode){
+		dr_close_file(global_logfile);
+	}*/
 	drmgr_exit();
 
 	
@@ -169,6 +183,10 @@ void process_global_arguments(){
 		else if (strcmp(arguments[i].name, "log") == 0){
 			dr_printf("global log - %s\n", arguments[i].arguments);
 			log_mode = arguments[i].arguments[0] - '0';
+		}
+		else if (strcmp(arguments[i].name, "exec") == 0){
+			dr_printf("exec - %s\n", arguments[i].arguments);
+			strncpy(exec, arguments[i].arguments, MAX_STRING_LENGTH);
 		}
 	}
 }

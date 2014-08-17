@@ -125,7 +125,6 @@ int main(int argc, char **argv){
 	if (find != string::npos){
 		process_name = process_name.substr(0, find);
 	}
-	cout << process_name << endl;
 
 	ofstream filter_file(get_standard_folder("filter") + "\\" + process_name + "_" +  exec + ".exe.log", ofstream::out); 
 	ofstream app_pc_file(get_standard_folder("output") + "\\" + process_name + "_" + exec + ".exe_app_pc.log", ofstream::out);
@@ -140,17 +139,39 @@ int main(int argc, char **argv){
 
 	if (mode == ONE_IMAGE_MODE || mode == DIFF_MODE){
 
+		DEBUG_PRINT(("populating module information....\n"), 5);
 		moduleinfo_t * module = populate_moduleinfo(*profile_files[0]);
+		DEBUG_PRINT( ("modules populated with profile information  \n") ,5);
 		image_t * in_image = populate_imageinfo(in_image_filenames[0].c_str());
 		image_t * out_image = populate_imageinfo(out_image_filenames[0].c_str());
 
-		filter_based_on_freq(module, in_image, 30);
-		filter_based_on_composition(module);
+		//filter_based_on_freq(module, in_image, 10);
+		//filter_based_on_composition(module);
+		
 
-
+		DEBUG_PRINT(("getting memory region information... \n"), 5);
 		vector<pc_mem_region_t *> pc_mems = get_mem_regions_from_memtrace(memtrace_files[0], module);
-		link_mem_regions(pc_mems);
+		DEBUG_PRINT(("linking memory regions together... \n"), 5);
+		link_mem_regions(pc_mems,GREEDY);
+		DEBUG_PRINT(("filtering out insignificant regions... \n"), 5);
 		filter_mem_regions(pc_mems, in_image, out_image, 30);
+		print_mem_layout(log_file, pc_mems);
+
+
+		DEBUG_PRINT(("filtering based on bb freq on moduleinfo...\n"), 5);
+		filter_bbs_based_on_freq(module, in_image, 1);
+		print_filter_file(filter_file, module);
+		
+
+		vector<mem_info_t *> mems = extract_mem_regions(pc_mems);
+		log_file << "********************extracted mems************************" << endl;
+		
+		print_mem_layout(log_file, mems);
+
+		exit(0);
+
+
+		
 		
 
 		if (mode == ONE_IMAGE_MODE){

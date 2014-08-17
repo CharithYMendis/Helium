@@ -3,6 +3,8 @@
 #include <sstream>
 #include <assert.h>
 #include <iostream>
+#include <stdint.h>
+#include "common_defines.h"
 #include "utilities.h"
 
 
@@ -112,4 +114,17 @@ bool is_prefix(string str, string prefix){
 		if (str[i] != prefix[i]) return false;
 	}
 	return true;
+}
+
+
+void print_progress(uint32_t * count, uint32_t mod){
+
+	if (debug){
+		(*count)++;
+		if ( (*count % mod)  == 0){
+			printf("\t progress - %d\n", *count);
+		}
+	}
+
+
 }
