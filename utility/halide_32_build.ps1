@@ -47,8 +47,8 @@ echo $LLVM
 echo $LLVM\tools\clang
 
 # Update source
-svn up $LLVM\tools\clang
-svn up $LLVM
+# svn up $LLVM\tools\clang
+# svn up $LLVM
 cd $ROOT
 git pull
 
