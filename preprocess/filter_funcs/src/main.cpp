@@ -158,9 +158,6 @@ int main(int argc, char **argv){
 		link_mem_regions(pc_mems,GREEDY);
 		DEBUG_PRINT(("filtering out insignificant regions... \n"), 5);
 		filter_mem_regions(pc_mems, in_image, out_image, 30);
-		
-
-		//rank the app_pcs with the highest mem region - not needed now
 
 		//get the function entry points filled up for those PCs
 		populate_function_entry_points(pc_mems, module);

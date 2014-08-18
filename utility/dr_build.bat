@@ -31,6 +31,7 @@ setx DYNAMORIO_32_DEBUG_HOME %DR_HOME%\build_debug_32
 setx DYNAMORIO_32_RELEASE_HOME %DR_HOME%\build_release_32
 setx DYNAMORIO_64_DEBUG_HOME %DR_HOME%\build_debug_64
 setx DYNAMORIO_64_RELEASE_HOME %DR_HOME%\build_release_64
+setx DYNAMORIO_HOME %DR_HOME%
 
 :: set up the necessary environments - 32 bit
 call "C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\vcvars32.bat"
