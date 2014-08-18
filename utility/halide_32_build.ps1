@@ -1,9 +1,9 @@
-param([int]$clean=0,[int]$cmakeclean=0,[string]$library="",[string]$halide="halide_build",[string]$llvm="llvm")
+param([int]$clean=0,[int]$cmakeclean=0,[string]$library="",[string]$halide="halide_build",[string]$llvm_folder="llvm")
 
 # Set the root dir of the Halide checkout
 $LIBRARIES = $library
 $ROOT = "$library\$halide"
-$LLVM = "$library\$llvm"
+$LLVM = "$library\$llvm_folder"
 
 if ( $library -eq "" ){
 	echo Please give the library folder location
@@ -12,8 +12,8 @@ if ( $library -eq "" ){
 
 if ( !(Test-path $LLVM) ){
 	cd $library
-	svn co http://llvm.org/svn/llvm-project/llvm/trunk $llvm
-	svn co http://llvm.org/svn/llvm-project/cfe/trunk $llvm\tools\clang
+	svn co http://llvm.org/svn/llvm-project/llvm/trunk $llvm_folder
+	svn co http://llvm.org/svn/llvm-project/cfe/trunk $llvm_folder\tools\clang
 }
 
 
@@ -43,17 +43,17 @@ $env:PATH += ";C:\Program Files (x86)\Git\bin"
 # $env:PATH += ";C:\Program Files (x86)\7-Zip"
 $env:PATH += ";C:\Program Files (x86)\MSBuild\12.0\bin"
 
-echo $LIBRARIES\$llvm
-echo $LIBRARIES\$llvm\tools\clang
+echo $LLVM
+echo $LLVM\tools\clang
 
 # Update source
-svn up $LIBRARIES\$llvm\tools\clang
-svn up $LIBRARIES\$llvm
+svn up $LLVM\tools\clang
+svn up $LLVM
 cd $ROOT
 git pull
 
 # Build latest llvm
-cd $LIBRARIES\$llvm
+cd $LLVM
 if (! (Test-Path build-32)) {
   mkdir build-32
 }
