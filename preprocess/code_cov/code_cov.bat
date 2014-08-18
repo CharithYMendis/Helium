@@ -1,7 +1,7 @@
 :: this is to get the code coverage results for photoshop
 @echo off
 set LOGDIR=%EXALGO_OUTPUT_FOLDER%
-set DREXPORT=C:\Charith\libraries\dynamorio\exports
+set DREXPORT=%DYNAMORIO_HOME%\exports
 set PHOTOSHOP32="C:\Program Files (x86)\Adobe\Adobe Photoshop CS6\Photoshop.exe"
 set PHOTOSHOP64="C:\Program Files\Adobe\Adobe Photoshop CS6 (64 Bit)\Photoshop.exe"
 
