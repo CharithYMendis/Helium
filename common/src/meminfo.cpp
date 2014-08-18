@@ -68,15 +68,32 @@ static void update_stride(vector<pair<uint, uint> > &strides, uint stride){
 }
 
 
-bool compare_pc_mem_regions(pc_mem_region_t * first, pc_mem_region_t * second){
+static bool compare_pc_mem_regions(pc_mem_region_t * first, pc_mem_region_t * second){
 
-	
+	uint32_t highest_first = 0;
+	uint32_t highest_second = 0;
+
+	for (int i = 0; i < first->regions.size(); i++){
+		uint32_t size = (first->regions[i]->start - first->regions[i]->end);
+		if (highest_first < size){
+			highest_first = size;
+		}
+	}
+
+	for (int i = 0; i < second->regions.size(); i++){
+		uint32_t size = (second->regions[i]->start - second->regions[i]->end);
+		if (highest_second < size){
+			highest_second = size;
+		}
+	}
+
+	return highest_first >= highest_second;  /* we are going to get the reversed ranking */
 
 }
 
-void rank_from_highest(vector<pc_mem_region_t *> pc_mems){
+void rank_pc_mems_from_highest(vector<pc_mem_region_t *> &pc_mems){
 
-
+	sort(pc_mems.begin(), pc_mems.end(), compare_pc_mem_regions);
 
 }
 

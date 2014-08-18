@@ -12,8 +12,8 @@ if ( $library -eq "" ){
 
 if ( !(Test-path $LLVM) ){
 	cd $library
-	svn co https://llvm.org/svn/llvm-project/llvm/branches/release_33 $llvm_folder
-	svn co https://llvm.org/svn/llvm-project/cfe/branches/release_33 $llvm_folder\tools\clang
+	svn co http://llvm.org/svn/llvm-project/llvm/trunk $llvm_folder
+	svn co http://llvm.org/svn/llvm-project/cfe/trunk $llvm_folder\tools\clang
 }
 
 

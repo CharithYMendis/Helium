@@ -160,15 +160,16 @@ int main(int argc, char **argv){
 		filter_mem_regions(pc_mems, in_image, out_image, 30);
 		
 
-		//rank the app_pcs with the highest
+		//rank the app_pcs with the highest mem region - not needed now
 
 		//get the function entry points filled up for those PCs
+		populate_function_entry_points(pc_mems, module);
 
 		//get the function composition
 
 		//if one image -> filter based on functional composition (to get rid of loading and saving code)
 		
-		//then filter based
+		//then get the function with the maximum number of pc_mems
 		
 		print_mem_layout(log_file, pc_mems);
 
