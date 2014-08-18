@@ -131,7 +131,7 @@ void print_moduleinfo(moduleinfo_t * module,ofstream &file){
 				
 				file << bb->from_bbs.size() << "," ;
 				for (int k = 0; k < bb->from_bbs.size(); k++){
-					file << hex << bb->from_bbs[k]->target << "," << dec << bb->from_bbs[k]->freq << ",";
+					file << hex << bb->from_bbs[k]->target << "," << dec << bb->from_bbs[k]->freq << "," << bb->from_bbs[k]->is_ret << "," ; 
 				}
 
 				file << bb->to_bbs.size() << ",";
@@ -236,7 +236,8 @@ moduleinfo_t * populate_moduleinfo(ifstream &file){
 			for (int k = 0; k < from_bbs; k++){
 				targetinfo_t * info = new targetinfo_t();
 				info->target = strtoul(tokens[index++].c_str(), NULL, 16);
-				info->freq = strtoul(tokens[index++].c_str(), NULL, 10);				
+				info->freq = strtoul(tokens[index++].c_str(), NULL, 10);	
+				info->is_ret = strtoul(tokens[index++].c_str(), NULL, 10);
 				new_bb->from_bbs.push_back(info);
 			}
 

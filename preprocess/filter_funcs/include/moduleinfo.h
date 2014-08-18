@@ -15,6 +15,7 @@
 struct targetinfo_t{
 
 	uint32_t target;
+	uint32_t is_ret;
 	uint32_t freq;
 
 };

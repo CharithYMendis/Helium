@@ -25,6 +25,7 @@ typedef struct _call_bb_info_t {
 	char * module;
 	uint start_addr;
 	uint freq;
+	uint is_ret;
 } call_bb_info_t;
 
 //if the bb is a call target 

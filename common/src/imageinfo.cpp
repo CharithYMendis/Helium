@@ -1,7 +1,10 @@
 #include "imageinfo.h"
+#include "common_defines.h"
 #include <iostream>
 
 using namespace std;
+
+int GetEncoderClsid(const WCHAR* format, CLSID* pClsid);
 
 ULONG_PTR initialize_image_subsystem(){
 
@@ -17,56 +20,110 @@ void shutdown_image_subsystem(ULONG_PTR token){
 	Gdiplus::GdiplusShutdown(token);
 }
 
-image_t * populate_imageinfo(const char * filename){
+void save_image(Gdiplus::Bitmap * image, const char * file){
+
+	CLSID clsId;
+
+	wchar_t * file_wchar = new wchar_t[strlen(file) + 1];;
+	mbstowcs(file_wchar, file, strlen(file) + 1);
+
+	string filename(file);
+
+	string extension = "";
+	int index = -1;
+	for (int i = filename.size() - 1; i >= 0; i--){
+		if (filename[i] == '.'){
+			index = i + 1;
+			break;
+		}
+	}
+
+	if (index != -1){
+
+		for (int i = index; i<filename.size(); i++){
+			extension += filename[i];
+		}
+
+	}
+
+	/*image/bmp
+	image/jpeg
+	image/gif
+	image/tiff
+	image/png*/
+
+	if ((extension.compare("jpg") == 0)){
+		GetEncoderClsid(L"image/jpeg", &clsId);
+	}
+	else if ((extension.compare("png") == 0)){
+		GetEncoderClsid(L"image/png", &clsId);
+	}
+	else{
+		cout << "error: unknown image type" << endl;
+		return;
+	}
+
+	image->Save(file_wchar, &clsId);
+
+}
+
+Gdiplus::Bitmap * open_image(const char * filename){
 
 	wchar_t * file_wchar = new wchar_t[strlen(filename) + 1];
 
 	mbstowcs(file_wchar, filename, strlen(filename) + 1);
 
 	Gdiplus::Bitmap *image = Gdiplus::Bitmap::FromFile(file_wchar);
-	Gdiplus::Status ok;
+
+	return image;
+
+}
+
+Gdiplus::Bitmap * create_image(uint32_t width, uint32_t height){
+
+	Gdiplus::Bitmap * image = new Gdiplus::Bitmap(width, height);
+	return image;
+
+}
+
+image_t * populate_imageinfo(Gdiplus::Bitmap * image){
 
 	image_t * imageinfo = new image_t;
 
 	imageinfo->width = image->GetWidth();
 	imageinfo->height = image->GetHeight();
-
-	delete image;
+	imageinfo->image_array = get_image_buffer(image);
 
 	return imageinfo;
 
 }
 
-#define COLORS 3
-
-//need routines to save and create images
-
-byte * get_image_buffer(Gdiplus::Bitmap * image, uint32_t * height, uint32_t * width, uint32_t * fields){
+byte * get_image_buffer(Gdiplus::Bitmap * image){
 
 	Gdiplus::Status ok;
 
 	byte * buffer = new byte[image->GetHeight() * image->GetWidth() * 3];
 
-	*height = image->GetHeight();
-	*width = image->GetWidth();
-	*fields = COLORS;
+	uint32_t height = image->GetHeight();
+	uint32_t width = image->GetWidth();
+	if (debug){
+		std::cout << height << " " << width << std::endl;
+	}
 
 	for (int i = 0; i < image->GetWidth(); i++){
 		for (int j = 0; j < image->GetHeight(); j++){
 			Gdiplus::Color color;
 			ok = image->GetPixel(i, j, &color);
-
-
+			
 			if (ok != 0){
 				std::cout << "error" << std::endl;
 				exit(-1);
 			}
 			else{
 
-				uint32_t index = (i + j * image->GetWidth()) * COLORS;
-				buffer[index] = color.GetR();
-				buffer[index + 1] = color.GetG();
-				buffer[index + 2] = color.GetB();
+				buffer[(0 * height + j)*width + i] = color.GetR();
+				buffer[(1 * height + j)*width + i] = color.GetG();
+				buffer[(2 * height + j)*width + i] = color.GetB();
 
 			}
 
@@ -77,21 +134,21 @@ byte * get_image_buffer(Gdiplus::Bitmap * image, uint32_t * height, uint32_t * w
 
 }
 
-void update_image_buffer(Gdiplus::Bitmap * image, byte * array){
+void update_image_buffer(Gdiplus::Bitmap * image, byte * buffer){
 
 	/* update the bitmap image*/
+	uint32_t height = image->GetHeight();
+	uint32_t width = image->GetWidth();
 
 	for (int i = 0; i < image->GetWidth(); i++){
 		for (int j = 0; j < image->GetHeight(); j++){
 			Gdiplus::Color color;
 			Gdiplus::ARGB value = 0;
 
-			uint32_t index = (i + j * image->GetWidth()) * COLORS;
-
-			value |= ((uint32_t)color.GetA()) << 24;
-			value |= (((uint32_t)array[index]) << 16);
-			value |= (((uint32_t)array[index + 1]) << 8);
-			value |= (((uint32_t)array[index + 2]));
+			value |= ((uint32_t)255) << 24;   /*create opaque images*/
+			value |= (((uint32_t)buffer[(0 * height + j)*width + i]) << 16);
+			value |= (((uint32_t)buffer[(1 * height + j)*width + i]) << 8);
+			value |= (((uint32_t)buffer[(2 * height + j)*width + i]));
 
 			color.SetValue(value);
 
@@ -102,8 +159,6 @@ void update_image_buffer(Gdiplus::Bitmap * image, byte * array){
 	}
 
 }
-
-
 
 int GetEncoderClsid(const WCHAR* format, CLSID* pClsid)
 {
@@ -131,16 +186,6 @@ int GetEncoderClsid(const WCHAR* format, CLSID* pClsid)
 	return 0;
 }
 
-void save_image(Gdiplus::Bitmap * image, wchar_t * file){
-
-	CLSID clsId;
-
-	GetEncoderClsid(L"image/jpeg", &clsId);
-
-	image->Save(file, &clsId);
-
-
-}
 
 
 

@@ -19,7 +19,7 @@ if ( !(Test-path $LLVM) ){
 
 if ( !(Test-path $ROOT) ) {
 	cd $library
-	git clone https://github.com/halide/Halide.git
+	git clone https://github.com/halide/Halide.git $halide
 }
 
 

@@ -69,6 +69,7 @@ typedef struct _per_thread_data_t {
 	int prev_bb_start_addr;
 	bool is_call_ins;
 	int call_ins_addr;
+	bool is_ret_ins;
 
 } per_thread_data_t;
 
@@ -218,6 +219,7 @@ bbinfo_thread_init(void *drcontext){
 	/* initialize */
 	strncpy(data->module_name,"__init",MAX_STRING_LENGTH);
 	data->is_call_ins = false;
+	data->is_ret_ins = false;
 	
 	/* store this in thread local storage */
 	drmgr_set_tls_field(drcontext, tls_index, data);
@@ -288,7 +290,7 @@ static void print_readable_output(){
 still we have not implemented inter module calls/bb jumps; we only update bb information if it is 
 in the same module
 */
-static void clean_call(void* bb,int offset,const char * module,uint is_call,uint call_addr){
+static void clean_call(void* bb,int offset,const char * module,uint is_call, uint is_ret, uint call_addr){
 	
 	//get the drcontext
 	void * drcontext;
@@ -311,43 +313,52 @@ static void clean_call(void* bb,int offset,const char * module,uint is_call,uint
 	bbinfo->freq++;
 	bbinfo->func = get_current_function(drcontext);
 
-	if(strcmp(module,data->module_name) == 0){		
-		//updating from bbs
-		for(i=1;i<=bbinfo->from_bbs[0].start_addr;i++){
-			if(data->prev_bb_start_addr == bbinfo->from_bbs[i].start_addr){
-				bbinfo->from_bbs[i].freq++;
-				have_bb = true;
-				break;
+	// we are sure that the bbs are from the filtered out modules
+	// updating from bbs
+	for(i=1;i<=bbinfo->from_bbs[0].start_addr;i++){
+		if(data->prev_bb_start_addr == bbinfo->from_bbs[i].start_addr){
+			bbinfo->from_bbs[i].freq++;
+			if (data->is_ret_ins){
+				bbinfo->from_bbs[i].is_ret = true;
 			}
+			have_bb = true;
+			break;
 		}
-		if(!have_bb && (bbinfo->from_bbs[0].start_addr < MAX_TARGETS - 1) ){
-			bbinfo->from_bbs[++(bbinfo->from_bbs[0].start_addr)].start_addr = data->prev_bb_start_addr;
-			bbinfo->from_bbs[(bbinfo->from_bbs[0].start_addr)].freq = 1;
+	}
+	if(!have_bb && (bbinfo->from_bbs[0].start_addr < MAX_TARGETS - 1) ){
+		bbinfo->from_bbs[++(bbinfo->from_bbs[0].start_addr)].start_addr = data->prev_bb_start_addr;
+		bbinfo->from_bbs[(bbinfo->from_bbs[0].start_addr)].freq = 1;
+		if (data->is_ret_ins){
+			bbinfo->from_bbs[(bbinfo->from_bbs[0].start_addr)].is_ret = true;
 		}
-
-		//updating call target information
-		if(data->is_call_ins){
-			for(i=1;i<=bbinfo->called_from[0].bb_addr;i++){
-				if(data->prev_bb_start_addr == bbinfo->called_from[i].bb_addr){
-					bbinfo->called_from[i].freq++;
-					have_call = true;
-					break;
-				}
-			}
-			if(!have_call && (bbinfo->called_from[0].bb_addr < MAX_TARGETS - 1)){
-				bbinfo->called_from[++(bbinfo->called_from[0].bb_addr)].bb_addr = data->prev_bb_start_addr;
-				bbinfo->called_from[(bbinfo->called_from[0].bb_addr)].call_point_addr = data->call_ins_addr;
-				bbinfo->called_from[(bbinfo->called_from[0].bb_addr)].freq = 1;
-			}
+		else{
+			bbinfo->from_bbs[(bbinfo->from_bbs[0].start_addr)].is_ret = false;
 		}
 	}
 
+	//updating call target information
+	if(data->is_call_ins){
+		for(i=1;i<=bbinfo->called_from[0].bb_addr;i++){
+			if(data->prev_bb_start_addr == bbinfo->called_from[i].bb_addr){
+				bbinfo->called_from[i].freq++;
+				have_call = true;
+				break;
+			}
+		}
+		if(!have_call && (bbinfo->called_from[0].bb_addr < MAX_TARGETS - 1)){
+			bbinfo->called_from[++(bbinfo->called_from[0].bb_addr)].bb_addr = data->prev_bb_start_addr;
+			bbinfo->called_from[(bbinfo->called_from[0].bb_addr)].call_point_addr = data->call_ins_addr;
+			bbinfo->called_from[(bbinfo->called_from[0].bb_addr)].freq = 1;
+		}
+	}
+	
 	//update information
 	
 	data->prev_bb_start_addr = (uint)offset;
 	strncpy(data->module_name,module,MAX_STRING_LENGTH);
 	data->is_call_ins = is_call;
 	data->call_ins_addr = call_addr;
+	data->is_ret_ins = is_ret;
 
 	//unlock the lock
 	dr_mutex_unlock(stats_mutex);
@@ -443,6 +454,7 @@ bbinfo_bb_instrumentation(void *drcontext, void *tag, instrlist_t *bb,
 		int offset;
 
 		uint is_call;
+		uint is_ret;
 		uint call_addr;
 
 		uint bb_size = 0;
@@ -582,6 +594,7 @@ bbinfo_bb_instrumentation(void *drcontext, void *tag, instrlist_t *bb,
 		if(is_call){
 			call_addr = (int)instr_get_app_pc(instr) - (int)module_data->start;
 		}
+		is_ret = instr_is_return(instr);
 
 		bbinfo->size = instr_get_app_pc(instrlist_last(bb)) - instr_get_app_pc(first) + instr_length(drcontext,instrlist_last(bb));
 
@@ -589,11 +602,12 @@ bbinfo_bb_instrumentation(void *drcontext, void *tag, instrlist_t *bb,
 		string_pointers[string_pointer_index++] = module_name;
 		dr_mutex_unlock(stats_mutex);
 
-		dr_insert_clean_call(drcontext,bb,first,(void *)clean_call,false,5,
+		dr_insert_clean_call(drcontext,bb,first,(void *)clean_call,false,6,
 			OPND_CREATE_INTPTR(bbinfo),
 			OPND_CREATE_INT32(offset),
 			OPND_CREATE_INTPTR(module_name),
 			OPND_CREATE_INT32(is_call),
+			OPND_CREATE_INT32(is_ret),
 			OPND_CREATE_INT32(call_addr));
 
 		dr_free_module_data(module_data);

@@ -340,7 +340,7 @@ void print_bb_info(bbinfo_t * bb, file_t file, bool extra_info){
 		}
 		dr_fprintf(file, "%x,%u,%u,%u,", bb->start_addr, bb->size, bb->freq, bb->from_bbs[0].start_addr);
 		for (i = 1; i <= bb->from_bbs[0].start_addr; i++){
-			dr_fprintf(file, "%x,%u,", bb->from_bbs[i].start_addr, bb->from_bbs[i].freq);
+			dr_fprintf(file, "%x,%u,%u,", bb->from_bbs[i].start_addr, bb->from_bbs[i].freq, bb->from_bbs[i].is_ret);
 		}
 		dr_fprintf(file, "%u,", bb->to_bbs[0].start_addr);
 		for (i = 1; i <= bb->to_bbs[0].start_addr; i++){

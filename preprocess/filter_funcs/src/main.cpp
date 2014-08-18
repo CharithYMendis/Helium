@@ -142,8 +142,12 @@ int main(int argc, char **argv){
 		DEBUG_PRINT(("populating module information....\n"), 5);
 		moduleinfo_t * module = populate_moduleinfo(*profile_files[0]);
 		DEBUG_PRINT( ("modules populated with profile information  \n") ,5);
-		image_t * in_image = populate_imageinfo(in_image_filenames[0].c_str());
-		image_t * out_image = populate_imageinfo(out_image_filenames[0].c_str());
+
+		Gdiplus::Bitmap * in_image_bitmap = open_image(in_image_filenames[0].c_str());
+		Gdiplus::Bitmap * out_image_bitmap = open_image(out_image_filenames[0].c_str());
+
+		image_t * in_image = populate_imageinfo(in_image_bitmap);
+		image_t * out_image = populate_imageinfo(out_image_bitmap);
 
 		//filter_based_on_freq(module, in_image, 10);
 		//filter_based_on_composition(module);
