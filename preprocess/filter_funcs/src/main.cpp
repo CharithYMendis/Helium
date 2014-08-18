@@ -139,26 +139,37 @@ int main(int argc, char **argv){
 
 	if (mode == ONE_IMAGE_MODE || mode == DIFF_MODE){
 
+		//get the module information from the profile
 		DEBUG_PRINT(("populating module information....\n"), 5);
 		moduleinfo_t * module = populate_moduleinfo(*profile_files[0]);
 		DEBUG_PRINT( ("modules populated with profile information  \n") ,5);
 
+		//get the image information
 		Gdiplus::Bitmap * in_image_bitmap = open_image(in_image_filenames[0].c_str());
 		Gdiplus::Bitmap * out_image_bitmap = open_image(out_image_filenames[0].c_str());
-
 		image_t * in_image = populate_imageinfo(in_image_bitmap);
 		image_t * out_image = populate_imageinfo(out_image_bitmap);
 
-		//filter_based_on_freq(module, in_image, 10);
-		//filter_based_on_composition(module);
-		
-
+		//get the memory region information -> link them together -> filter them
 		DEBUG_PRINT(("getting memory region information... \n"), 5);
 		vector<pc_mem_region_t *> pc_mems = get_mem_regions_from_memtrace(memtrace_files[0], module);
 		DEBUG_PRINT(("linking memory regions together... \n"), 5);
+		/* this should return the linking information */
 		link_mem_regions(pc_mems,GREEDY);
 		DEBUG_PRINT(("filtering out insignificant regions... \n"), 5);
 		filter_mem_regions(pc_mems, in_image, out_image, 30);
+		
+
+		//rank the app_pcs with the highest
+
+		//get the function entry points filled up for those PCs
+
+		//get the function composition
+
+		//if one image -> filter based on functional composition (to get rid of loading and saving code)
+		
+		//then filter based
+		
 		print_mem_layout(log_file, pc_mems);
 
 

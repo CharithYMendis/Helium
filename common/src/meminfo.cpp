@@ -67,6 +67,19 @@ static void update_stride(vector<pair<uint, uint> > &strides, uint stride){
 	}
 }
 
+
+bool compare_pc_mem_regions(pc_mem_region_t * first, pc_mem_region_t * second){
+
+	
+
+}
+
+void rank_from_highest(vector<pc_mem_region_t *> pc_mems){
+
+
+
+}
+
 static void update_stride_from_vector(vector<pair<uint, uint> > &strides, vector<pair<uint, uint> > &old){
 	for (int i = 0; i < old.size(); i++){
 
