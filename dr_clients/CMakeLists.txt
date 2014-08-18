@@ -123,7 +123,7 @@ configure_DynamoRIO_global(OFF ON)
 # better by parameterizing; but it works for now.
 include_directories("$ENV{DYNAMORIO_HOME}/ext/drmgr")
 include_directories("$ENV{DYNAMORIO_HOME}/ext/drutil")
-include_directories("$ENV{DYNAMORIO_HOME}/drcontainers")
+include_directories("$ENV{DYNAMORIO_HOME}/ext/drcontainers")
 include_directories("$ENV{DYNAMORIO_HOME}/ext/drwrap")
 include_directories("include")
 add_sample_client(exalgo    "src/main.c;src/funcwrap.c;src/profile_global.c;src/moduleinfo.c;src/cpuid.c;src/memtrace.c;src/inscount.c;src/instrace.c;src/utilities.c;src/debug.c;src/stack.c;src/functrace.c"      "drcontainers;drmgr;drutil;drwrap")
