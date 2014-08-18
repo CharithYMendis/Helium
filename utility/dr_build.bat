@@ -44,6 +44,9 @@ svn up
 if NOT EXIST build_debug_32\NUL mkdir build_debug_32
 cd build_debug_32
 cmake -G"Visual Studio 12" .. -DDEBUG=ON
+cmake --build . --config Debug --target install
+
+cmake -G"Visual Studio 12" .. -DDEBUG=ON
 cmake --build . --config Debug
 echo debug_32_done 1>&2
 cd %DR_HOME%
@@ -65,6 +68,9 @@ cd %DR_HOME%
 :: building 64 bit debug 
 if NOT EXIST build_debug_64\NUL mkdir build_debug_64
 cd build_debug_64
+cmake -G"Visual Studio 12 Win64" .. -DDEBUG=ON
+cmake --build . --config Debug --target install
+
 cmake -G"Visual Studio 12 Win64" .. -DDEBUG=ON
 cmake --build . --config Debug
 echo debug_64_done 1>&2
