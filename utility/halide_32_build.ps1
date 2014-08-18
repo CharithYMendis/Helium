@@ -43,6 +43,9 @@ $env:PATH += ";C:\Program Files (x86)\Git\bin"
 # $env:PATH += ";C:\Program Files (x86)\7-Zip"
 $env:PATH += ";C:\Program Files (x86)\MSBuild\12.0\bin"
 
+echo $LIBRARIES\$llvm
+echo $LIBRARIES\$llvm\tools\clang
+
 # Update source
 svn up $LIBRARIES\$llvm\tools\clang
 svn up $LIBRARIES\$llvm
