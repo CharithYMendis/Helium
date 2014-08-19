@@ -97,6 +97,17 @@ vector<func_composition_t *> create_func_composition(vector<pc_mem_region_t *> &
 	return funcs;
 }
 
+void populate_function_entry_points(vector<pc_mem_region_t *> pc_mems, moduleinfo_t * head){
+
+	for (int i = 0; i < pc_mems.size(); i++){
+		moduleinfo_t * module = find_module(head, pc_mems[i]->module);
+		funcinfo_t * func = find_func_app_pc(module, pc_mems[i]->pc);
+		bbinfo_t * bb = find_bb(func, pc_mems[i]->pc);
+	}
+	
+
+}
+
 
 void print_app_pc_info(ofstream &file, vector<func_composition_t *> &funcs){
 

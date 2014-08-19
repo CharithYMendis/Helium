@@ -126,12 +126,14 @@ void print_moduleinfo(moduleinfo_t * module,ofstream &file){
 			funcinfo_t * func = module->funcs[i];
 			for (int j = 0; j < func->bbs.size(); j++){
 
-				file << hex << func->bbs[j]->start_addr << "," << dec << func->bbs[j]->size << "," << func->bbs[j]->freq << ",";
 				bbinfo_t * bb = func->bbs[j];
+
+				file << hex << bb->start_addr << "," << dec << bb->size << "," << bb->freq << ",";
+				file << dec << bb->is_call << "," << bb->is_ret << ",";
 				
 				file << bb->from_bbs.size() << "," ;
 				for (int k = 0; k < bb->from_bbs.size(); k++){
-					file << hex << bb->from_bbs[k]->target << "," << dec << bb->from_bbs[k]->freq << "," << bb->from_bbs[k]->is_ret << "," ; 
+					file << hex << bb->from_bbs[k]->target << "," << dec << bb->from_bbs[k]->freq << "," ; 
 				}
 
 				file << bb->to_bbs.size() << ",";
@@ -224,20 +226,20 @@ moduleinfo_t * populate_moduleinfo(ifstream &file){
 			
 			func->start_addr = func_start;
 			bbinfo_t * new_bb = new bbinfo_t();
-			func->bbs.push_back(new_bb);
+			func->bbs.push_back(new_bb); 
 
 			//populate bb
 			new_bb->start_addr = strtoul(tokens[index++].c_str(), NULL, 16);
-
 			new_bb->size = strtoul(tokens[index++].c_str(), NULL, 10);
 			new_bb->freq = strtoul(tokens[index++].c_str(), NULL, 10);
+			new_bb->is_call = strtoul(tokens[index++].c_str(), NULL, 10);
+			new_bb->is_ret = strtoul(tokens[index++].c_str(), NULL, 10);
 
 			uint32_t from_bbs = atoi(tokens[index++].c_str());
 			for (int k = 0; k < from_bbs; k++){
 				targetinfo_t * info = new targetinfo_t();
 				info->target = strtoul(tokens[index++].c_str(), NULL, 16);
 				info->freq = strtoul(tokens[index++].c_str(), NULL, 10);	
-				info->is_ret = strtoul(tokens[index++].c_str(), NULL, 10);
 				new_bb->from_bbs.push_back(info);
 			}
 

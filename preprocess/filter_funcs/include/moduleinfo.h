@@ -15,7 +15,6 @@
 struct targetinfo_t{
 
 	uint32_t target;
-	uint32_t is_ret;
 	uint32_t freq;
 
 };
@@ -24,8 +23,12 @@ struct bbinfo_t{
 
 	uint32_t start_addr;		/* offset from the start of the module */
 	uint32_t size;
-
 	uint32_t freq;				/* number of times it gets executed */
+	uint32_t is_ret;
+	uint32_t is_call;
+
+	/* we are also keeping backward information - specially when global function information is missing */
+	uint32_t func_addr;
 
 	std::vector<targetinfo_t *> from_bbs;   /* bbs from which this bb was reached */
 	std::vector<targetinfo_t *> to_bbs;	 /* to which basic blocks this bb connects to */
@@ -66,6 +69,7 @@ moduleinfo_t * populate_moduleinfo(std::ifstream &file);
 moduleinfo_t * find_module(moduleinfo_t * head, uint64_t start_addr);
 moduleinfo_t * find_module(moduleinfo_t * head, std::string name);
 funcinfo_t * find_func_app_pc(moduleinfo_t * module, uint32_t app_pc);
+bbinfo_t * find_bb(funcinfo_t * func, uint32_t addr);
 
 void print_moduleinfo(moduleinfo_t * module,std::ofstream &file);
 void print_funcs(moduleinfo_t * module,std::ofstream &file);

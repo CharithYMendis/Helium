@@ -331,7 +331,7 @@ void print_bb_info(bbinfo_t * bb, file_t file, bool extra_info){
 		dr_fprintf(file, "%x\n", bb->start_addr);
 	}
 	else{
-		/*func, bb_addr, size, freq, <from_bbs_count>, from_bb, freq, .., <caller_count>, caller, freq, ..., <to_bbs_count>, to_bbs, freq, ..., <callee_count>, callee, freq*/
+		/*func, bb_addr, size, freq, is_call, is_ret, <from_bbs_count>, from_bb, freq, .., <caller_count>, caller, freq, ..., <to_bbs_count>, to_bbs, freq, ..., <callee_count>, callee, freq*/
 		if (bb->func != NULL){
 			dr_fprintf(file,"%x,", bb->func->start_addr);
 		}
@@ -339,8 +339,10 @@ void print_bb_info(bbinfo_t * bb, file_t file, bool extra_info){
 			dr_fprintf(file, "0,");
 		}
 		dr_fprintf(file, "%x,%u,%u,%u,", bb->start_addr, bb->size, bb->freq, bb->from_bbs[0].start_addr);
+		dr_fprintf(file, "%u,%u,", bb->is_call, bb->is_ret);
+
 		for (i = 1; i <= bb->from_bbs[0].start_addr; i++){
-			dr_fprintf(file, "%x,%u,%u,", bb->from_bbs[i].start_addr, bb->from_bbs[i].freq, bb->from_bbs[i].is_ret);
+			dr_fprintf(file, "%x,%u,", bb->from_bbs[i].start_addr, bb->from_bbs[i].freq);
 		}
 		dr_fprintf(file, "%u,", bb->to_bbs[0].start_addr);
 		for (i = 1; i <= bb->to_bbs[0].start_addr; i++){
