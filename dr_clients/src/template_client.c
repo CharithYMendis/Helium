@@ -17,24 +17,28 @@ thread_func_t thread_exit;
 */
 
 typedef struct _client_arg_t{
-	char in_filename[MAX_STRING_LENGTH];
+	char filter_filename[MAX_STRING_LENGTH];
 	uint filter_mode;
 } client_arg_t;
 
 typedef struct {
-	<fill_this_out>
+	file_t  logfile;
+	file_t  outfile;
 } per_thread_t;
 
 static client_arg_t * client_arg;
 static module_t * head;
 static int tls_index;
 
+static file_t logfile;
+static char ins_pass_name[MAX_STRING_LENGTH];
+
 
 static bool parse_commandline_args(const char * args) {
 
 	client_arg = (client_arg_t *)dr_global_alloc(sizeof(client_arg_t));
 
-	if (dr_sscanf(args, "%s %d", &client_arg->in_filename,
+	if (dr_sscanf(args, "%s %d", &client_arg->filter_filename,
 		&client_arg->filter_mode) != 2){
 		return false;
 	}
@@ -44,9 +48,10 @@ static bool parse_commandline_args(const char * args) {
 
 
 /* callbacks for the entire process */
-void <client_name>_init(client_id_t id, const char * arguments)
+void <client_name>_init(client_id_t id, const char * name, const char * arguments)
 {
 
+	char logfilename[MAX_STRING_LENGTH];
 	file_t in_file;
 
 	drmgr_init();
@@ -55,10 +60,16 @@ void <client_name>_init(client_id_t id, const char * arguments)
 	head = md_initialize();
 
 	if (client_arg->filter_mode != FILTER_NONE){
-		in_file = dr_open_file(client_arg->in_filename, DR_FILE_READ);
+		in_file = dr_open_file(client_arg->filter_filename, DR_FILE_READ);
 		md_read_from_file(head, in_file, false);
 		dr_close_file(in_file);
 	}
+
+	if (log_mode){
+		populate_conv_filename(logfilename, logdir, name, NULL);
+		logfile = dr_open_file(logfilename, DR_FILE_WRITE_OVERWRITE);
+	}
+	strncpy(ins_pass_name, name, MAX_STRING_LENGTH);
 
 }
 
@@ -68,6 +79,9 @@ void <client_name>_exit_event(void)
 	md_delete_list(head, false);
 	dr_global_free(client_arg, sizeof(client_arg_t));
 	drmgr_unregister_tls_field(tls_index);
+	if (log_mode){
+		dr_close_file(logfile);
+	}
 	drmgr_exit();
 
 }
@@ -75,6 +89,8 @@ void <client_name>_exit_event(void)
 /* callbacks for threads */
 void <client_name>_thread_init(void *drcontext){
 	per_thread_t * data;
+
+	DEBUG_PRINT("%s - initializing thread %d\n", ins_pass_name, dr_get_thread_id(drcontext));
 	data = dr_thread_alloc(drcontext, sizeof(per_thread_t));
 	drmgr_set_tls_field(drcontext, tls_index, data);
 
@@ -85,6 +101,7 @@ void
 	per_thread_t * data;
 	data = drmgr_get_tls_field(drcontext, tls_index);
 	dr_thread_free(drcontext, data, sizeof(per_thread_t));
+	DEBUG_PRINT("%s - exiting thread done %d\n", ins_pass_name, dr_get_thread_id(drcontext));
 
 }
 

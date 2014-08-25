@@ -157,6 +157,7 @@ void memtrace_exit_event()
 		dr_close_file(logfile);
 	}
     dr_mutex_destroy(mutex);
+	dr_global_free(client_arg, sizeof(client_arg_t));
     drutil_exit();
     drmgr_exit();
 }

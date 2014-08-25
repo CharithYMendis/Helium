@@ -144,6 +144,19 @@ int main(int argc, char **argv){
 		moduleinfo_t * module = populate_moduleinfo(*profile_files[0]);
 		DEBUG_PRINT( ("modules populated with profile information  \n") ,5);
 
+
+		/*moduleinfo_t * call_targets = get_probable_call_targets(module);
+		moduleinfo_t * callers = get_probable_callers(module);
+
+
+		
+		log_file << "*****************call targets*****************" << endl;
+		print_bbinfo(call_targets, log_file);
+		log_file << "*****************callers*****************" << endl;
+		print_bbinfo(callers, log_file);
+
+		exit(0);*/
+
 		//get the image information
 		Gdiplus::Bitmap * in_image_bitmap = open_image(in_image_filenames[0].c_str());
 		Gdiplus::Bitmap * out_image_bitmap = open_image(out_image_filenames[0].c_str());
@@ -154,55 +167,48 @@ int main(int argc, char **argv){
 		DEBUG_PRINT(("getting memory region information... \n"), 5);
 		vector<pc_mem_region_t *> pc_mems = get_mem_regions_from_memtrace(memtrace_files[0], module);
 		DEBUG_PRINT(("linking memory regions together... \n"), 5);
-		/* this should return the linking information */
+		//this should return the linking information
 		link_mem_regions(pc_mems,GREEDY);
 		DEBUG_PRINT(("filtering out insignificant regions... \n"), 5);
 		filter_mem_regions(pc_mems, in_image, out_image, 30);
 
-		//get the function entry points filled up for those PCs
-		populate_function_entry_points(pc_mems, module);
-
-		//get the function composition
-
 		//if one image -> filter based on functional composition (to get rid of loading and saving code)
 		
-		//then get the function with the maximum number of pc_mems
-		
+
+		//debug printing - this is after the filtering
 		print_mem_layout(log_file, pc_mems);
-
-
-		DEBUG_PRINT(("filtering based on bb freq on moduleinfo...\n"), 5);
-		filter_bbs_based_on_freq(module, in_image, 1);
-		print_filter_file(filter_file, module);
-		
-
 		vector<mem_info_t *> mems = extract_mem_regions(pc_mems);
 		log_file << "********************extracted mems************************" << endl;
-		
 		print_mem_layout(log_file, mems);
 
-		exit(0);
-
-
-		
-		
-
+		//get the function composition
+		/*vector<func_composition_t *> comp;
 		if (mode == ONE_IMAGE_MODE){
-			filter_based_on_memory_dependancy(pc_mems, module);
+			comp = filter_based_on_memory_dependancy(pc_mems, module);
+		}
+		else{
+			if (is_funcs_present(module)){
+				comp = create_func_composition_func(pc_mems, module);
+			}
+			else{
+				comp = create_func_composition_wo_func(pc_mems, module);
+			}
 		}
 
-		vector<func_composition_t *> comp = create_func_composition(pc_mems, module);
 
-
-		print_filter_file(filter_file, module);
-		print_app_pc_info(app_pc_file, comp);
-		
-
-		if (debug){
-			print_moduleinfo(module, log_file);
-			print_funcs(module, log_file);
+		//crude heuristic
+		//now get the function with the most number of app_pc s
+		uint32_t max_pcs = 0;
+		func_composition_t * func = NULL;
+		for (int i = 0; i < comp.size(); i++){
+			if (comp[i]->region.size() > max_pcs){
+				func = comp[i];
+				max_pcs = func->region.size();
+			}
 		}
 
+		//print this function composition and the app_pcs involved in it
+		print_filter_file(log_file, func);*/
 	
 	}
 	else if(mode == TWO_IMAGE_MODE){

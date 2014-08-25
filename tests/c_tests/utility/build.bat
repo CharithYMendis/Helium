@@ -33,7 +33,7 @@ if "%2"=="debug" (
 	cmake --build . --config Debug
 )
 if "%2"=="release" (
-	cmake --build . --config RelWithDebInfo
+	cmake --build . --config Release
 )
 
 cd %CURRENT_DIR%

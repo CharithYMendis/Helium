@@ -72,7 +72,7 @@ func_composition_t * find_func_composition(vector<func_composition_t *> &funcs, 
 }
 
 
-vector<func_composition_t *> create_func_composition(vector<pc_mem_region_t *> &regions, moduleinfo_t * head){
+vector<func_composition_t *> create_func_composition_func(vector<pc_mem_region_t *> &regions, moduleinfo_t * head){
 
 	vector<func_composition_t *>  funcs;
 
@@ -97,28 +97,38 @@ vector<func_composition_t *> create_func_composition(vector<pc_mem_region_t *> &
 	return funcs;
 }
 
-void populate_function_entry_points(vector<pc_mem_region_t *> pc_mems, moduleinfo_t * head){
-
-	for (int i = 0; i < pc_mems.size(); i++){
-		moduleinfo_t * module = find_module(head, pc_mems[i]->module);
-		funcinfo_t * func = find_func_app_pc(module, pc_mems[i]->pc);
-		bbinfo_t * bb = find_bb(func, pc_mems[i]->pc);
-	}
+vector<func_composition_t *> create_func_composition_wo_func(vector<pc_mem_region_t *> &regions, moduleinfo_t * head){
 	
+	vector<func_composition_t *> comp;
+
+	for (int i = 0; i < regions.size(); i++){
+		moduleinfo_t  * module = find_module(head, regions[i]->module);
+		cout << hex << regions[i]->pc << endl;
+		uint32_t start_addr =  get_func_entry_points(head, module, regions[i]->pc);
+		cout << hex << start_addr << endl;
+		func_composition_t * new_func = find_func_composition(comp, regions[i]->module, start_addr);
+		if (new_func == NULL){
+			new_func = new func_composition_t;
+			new_func->func_addr = start_addr;
+			new_func->module_name = regions[i]->module;
+			comp.push_back(new_func);
+		}
+		new_func->region.push_back(regions[i]);
+		
+	}
+
+	return comp;
 
 }
 
 
-void print_app_pc_info(ofstream &file, vector<func_composition_t *> &funcs){
+void print_filter_file(ofstream &file, func_composition_t * &funcs){
 
-	file << funcs.size() << endl;
-	for (int i = 0; i < funcs.size(); i++){
-		file << funcs[i]->module_name << endl;
-		file << funcs[i]->func_addr << endl;
-		file << funcs[i]->region.size() << endl;
-		for (int j = 0; j < funcs[i]->region.size(); j++){
-			file << funcs[i]->region[j]->pc << endl;
-		}
-	}
+}
+
+void print_app_pc_info(ofstream &file, func_composition_t * &funcs){
+
+	file << funcs->module_name << endl;
+	file << funcs->func_addr << endl;
 
 }

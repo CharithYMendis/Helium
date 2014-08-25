@@ -53,6 +53,7 @@ if "%2" == "asm" (
 	set EXEC=%ASM_TEST%
 )
  
+ ::-msgbox_mask 0xf
 %DR_PATH% -debug -root %DYNAMORIO_HOME% -syntax_intel -c exalgo.dll %3 -- %EXEC%
 
 cd %CURRENT_DIR%

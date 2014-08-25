@@ -64,8 +64,15 @@ int main(int argc, char **argv){
 
 	string image_folder = get_standard_folder("image");
 
-	Gdiplus::Bitmap * image = open_image( (image_folder + "\\bird.png").c_str());
+	Gdiplus::Bitmap * image = open_image( (image_folder + "\\low.png").c_str());
 	byte * buffer = get_image_buffer(image);
+
+		for (int j = 0; j < image->GetHeight(); j++){
+			for (int i = 0; i < image->GetWidth(); i++){
+			cout << (uint32_t)buffer[j * width + i] << endl;
+		}
+	}
+
 	update_image_buffer(image, buffer);
 	save_image(image, (image_folder + "\\test.png").c_str());
 	delete image;

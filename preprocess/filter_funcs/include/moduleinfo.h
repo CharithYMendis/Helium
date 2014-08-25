@@ -6,6 +6,7 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
+
 #include "common_defines.h"
 
 
@@ -64,17 +65,23 @@ struct moduleinfo_t{
 
 };
 
-moduleinfo_t * populate_moduleinfo(std::ifstream &file);
+
 
 moduleinfo_t * find_module(moduleinfo_t * head, uint64_t start_addr);
 moduleinfo_t * find_module(moduleinfo_t * head, std::string name);
 funcinfo_t * find_func_app_pc(moduleinfo_t * module, uint32_t app_pc);
 bbinfo_t * find_bb(funcinfo_t * func, uint32_t addr);
 
+bool is_funcs_present(moduleinfo_t * head);
+uint32_t get_func_entry_points(moduleinfo_t * head, moduleinfo_t * current, uint32_t app_pc);
+moduleinfo_t * get_probable_call_targets(moduleinfo_t * head);
+moduleinfo_t * get_probable_callers(moduleinfo_t * head);
+
+moduleinfo_t * populate_moduleinfo(std::ifstream &file);
 void print_moduleinfo(moduleinfo_t * module,std::ofstream &file);
 void print_funcs(moduleinfo_t * module,std::ofstream &file);
-
 void print_filter_file(std::ofstream &file, moduleinfo_t * head);
+void print_bbinfo(moduleinfo_t * module, std::ofstream &file);
 
 
 #endif

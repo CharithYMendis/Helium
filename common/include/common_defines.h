@@ -3,7 +3,7 @@
 
 #include <fstream>
 
-#define MAX_STRING_LENGTH 500
+#define MAX_STRING_LENGTH 2000
 
 extern bool debug;
 extern uint32_t debug_level;

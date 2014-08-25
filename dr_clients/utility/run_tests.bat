@@ -6,7 +6,7 @@ if "%1"=="help" (
 	echo 	{exec} photoshop, halide, ctests, asm
 	echo 	{test_name} - should be the executable name that DR is running on {without exe}
 	echo 	{debug_on_off} - 1,0
-	echo 	{phase} - phase of running dr clients "profile memtrace" "profile" "opndtrace" "opcodetrace" "disasmtrace" "instrace"
+	echo 	{phase} - phase of running dr clients "profile memtrace" "profile" "opndtrace" "opcodetrace" "disasmtrace" "instrace" "memdump"
 	echo 	{filter_file} - the filter file name {only filename with ext}
 	echo 	{filter_mode} - module, bb, range, func, neg_module, app_pc, none
 	echo 	{input_image} - only the filename {with ext}
@@ -32,6 +32,16 @@ if "%DR_PHASE%" == "profile_memtrace" (
 
 	del %EXALGO_OUTPUT_FOLDER%\memtrace_%TEST_NAME%.exe_%IN_IMAGE%*	
 	call run_client %ARCH% %EXEC% %TEST_NAME% %DEBUG% "profile memtrace" %FILTER_FILE% %FILTER_MODE_STRING% %INSTRACE_MODE_STRING%	
+)
+
+if "%DR_PHASE%" == "memdump" (
+
+	call run_client %ARCH% %EXEC% %TEST_NAME% %DEBUG% "memdump" %FILTER_FILE% %FILTER_MODE_STRING%
+)
+
+if "%DR_PHASE%" == "funcreplace" (
+
+	call run_client %ARCH% %EXEC% %TEST_NAME% %DEBUG% "funcreplace" %FILTER_FILE% %FILTER_MODE_STRING%
 )
 
 if "%DR_PHASE%" == "profile" (

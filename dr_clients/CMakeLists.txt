@@ -83,6 +83,9 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OPT_CFLAGS}")
 
 function (add_sample_client name source_file_list extension_list)
   add_library(${name} ${libtype} ${source_file_list})
+  #find_library(dll dll_example ${CMAKE_SOURCE_DIR}/src)
+  #find_library(halide Halide ${CMAKE_SOURCE_DIR}/src)
+  #target_link_libraries(${name} ${dll} ${halide})
   configure_DynamoRIO_client(${name})
   foreach (ext ${extension_list})
     use_DynamoRIO_extension(${name} ${ext})
@@ -126,9 +129,11 @@ include_directories("$ENV{DYNAMORIO_HOME}/ext/drutil")
 include_directories("$ENV{DYNAMORIO_HOME}/ext/drcontainers")
 include_directories("$ENV{DYNAMORIO_HOME}/ext/drwrap")
 include_directories("include")
-add_sample_client(exalgo    "src/main.c;src/funcwrap.c;src/profile_global.c;src/moduleinfo.c;src/cpuid.c;src/memtrace.c;src/inscount.c;src/instrace.c;src/utilities.c;src/debug.c;src/stack.c;src/functrace.c"      "drcontainers;drmgr;drutil;drwrap")
+include_directories("obj")
+add_sample_client(exalgo    "src/main.c;src/funcwrap.c;src/profile_global.c;src/moduleinfo.c;src/cpuid.c;src/memtrace.c;src/inscount.c;src/instrace.c;src/utilities.c;src/debug.c;src/stack.c;src/functrace.c;src/memdump.c;src/funcreplace.c;obj/halide_blur_gen.o;obj/halide_rotate_gen.o;obj/halide_funcs.obj"      "drcontainers;drmgr;drutil;drwrap")
 # add utils.h for installation  # NON-PUBLIC
 set(srcs ${srcs} "utils.h")     # NON-PUBLIC
+# obj/halide_blur_gen.o;obj/halide_funcs.obj
 
 # foreach (tgt ${tgts})
   # # ensure we rebuild samples if includes change

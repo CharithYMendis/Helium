@@ -21,25 +21,24 @@ using namespace std;
 
 struct mem_regions_t {
 
-	/* color and other image related information */
-	uint colors;
-	uint bytes_per_color;
-	uint stride;
+	/* image related information */
+	uint bytes_per_pixel;  
+	uint stride;						//stride in bytes from one pixel to another
 
 	/* characteristics of the memory region */
-	uint type;
-	uint layout;
-	uint scanline_width;
-	uint padding;
+	uint type;							//image input, output or intermediate
+	uint layout;						//row, column major
+	uint scanline_width;				//in bytes the total scanline size
+	uint padding[4];					//padding for all 4 directions 
 
 	/* physical demarcations of the memory regions */
 	uint64 start;
 	uint64 end;
-	uint64 size;
 
-	/* width and height of the picture - these are derived values */
+	/* dimensions of the image - read from the image itself */
 	uint width;
 	uint height;
+	uint colors;
 
 	/*name of the mem region */
 	string name;

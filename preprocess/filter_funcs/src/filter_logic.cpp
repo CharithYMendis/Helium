@@ -1,15 +1,12 @@
 #include "filter_logic.h"
-#include "moduleinfo.h"
-#include "imageinfo.h"
 #include <iostream>
 #include <vector>
 #include <algorithm>
-#include "meminfo.h"
-#include "memlayout.h"
+
 
 using namespace std;
 
-
+/* moduleinfo filtering */
 void filter_based_on_freq(moduleinfo_t * head, image_t * image, uint32_t min_threshold){
 
 	uint32_t size = image->height * image->width;
@@ -67,9 +64,6 @@ void filter_bbs_based_on_freq(moduleinfo_t * head, image_t * image, uint32_t min
 
 }
 
-
-
-/* doesn't work on mutually recursive functions - will add a check in future for that */
 void filter_based_on_composition(moduleinfo_t * module){
 
 	while (module != NULL){
@@ -109,6 +103,8 @@ void filter_based_on_composition(moduleinfo_t * module){
 
 }
 
+
+/* meminfo filtering */
 void filter_mem_regions(vector<mem_info_t *> &mems, image_t * in_image, image_t * out_image, uint32_t min_threshold){
 
 	/* use a conservative guess to filter out unnecessary memory regions */
@@ -119,7 +115,7 @@ void filter_mem_regions(vector<mem_info_t *> &mems, image_t * in_image, image_t 
 
 
 	for (int i = 0; i < mems.size(); i++){
-		uint32_t size = (mems[i]->end - mems[i]->start) / (mems[i]->prob_stride);
+		uint32_t size = (mems[i]->end - mems[i]->start);
 		//if (size < 10){
 		if (size <  (min_area * min_threshold / 100) ){
 			mems.erase(mems.begin() + i--);
@@ -130,7 +126,7 @@ void filter_mem_regions(vector<mem_info_t *> &mems, image_t * in_image, image_t 
 
 }
 
-
+/* pc_mem_region filtering */
 void filter_mem_regions(vector<pc_mem_region_t *> &pc_mems, image_t * in_image, image_t * out_image, uint32_t min_threshold){
 
 
@@ -143,17 +139,20 @@ void filter_mem_regions(vector<pc_mem_region_t *> &pc_mems, image_t * in_image, 
 
 }
 
-
-
-
-
-void filter_based_on_memory_dependancy(vector<pc_mem_region_t *> &pc_mems, moduleinfo_t * head){
+vector<func_composition_t *> filter_based_on_memory_dependancy(vector<pc_mem_region_t *> &pc_mems, moduleinfo_t * head){
 
 	/* the filter should have regions which are incoming and outgoing */
 
 	populate_memory_dependancies(pc_mems);
 
-	vector<func_composition_t *> funcs = create_func_composition(pc_mems, head);
+	vector<func_composition_t *> funcs = create_func_composition_func(pc_mems, head);
+
+	if (is_funcs_present(head)){
+		funcs = create_func_composition_func(pc_mems, head);
+	}
+	else{
+		funcs = create_func_composition_wo_func(pc_mems, head);
+	}
 
 	for (int i = 0; i < funcs.size(); i++){
 
@@ -172,13 +171,17 @@ void filter_based_on_memory_dependancy(vector<pc_mem_region_t *> &pc_mems, modul
 		}
 
 		if (direction != 0x03){
-			moduleinfo_t * module = find_module(head, funcs[i]->module_name);
+
+			funcs.erase(funcs.begin() + i--);
+			/*moduleinfo_t * module = find_module(head, funcs[i]->module_name);
 			for (int j = 0; j < module->funcs.size(); j++){
 				if (module->funcs[j]->start_addr == funcs[i]->func_addr){
 					module->funcs.erase(module->funcs.begin() + j--);
 				}
-			}
+			}*/
 		}
 	}
+
+	return funcs;
 
 }

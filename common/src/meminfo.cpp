@@ -9,18 +9,6 @@
 #include "utilities.h"
 #include <algorithm>
 
-struct cregions{
-
-	cregions * prev;
-	mem_info_t * current;
-	cregions * next;
-
-	cregions(){
-		prev = NULL;
-		next = NULL;
-	}
-
-};
 
 using namespace std;
 

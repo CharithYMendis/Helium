@@ -15,6 +15,8 @@
 #include  "functrace.h"
 #include "funcwrap.h"
 #include "utilities.h"
+#include "memdump.h"
+#include "funcreplace.h"
 
 #define ARGUMENT_LENGTH 10
 
@@ -336,7 +338,7 @@ static void setupInsPasses(){
 	ins_pass[4].module_unload = NULL;
 
 
-	//ins pass 5 - functrace - this is a low priority update (should be the last)
+	//ins pass 6 - functrace - this is a low priority update (should be the last)
 	ins_pass[5].name = "functrace";
 	ins_pass[5].priority = priority;
 	ins_pass[5].priority.name = ins_pass[5].name;
@@ -351,7 +353,7 @@ static void setupInsPasses(){
 	ins_pass[5].module_load = NULL;
 	ins_pass[5].module_unload = NULL;
 
-	//ins pass 6 - funcwrapping - given a high priority  
+	//ins pass 7 - funcwrapping - given a high priority  
 	ins_pass[6].name = "funcwrap";
 	ins_pass[6].priority = priority;
 	ins_pass[6].priority.name = ins_pass[6].name;
@@ -367,10 +369,38 @@ static void setupInsPasses(){
 	ins_pass[6].module_unload = NULL;
 
 
-	pass_length = 7;
+	//ins pass 8 - memdump
+	ins_pass[7].name = "memdump";
+	ins_pass[7].priority = priority;
+	ins_pass[7].priority.name = ins_pass[7].name;
+	ins_pass[7].priority.priority = 0;
+	ins_pass[7].init_func = memdump_init;
+	ins_pass[7].app2app_bb = NULL;
+	ins_pass[7].analysis_bb = NULL;
+	ins_pass[7].instrumentation_bb = memdump_bb_instrumentation;
+	ins_pass[7].thread_init = memdump_thread_init;
+	ins_pass[7].thread_exit = memdump_thread_exit;
+	ins_pass[7].process_exit = memdump_exit_event;
+	ins_pass[7].module_load = memdump_module_load;
+	ins_pass[7].module_unload = NULL;
 
-	 
-	
+	//ins pass 9 - funcreplace
+	ins_pass[8].name = "funcreplace";
+	ins_pass[8].priority = priority;
+	ins_pass[8].priority.name = ins_pass[8].name;
+	ins_pass[8].priority.priority = 0;
+	ins_pass[8].init_func = funcreplace_init;
+	ins_pass[8].app2app_bb = NULL;
+	ins_pass[8].analysis_bb = NULL;
+	ins_pass[8].instrumentation_bb = funcreplace_bb_instrumentation;
+	ins_pass[8].thread_init = funcreplace_thread_init;
+	ins_pass[8].thread_exit = funcreplace_thread_exit;
+	ins_pass[8].process_exit = funcreplace_exit_event;
+	ins_pass[8].module_load = funcreplace_module_load;
+	ins_pass[8].module_unload = NULL;
+
+
+	pass_length = 9;
 
 }
 

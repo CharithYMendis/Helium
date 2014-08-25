@@ -11,35 +11,7 @@
 using namespace std;
 
 
-void populate_func_freq(moduleinfo_t * module){
-
-	while (module != NULL){
-		
-		for (int i = 0; i < module->funcs.size(); i++){
-			funcinfo_t * func = module->funcs[i];
-			func->freq = 0;
-			for (int j = 0; j < func->bbs.size(); j++){
-				if (func->bbs[j]->callees.size() > 0){
-					uint32_t num_calls = 0;
-					for (int k = 0; k < func->bbs[j]->callees.size(); k++){
-						num_calls += func->bbs[j]->callees[k]->freq;
-					}
-					func->freq = num_calls;
-				}
-			}
-
-			if (func->freq == 0){
-				func->freq = func->bbs[0]->freq;
-			}
-
-
-		}
-		module = module->next;
-
-	}
-
-}
-
+/* mining information from the module structure */
 moduleinfo_t * find_module(moduleinfo_t * head,  uint64_t start_addr){
 	while (head != NULL){
 		if (head->start_addr == start_addr){
@@ -60,17 +32,6 @@ moduleinfo_t * find_module(moduleinfo_t * head, string name){
 	return NULL;
 }
 
-bbinfo_t * find_bb(funcinfo_t * func, uint32_t addr){
-
-	for (int i = 0; i < func->bbs.size(); i++){
-		if ( (func->bbs[i]->start_addr >= addr) && (addr < func->bbs[i]->start_addr + func->bbs[i]->size) ){
-			return func->bbs[i];
-		}
-	}
-	return NULL;
-
-}
-
 funcinfo_t * find_func(moduleinfo_t * module,uint32_t start_addr){
 	for (int i = 0; i < module->funcs.size(); i++){
 		if (start_addr == module->funcs[i]->start_addr){
@@ -88,6 +49,296 @@ funcinfo_t * find_func_app_pc(moduleinfo_t * module, uint32_t app_pc){
 	}
 	return NULL;
 }
+
+/* find the bb having the addr from a func 
+* addr - any valid app_pc
+*/
+bbinfo_t * find_bb(funcinfo_t * func, uint32_t addr){
+
+	for (int i = 0; i < func->bbs.size(); i++){
+		if ((func->bbs[i]->start_addr >= addr) && (addr < func->bbs[i]->start_addr + func->bbs[i]->size)){
+			return func->bbs[i];
+		}
+	}
+	return NULL;
+
+}
+
+/* find the bb having the addr from a module 
+* addr - any valid app_pc
+*/
+bbinfo_t * find_bb(moduleinfo_t * module, uint32_t addr){
+
+	for (int i = 0; i < module->funcs.size(); i++){
+		funcinfo_t * func = module->funcs[i];
+		for (int j = 0; j < func->bbs.size(); j++){
+			for (int i = 0; i < func->bbs.size(); i++){
+				if ((func->bbs[i]->start_addr >= addr) && (addr < func->bbs[i]->start_addr + func->bbs[i]->size)){
+					return func->bbs[i];
+				}
+			}
+		}
+	}
+	return NULL;
+
+}
+
+/* tries to find the occurance in the current module or else find in another module 
+* addr - bb start addr
+*/
+bbinfo_t * find_bb(moduleinfo_t * head, moduleinfo_t * current, uint32_t addr, moduleinfo_t ** from_module){
+
+	/* find in the current module */
+	for (int i = 0; i < current->funcs.size(); i++){
+		funcinfo_t * func = current->funcs[i];
+		for (int j = 0; j < func->bbs.size(); j++){
+			if (func->bbs[j]->start_addr == addr){
+				*from_module = current;
+				return func->bbs[j];
+			}
+		}
+	}
+
+	*from_module = false;
+	/* if not try to find from all the modules */
+	while (head != NULL){
+		for (int i = 0; i < head->funcs.size(); i++){
+			funcinfo_t * func = head->funcs[i];
+			for (int j= 0; j < func->bbs.size(); j++){
+				if (func->bbs[j]->start_addr == addr){
+					*from_module = head;
+					return func->bbs[j];
+				}
+			}
+		}
+		head = head->next;
+	}
+	return NULL;
+
+}
+
+bool is_funcs_present(moduleinfo_t * head){
+
+	while (head != NULL){
+		if (!(head->funcs.size() == 1 && head->funcs[0]->start_addr == 0)){
+			return true;
+		}
+		head = head->next;
+	}
+	return false;
+}
+
+
+moduleinfo_t * get_probable_call_targets(moduleinfo_t * head){
+
+	moduleinfo_t * new_head = NULL;
+	moduleinfo_t * prev = NULL;
+	moduleinfo_t * ret_head;
+	
+
+	while (head != NULL){
+
+		ret_head = new moduleinfo_t;
+		strncpy(ret_head->name, head->name, MAX_STRING_LENGTH);
+		ret_head->start_addr = head->start_addr;
+
+		if (prev != NULL) prev->next = ret_head;
+		if (new_head == NULL) new_head = ret_head;
+
+		funcinfo_t * func = new funcinfo_t;
+		func->start_addr = 0;
+		ret_head->funcs.push_back(func);
+
+		for (int i = 0; i < head->funcs.size(); i++){
+			for (int j = 0; j < head->funcs[i]->bbs.size(); j++){
+				bbinfo_t * bb = head->funcs[i]->bbs[j];
+				if (bb->callees.size() > 0){
+					func->bbs.push_back(bb);
+				}
+			}
+		}
+
+		prev = ret_head;
+		ret_head = ret_head->next;
+
+		head = head->next;
+	}
+
+	return new_head;
+
+}
+
+moduleinfo_t * get_probable_callers(moduleinfo_t * head){
+
+	moduleinfo_t * new_head = NULL;
+	moduleinfo_t * prev = NULL;
+	moduleinfo_t * ret_head;
+
+	while (head != NULL){
+
+		ret_head = new moduleinfo_t();
+		strncpy(ret_head->name,head->name, MAX_STRING_LENGTH);
+		ret_head->start_addr = head->start_addr;
+
+		if (prev != NULL) prev->next = ret_head;
+
+		if (new_head == NULL) new_head = ret_head;
+
+		funcinfo_t * func = new funcinfo_t;
+		func->start_addr = 0;
+		ret_head->funcs.push_back(func);
+
+		for (int i = 0; i < head->funcs.size(); i++){
+			for (int j = 0; j < head->funcs[i]->bbs.size(); j++){
+				bbinfo_t * bb = head->funcs[i]->bbs[j];
+				if (bb->is_call){
+					func->bbs.push_back(bb);
+				}
+			}
+		}
+
+		prev = ret_head;
+		ret_head = ret_head->next;
+		head = head->next;
+	}
+
+	return new_head;
+
+}
+
+/*  other manipulating routines
+*   most of the manipulating can be done outside this file as the structure is public
+*   these are only convenience routines
+*/
+void populate_func_freq(moduleinfo_t * head){
+
+	while (head != NULL){
+
+		for (int i = 0; i < head->funcs.size(); i++){
+			funcinfo_t * func = head->funcs[i];
+			func->freq = 0;
+			for (int j = 0; j < func->bbs.size(); j++){
+				if (func->bbs[j]->callees.size() > 0){
+					uint32_t num_calls = 0;
+					for (int k = 0; k < func->bbs[j]->callees.size(); k++){
+						num_calls += func->bbs[j]->callees[k]->freq;
+					}
+					func->freq = num_calls;
+				}
+			}
+
+			if (func->freq == 0){
+				func->freq = func->bbs[0]->freq;
+			}
+
+
+		}
+		head = head->next;
+
+	}
+
+}
+
+static bbinfo_t * select_predecessor(moduleinfo_t * head, moduleinfo_t * current, vector<targetinfo_t *> from_bbs,
+	bbinfo_t * bb, moduleinfo_t ** from_module, vector<bbinfo_t *> visited){
+
+	/* need to check all the from_bbs */
+	bbinfo_t * selected_bb = NULL;
+	moduleinfo_t * selected_module = NULL;
+	bool current_module = false;
+
+	for (int i = 0; i < from_bbs.size(); i++){
+
+		moduleinfo_t * module;
+		/* muliple viable candidates - what to choose */
+		bbinfo_t * from_bb = find_bb(head, current, from_bbs[i]->target, &module);
+		if ( (from_bb != bb) && (find(visited.begin(), visited.end(), from_bb) == visited.end()) ) {
+			if ((module == current) && (from_bb->start_addr + from_bb->size == bb->start_addr)
+				|| ((module == current) && (!current_module))){
+				current_module = true;
+				selected_module = module;
+				selected_bb = from_bb;
+			}
+			else if (selected_bb == NULL){
+				selected_module = module;
+				selected_bb = from_bb;
+			}
+		}
+
+	}
+
+	*from_module = selected_module;
+	return selected_bb;
+
+}
+
+/* CAUTION: calls outside the filtered modules yields in false function entry points */
+static uint32_t recursive_populate_func(moduleinfo_t * head, moduleinfo_t * current, bbinfo_t * bb, 
+			moduleinfo_t * in_func_module, bbinfo_t * in_func_bb, uint32_t ret, vector<bbinfo_t *> visited){
+
+	moduleinfo_t * from_module = NULL;
+	bbinfo_t * selected_bb = NULL;
+	bool selected = false;
+
+	if (ret == 0){
+		if (bb->callees.size() > 0){
+			bb->func_addr = bb->start_addr;
+			return bb->start_addr;
+		}
+		if (bb->func_addr != 0){
+			return bb->func_addr;
+		}
+	}
+	else{
+		/* out of func call site */
+		if (bb->callees.size() > 0){
+			ret--;
+			if (ret == 0){
+				selected = true;
+				selected_bb = select_predecessor(head, in_func_module, bb->from_bbs, in_func_bb, &from_module, visited);
+			}
+		}
+	}
+
+	/* need to check all the from_bbs */
+	if (!selected)
+		selected_bb = select_predecessor(head, current, bb->from_bbs, bb, &from_module, visited);
+
+	ASSERT_MSG((selected_bb != NULL), ("from_bb candidate cannot be NULL\n"));
+
+	if (ret == 0 && !selected){
+		in_func_bb = bb;
+		in_func_module = current;
+	}
+	ret += selected_bb->is_ret;  
+
+	cout << "s: " << hex << selected_bb->start_addr << ret << endl;
+
+	visited.push_back(bb);
+	
+	bb->func_addr = recursive_populate_func(head, from_module, selected_bb, in_func_module, in_func_bb, ret, visited);
+	return bb->func_addr;
+
+}
+
+/* best effort analysis to get the function information */
+uint32_t get_func_entry_points(moduleinfo_t * head, moduleinfo_t * current, uint32_t app_pc){
+
+	/* caution of accuracy */
+	printf("CAUTION: this is not sound; e.g:- calls outside the filtered modules yields in false function entry points\n");
+
+	bbinfo_t * bb = find_bb(current, app_pc);
+
+	vector<bbinfo_t *> visited;
+	return recursive_populate_func(head, current, bb, NULL, NULL, 0, visited);
+
+}
+
+
+
+
+
+/* printing and file reading functions */
 
 void print_funcs(moduleinfo_t * module,ofstream &file){
 
@@ -163,6 +414,42 @@ void print_moduleinfo(moduleinfo_t * module,ofstream &file){
 
 }
 
+void print_bbinfo(moduleinfo_t * module, ofstream &file){
+
+
+	assert(file.good());
+
+	//get the number of modules
+	moduleinfo_t * local = module;
+	uint32_t number_modules = 0;
+	while (local != NULL){
+		number_modules++;
+		local = local->next;
+	}
+
+	file << number_modules << endl;
+	while (module != NULL){
+		file << module->name << endl;
+		file << hex << module->start_addr << endl;
+
+		for (int i = 0; i < module->funcs.size(); i++){
+
+			funcinfo_t * func = module->funcs[i];
+			file << dec << func->bbs.size() << endl;
+			for (int j = 0; j < func->bbs.size(); j++){
+
+				bbinfo_t * bb = func->bbs[j];
+
+				file << hex << bb->start_addr << endl;
+			}
+		}
+
+		module = module->next;
+
+	}
+
+}
+
 moduleinfo_t * populate_moduleinfo(ifstream &file){
 
 	moduleinfo_t * head = new moduleinfo_t();
@@ -234,6 +521,7 @@ moduleinfo_t * populate_moduleinfo(ifstream &file){
 			new_bb->freq = strtoul(tokens[index++].c_str(), NULL, 10);
 			new_bb->is_call = strtoul(tokens[index++].c_str(), NULL, 10);
 			new_bb->is_ret = strtoul(tokens[index++].c_str(), NULL, 10);
+			new_bb->func_addr = 0;
 
 			uint32_t from_bbs = atoi(tokens[index++].c_str());
 			for (int k = 0; k < from_bbs; k++){
