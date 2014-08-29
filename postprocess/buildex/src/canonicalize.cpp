@@ -56,6 +56,7 @@
 	assign_value(start,opnd)
 
 #define if_bounds(d,s)  if( (cinstr->num_dsts == d ) && (cinstr->num_srcs == s ) )
+#define elseif_bounds(d,s) if( (cinstr->num_dsts == d ) && (cinstr->num_srcs == s ) )
 #define else_bounds else{ unhandled = true; } break
 
 
@@ -161,7 +162,7 @@ void reg_to_mem_range(operand_t * opnd){
 #endif
 
 	}
-	else if ((opnd->type == MEM_HEAP_TYPE) || (opnd->type == MEM_STACK_TYPE)){
+	else if (((opnd->type == MEM_HEAP_TYPE) || (opnd->type == MEM_STACK_TYPE)) && (opnd->width != 0)){
 		ASSERT_MSG((opnd->value > MAX_SIZE_OF_REG * 48), ("ERROR: memory and register space overlap\n"));
 	}
 
@@ -250,7 +251,7 @@ rinstr_t * cinstr_to_rinstrs (cinstr_t * cinstr, int &amount){
 
 	int operation;
 
-	DEBUG_PRINT(("entering canonicalization\n"),2);
+	DEBUG_PRINT(("entering canonicalization - app_pc %u\n", cinstr->pc), 3);
 
 	rinstr_t * rinstr;
 	rinstr = NULL;
@@ -283,6 +284,12 @@ rinstr_t * cinstr_to_rinstrs (cinstr_t * cinstr, int &amount){
 	case OP_mov_ld:
 	case OP_mov_imm:
 	case OP_movzx:
+
+	case OP_fstp:
+	case OP_fld:
+	case OP_fld1:
+	case OP_fistp:
+	case OP_fild:
 		// dst[0] <- src[0]
 		if_bounds(1, 1){
 			rinstr = new rinstr_t[1];
@@ -299,6 +306,36 @@ rinstr_t * cinstr_to_rinstrs (cinstr_t * cinstr, int &amount){
 			rinstr = new rinstr_t[1];
 			amount = 1;
 			rinstr[0] = { op_mul, cinstr->dsts[0], 2, { cinstr->srcs[0], cinstr->srcs[1] }, true };
+		}
+		else_bounds;
+
+	case OP_fmul: //same as op_imul can be merged
+		if_bounds(1, 2){
+			rinstr = new rinstr_t[1];
+			amount = 1;
+			rinstr[0] = { op_mul, cinstr->dsts[0], 2, { cinstr->srcs[0], cinstr->srcs[1] }, true };
+		}
+		else_bounds;
+
+
+	case OP_mul:
+		if_bounds(2, 2){
+			// edx [dst0] : eax [dst1] <- eax [src1] * [src0] 
+			rinstr = new rinstr_t[3];
+			amount = 3;
+			// create an operand for the virtual register
+			operand_t virtual_reg = { REG_TYPE, 2 * cinstr->srcs[1].width, DR_REG_VIRTUAL_1 };
+			reg_to_mem_range(&virtual_reg);
+
+			//virtual <= eax * src0
+			rinstr[0] = { op_mul, virtual_reg, 2, { cinstr->srcs[1], cinstr->srcs[0] }, false };
+
+			//edx <= split_h(virtual)
+			rinstr[1] = { op_split_h, cinstr->dsts[0], 1, { virtual_reg }, false };
+
+			//eax <= split_l(virtual)
+			rinstr[2] = { op_split_l, cinstr->dsts[1], 1, { virtual_reg }, false };
+
 		}
 		else_bounds;
 
@@ -335,16 +372,49 @@ rinstr_t * cinstr_to_rinstrs (cinstr_t * cinstr, int &amount){
 	case OP_sub:
 	case OP_xor:
 	case OP_add:
+	case OP_and:
+	case OP_or:
+
+	case OP_fadd:
+	case OP_fsub:
+	case OP_fdivp:
 		// dst[0] <- src[1] (op) src[0]
 		if_bounds(1, 2){
 			rinstr = new rinstr_t[1];
 			amount = 1;
 			switch (cinstr->opcode){
-			case OP_sub: operation = op_sub; break;
-			case OP_add: operation = op_add; break;
+			case OP_sub: 
+			case OP_fsub:
+				operation = op_sub; break;
+			case OP_add: 
+			case OP_fadd:
+				operation = op_add; break;
 			case OP_xor: operation = op_xor; break;
+			case OP_and: operation = op_and; break;
+			case OP_or: operation = op_or; break;
+			case OP_fdivp: operation = op_div; break;
 			}
-			rinstr[0] = { operation, cinstr->dsts[0], 2, { cinstr->srcs[0], cinstr->srcs[1] }, false };
+			rinstr[0] = { operation, cinstr->dsts[0], 2, { cinstr->srcs[1], cinstr->srcs[0] }, false };  /* changed for SUB (src1, src0) from the reverse: please verify */
+
+
+		}
+		else_bounds;
+
+	case OP_dec:
+		if_bounds(1, 1){
+			rinstr = new rinstr_t[1];
+			amount = 1;
+			operand_t immediate = { IMM_INT_TYPE, cinstr->srcs[0].width, 1 };
+			rinstr[0] = { op_sub, cinstr->dsts[0], 2, { cinstr->srcs[0], immediate }, true };
+		}
+		else_bounds;
+
+	case OP_inc:
+		if_bounds(1, 1){
+			rinstr = new rinstr_t[1];
+			amount = 1;
+			operand_t immediate = { IMM_INT_TYPE, cinstr->srcs[0].width, 1 };
+			rinstr[0] = { op_add, cinstr->dsts[0], 2, { cinstr->srcs[0], immediate }, true };
 		}
 		else_bounds;
 
@@ -357,6 +427,35 @@ rinstr_t * cinstr_to_rinstrs (cinstr_t * cinstr, int &amount){
 		}
 		else_bounds;
 
+	case OP_shr:
+
+		if_bounds(1, 2){
+			rinstr = new rinstr_t[1];
+			amount = 1;
+			rinstr[0] = { op_rsh, cinstr->dsts[0], 2, { cinstr->srcs[1], cinstr->srcs[0] }, false };
+		}
+		else_bounds;
+
+	case OP_shl:
+
+		if_bounds(1, 2){
+			rinstr = new rinstr_t[1];
+			amount = 1;
+			rinstr[0] = { op_lsh, cinstr->dsts[0], 2, { cinstr->srcs[1], cinstr->srcs[0] }, false };
+		}
+		else_bounds;
+
+	case OP_lea:
+
+		if_bounds(1, 1){
+			rinstr = new rinstr_t[1];
+			amount = 1;
+			operand_t immediate = { IMM_INT_TYPE, cinstr->dsts[0].width, cinstr->srcs[0].value };
+			rinstr[0] = { op_assign, cinstr->dsts[0], 1, {immediate}, false };
+		}
+		else_bounds;
+
+
 	case OP_jmp:
 	case OP_jmp_short:
 	case OP_jnl:
@@ -367,6 +466,28 @@ rinstr_t * cinstr_to_rinstrs (cinstr_t * cinstr, int &amount){
 	case OP_cmp:
 	case OP_ret:
 	case OP_call:
+	case OP_jnz:
+	case OP_jnz_short:
+	case OP_jz:
+	case OP_test:
+	case OP_jnb_short:
+	case OP_jb_short:
+	case OP_jz_short:
+	case OP_jl_short:
+	case OP_jns_short:
+	case OP_js_short:
+	case OP_jnbe_short:
+	case OP_jle_short:
+	case OP_jbe_short:
+	case OP_call_ind:
+	case OP_jns:
+	case OP_jb:
+	case OP_jnb:
+	case OP_js:
+
+		/* floating point control word stores and loads */
+	case OP_fldcw:
+	case OP_fnstcw:
 		break;
 
 	default:
@@ -375,13 +496,14 @@ rinstr_t * cinstr_to_rinstrs (cinstr_t * cinstr, int &amount){
 
 	}
 
-	ASSERT_MSG((!unhandled), ("ERROR: opcode %d with %d dests and %d srcs (app_pc - %d) not handled in canonicalization\n",cinstr->opcode,cinstr->num_dsts,cinstr->num_srcs,cinstr->pc));
+	ASSERT_MSG((!unhandled), ("ERROR: opcode %s(%d) with %d dests and %d srcs (app_pc - %d) not handled in canonicalization\n",dr_operation_to_string(cinstr->opcode).c_str(),cinstr->opcode,
+		cinstr->num_dsts,cinstr->num_srcs,cinstr->pc));
 
 	if(rinstr == NULL){
-		DEBUG_PRINT(("opcode skipped\n"),2);
+		DEBUG_PRINT(("opcode skipped\n"),3);
 	}
 	else{
-		DEBUG_PRINT(("opcode reduced\n"),2);
+		DEBUG_PRINT(("opcode reduced\n"),3);
 	}
 
 	return rinstr;

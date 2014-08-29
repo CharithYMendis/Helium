@@ -51,6 +51,8 @@ string operation_to_string(uint operation){
 	case op_signex: return "SE";
 	case op_full_overlap: return "FO";
 	case op_partial_overlap: return "PO";
+	case op_split_l: return "SL";
+	case op_split_h: return "SH";
 	default: return "__";
 	}
 

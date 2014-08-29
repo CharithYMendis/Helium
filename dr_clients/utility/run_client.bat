@@ -40,8 +40,11 @@ set INSTRACE_MODE=
 
 call set_parameters %FILTER_MODE_STRING% %INSTRACE_MODE_STRING%
 
-set MD_FILTER_FILE=%EXALGO_FILTER_FOLDER%\memdump_filter.log
-set MD_APP_PC_FILE=%EXALGO_FILTER_FOLDER%\memdump_app_pc.log
+::set MD_FILTER_FILE=%EXALGO_FILTER_FOLDER%\memdump_filter.log
+::set MD_APP_PC_FILE=%EXALGO_FILTER_FOLDER%\memdump_app_pc.log
+
+set MD_FILTER_FILE=%EXALGO_FILTER_FOLDER%\blur_func_filter.txt
+set MD_APP_PC_FILE=%EXALGO_FILTER_FOLDER%\blur_func_app_pc.txt
 
 set CURRENT_DIR=%CD%
 

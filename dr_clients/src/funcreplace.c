@@ -21,6 +21,8 @@ thread_func_t thread_exit;
 
 */
 
+static void pre_func_cb(void * wrapcxt, OUT void ** user_data);
+
 typedef struct _client_arg_t{
 	char filter_filename[MAX_STRING_LENGTH];
 	uint filter_mode;
@@ -165,6 +167,7 @@ static void pre_func_cb(void * wrapcxt, OUT void ** user_data){
 
 	dr_mcontext_t mc = { sizeof(mc), DR_MC_ALL };
 	uint eax;
+	uint other_reg;
 	uint width = 144;
 	uint height = 120;
 	unsigned char * values = dr_global_alloc(sizeof(unsigned char) * width * height * 3);
@@ -192,9 +195,12 @@ static void pre_func_cb(void * wrapcxt, OUT void ** user_data){
 	}*/
 
 	
-	
 	dr_get_mcontext(dr_get_current_drcontext(), &mc);
 	eax = reg_get_value(DR_REG_EAX, &mc);
+
+	other_reg = reg_get_value(DR_REG_ECX, &mc);
+	dr_printf("ecx - %u\n", other_reg);
+	
 	
 	do_func_test(drwrap_get_arg(wrapcxt, 0), eax);
 	
@@ -267,7 +273,7 @@ void funcreplace_module_load(void * drcontext, module_data_t * module, bool load
 	if (md != NULL){
 		for (int i = 1; i <= md->bbs[0].start_addr; i++){
 			address = md->bbs[i].start_addr + module->start;
-			DEBUG_PRINT("replacing function %x of %s with %x\n", address, module->full_path, pre_func_cb);
+			//DEBUG_PRINT("replacing function %x of %s with %x\n", address, module->full_path, pre_func_cb);
 			//drwrap_replace(address, (app_pc)clean_call_halide, true);
 			//drwrap_replace_native(address, clean_call_halide, true, 0, NULL, false);
 			drwrap_wrap(address, pre_func_cb, NULL);

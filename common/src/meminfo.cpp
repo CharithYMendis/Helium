@@ -92,8 +92,8 @@ static void update_stride_from_vector(vector<pair<uint, uint> > &strides, vector
 		uint old_freq = old[i].second;
 		bool updated = false;
 		for (int j = 0; j < strides.size(); j++){
-			if (strides[i].first == old_stride){
-				strides[i].second += old_freq;
+			if (strides[j].first == old_stride){
+				strides[j].second += old_freq;
 				updated = true;
 				break;
 			}
@@ -484,6 +484,8 @@ bool random_dest_select(vector<mem_info_t *> &mem_info, uint64_t * dest, uint32_
 
 void print_mem_layout(ostream &file, vector<mem_info_t *> &mem_info){
 
+	DEBUG_PRINT(("print_mem_layout(mem_info) \n"), 2);
+
 	for (int i = 0; i < mem_info.size(); i++){
 		mem_info_t * info = mem_info[i];
 
@@ -511,6 +513,8 @@ void print_mem_layout(ostream &file, vector<mem_info_t *> &mem_info){
 		file << "--------------------------------------------------------------------------" << endl;
 
 	}
+
+	DEBUG_PRINT(("print_mem_layout(mem_info) - done\n"), 2);
 }
 
 bool compare_mem_regions(mem_info_t * first, mem_info_t * second){
@@ -524,9 +528,10 @@ bool compare_mem_regions(mem_info_t * first, mem_info_t * second){
 */
 
 bool link_mem_regions_greedy(vector<mem_info_t *> &mem, uint32_t app_pc){
+	
+	DEBUG_PRINT(("link_mem_regions_greedy...\n"), 2);
 
 	sort(mem.begin(), mem.end(), compare_mem_regions);
-
 
 	bool ret = true;
 
@@ -571,6 +576,8 @@ bool link_mem_regions_greedy(vector<mem_info_t *> &mem, uint32_t app_pc){
 			}
 		}
 	}
+
+	DEBUG_PRINT(("link_mem_regions_greedy - done\n"), 2);
 
 	return ret;
 }

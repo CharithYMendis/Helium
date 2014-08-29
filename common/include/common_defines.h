@@ -2,6 +2,7 @@
 #define _EXALGO_COMMON_DEFINES_H
 
 #include <fstream>
+#include <stdint.h>
 
 #define MAX_STRING_LENGTH 2000
 

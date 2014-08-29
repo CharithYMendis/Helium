@@ -25,12 +25,14 @@ void cinstr_convert_reg(cinstr_t * instr){
 
 void build_tree(uint64 destination, int start_trace, int end_trace, ifstream &file, Expression_tree * tree){
 
-	if (end_trace != FILE_END)
+	DEBUG_PRINT(("build_tree(concrete)....\n"), 2);
+
+	if (end_trace != FILE_ENDING)
 		ASSERT_MSG((end_trace >= start_trace), ("trace end should be greater than the trace start\n"));
 
 	uint curpos = 0;
 	
-	if (start_trace != FILE_BEG){
+	if (start_trace != FILE_BEGINNING){
 		go_to_line(start_trace, file);
 		curpos = start_trace - 1;
 	}
@@ -74,8 +76,9 @@ void build_tree(uint64 destination, int start_trace, int end_trace, ifstream &fi
 	//do the rest of expression tree building
 	while (!file.eof()){
 		instr = get_next_from_ascii_file(file);
+		//print_cinstr(instr);
 		curpos++;
-		//DEBUG_PRINT(("%d\n", curpos), 1);
+		DEBUG_PRINT(("->line - %d\n", curpos), 3);
 		if (instr != NULL){
 			cinstr_convert_reg(instr);
 			rinstr = cinstr_to_rinstrs(instr, no_rinstrs);
@@ -84,11 +87,13 @@ void build_tree(uint64 destination, int start_trace, int end_trace, ifstream &fi
 			}
 		}
 
-		if ( (end_trace != FILE_END) && (curpos == end_trace)){
+		if ( (end_trace != FILE_ENDING) && (curpos == end_trace)){
 			break;
 		}
 
 	}
+
+	DEBUG_PRINT(("build_tree(concrete) - done\n"), 2);
 
 
 }

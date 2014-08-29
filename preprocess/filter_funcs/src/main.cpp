@@ -170,13 +170,14 @@ int main(int argc, char **argv){
 		//this should return the linking information
 		link_mem_regions(pc_mems,GREEDY);
 		DEBUG_PRINT(("filtering out insignificant regions... \n"), 5);
-		filter_mem_regions(pc_mems, in_image, out_image, 30);
+		filter_mem_regions(pc_mems, in_image, out_image, 80);
 
 		//if one image -> filter based on functional composition (to get rid of loading and saving code)
 		
 
 		//debug printing - this is after the filtering
 		print_mem_layout(log_file, pc_mems);
+		print_app_pc_file(app_pc_file, pc_mems);
 		vector<mem_info_t *> mems = extract_mem_regions(pc_mems);
 		log_file << "********************extracted mems************************" << endl;
 		print_mem_layout(log_file, mems);

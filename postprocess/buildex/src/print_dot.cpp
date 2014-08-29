@@ -112,7 +112,9 @@ void print_to_dotfile(ofstream &file,Node * head, uint no_of_nodes, uint graph_n
 
 
 	file << "digraph G_" << graph_no << " {" << endl;
+	DEBUG_PRINT( ("printing node...\n"), 2);
 	print_nodes(file, head, no_of_nodes);
+	DEBUG_PRINT(("printing edges...\n"), 2);
 	print_edges(file, head, no_of_nodes);
 	file << "}" << endl;
 }

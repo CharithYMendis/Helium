@@ -25,7 +25,8 @@ enum {
 	op_or,
 
 	/*support operations*/
-	//op_split,
+	op_split_h,
+	op_split_l,
 	op_concat,
 	op_signex,
 

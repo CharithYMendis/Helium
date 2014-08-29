@@ -5,12 +5,18 @@
 #include <vector>
 #include "fileparser.h"
 #include "defines.h"
+#include "meminfo.h"
+#include "utilities.h"
 
 
 using namespace std;
 
 
 void create_mem_layout(std::ifstream &in, vector<mem_info_t *> &mem_info){
+
+	uint32_t count = 0;
+
+	DEBUG_PRINT(("create_mem_layout(mem_info)...\n"), 2);
 
 	while (!in.eof()){
 		cinstr_t * instr = get_next_from_ascii_file(in);
@@ -24,7 +30,9 @@ void create_mem_layout(std::ifstream &in, vector<mem_info_t *> &mem_info){
 					input->stride = instr->srcs[i].width;
 					input->write = false;
 					input->type = instr->srcs[i].type;
-					update_mem_regions(mem_info,input);
+					if (input->stride != 0){
+						update_mem_regions(mem_info, input);
+					}
 				}
 			}
 			for (int i = 0; i < instr->num_dsts; i++){
@@ -32,17 +40,24 @@ void create_mem_layout(std::ifstream &in, vector<mem_info_t *> &mem_info){
 					input->mem_addr = instr->dsts[i].value;
 					input->stride = instr->dsts[i].width;
 					input->write = true;
-					update_mem_regions(mem_info, input);
+					input->type = instr->dsts[i].type;
+					if (input->stride != 0){
+						update_mem_regions(mem_info, input);
+					}
 				}
 			}
 			
 		}
+
+		print_progress(&count, 10000);
 
 		delete instr;
 		delete input;
 	}
 
 	postprocess_mem_regions(mem_info);
+
+	DEBUG_PRINT(("create_mem_layout(mem_info) - done\n"), 2);
 
 
 }
@@ -52,6 +67,10 @@ void create_mem_layout(std::ifstream &in, vector<mem_info_t *> &mem_info){
 
 void create_mem_layout(std::ifstream &in, vector<pc_mem_region_t *> &mem_info){
 
+	uint32_t count = 0;
+
+	DEBUG_PRINT(("create_mem_layout(pc_mem_regions)...\n"), 2);
+
 	while (!in.eof()){
 		cinstr_t * instr = get_next_from_ascii_file(in);
 		mem_input_t * input = new mem_input_t;
@@ -65,7 +84,9 @@ void create_mem_layout(std::ifstream &in, vector<pc_mem_region_t *> &mem_info){
 					input->stride = instr->srcs[i].width;
 					input->write = false;
 					input->type = instr->srcs[i].type;
-					update_mem_regions(mem_info, input);
+					if (input->stride != 0){
+						update_mem_regions(mem_info, input);
+					}
 				}
 			}
 			for (int i = 0; i < instr->num_dsts; i++){
@@ -74,17 +95,24 @@ void create_mem_layout(std::ifstream &in, vector<pc_mem_region_t *> &mem_info){
 					input->mem_addr = instr->dsts[i].value;
 					input->stride = instr->dsts[i].width;
 					input->write = true;
-					update_mem_regions(mem_info, input);
+					input->type = instr->dsts[i].type;
+					if (input->stride != 0){
+						update_mem_regions(mem_info, input);
+					}
 				}
 			}
 
 		}
+
+		print_progress(&count, 10000);
 
 		delete instr;
 		delete input;
 	}
 
 	postprocess_mem_regions(mem_info);
+
+	DEBUG_PRINT(("create_mem_layout(pc_mem_regions) - done\n"), 2);
 
 }
 

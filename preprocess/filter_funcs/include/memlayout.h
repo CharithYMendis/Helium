@@ -23,4 +23,6 @@ std::vector<func_composition_t *> create_func_composition_wo_func(std::vector<pc
 void print_app_pc_info(std::ofstream &file, func_composition_t * &funcs);
 void print_filter_file(std::ofstream &file, func_composition_t * &funcs);
 
+void print_app_pc_file(std::ofstream &file, std::vector<pc_mem_region_t *> &pc_mems);
+
 #endif

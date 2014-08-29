@@ -8,7 +8,7 @@
 #include <fstream>
 
 #define MAX_FRONTIERS		1000
-#define SIZE_PER_FRONTIER	5
+#define SIZE_PER_FRONTIER	10
 #define MEM_OFFSET			200
 #define MEM_REGION			(MAX_FRONTIERS - MEM_OFFSET)
 #define REG_REGION			MEM_OFFSET

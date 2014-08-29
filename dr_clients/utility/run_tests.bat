@@ -69,4 +69,10 @@ if "%DR_PHASE%" == "instrace" (
 	call run_client %ARCH% %EXEC% %TEST_NAME% %DEBUG% "funcwrap instrace" %FILTER_FILE% %FILTER_MODE_STRING% instrace
 )
 
+if "%DR_PHASE%" == "instrace_memdump" (
+	del %EXALGO_OUTPUT_FOLDER%\instrace_%TEST_NAME%.exe_%IN_IMAGE%_instr*
+	del %EXALGO_OUTPUT_FOLDER%\memdump*
+	call run_client %ARCH% %EXEC% %TEST_NAME% %DEBUG% "funcwrap instrace memdump" %FILTER_FILE% %FILTER_MODE_STRING% instrace
+)
+
 

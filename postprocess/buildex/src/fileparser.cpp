@@ -13,9 +13,8 @@
 #include <vector>
 #include "utilities.h"
 #include "print_common.h"
+#include "common_defines.h"
 
-
-#define MAX_STRING_LENGTH 100
 
 using namespace std;
 

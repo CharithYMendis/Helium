@@ -29,6 +29,8 @@ struct mem_regions_t {
 	uint type;							//image input, output or intermediate
 	uint layout;						//row, column major
 	uint scanline_width;				//in bytes the total scanline size
+
+	uint padding_filled;				//padding array filled right, left, up and down
 	uint padding[4];					//padding for all 4 directions 
 
 	/* physical demarcations of the memory regions */
@@ -42,6 +44,17 @@ struct mem_regions_t {
 
 	/*name of the mem region */
 	string name;
+
+	mem_regions_t(){
+		
+		/* these are hardcoded values for a 256 bit grey scale image which we will be using for analysis */
+		bytes_per_pixel = 1;
+		stride = 1;
+
+		layout = COLUMN_MAJOR;
+		colors = 1;
+		
+	}
 
 };
 
@@ -71,8 +84,7 @@ void print_mem_regions(vector<mem_regions_t *> regions);
 * information retrieval functions 
 */
 
-/* extracting mem regions */
-mem_regions_t* get_random_output_region(vector<mem_regions_t *> regions);
+
 mem_regions_t * get_mem_region(uint64 value, vector<mem_regions_t *> &mem_regions);
 
 /*extracting mem locations*/
@@ -80,9 +92,13 @@ mem_regions_t * get_mem_region(uint64 value, vector<mem_regions_t *> &mem_region
 uint64 get_mem_location(vector<uint> base, vector<int> offset, mem_regions_t * mem_region, bool * success);
 /* given a memory location get the memory position in (x,y,c)*/
 vector<uint> get_mem_position(mem_regions_t * mem_region, uint64 mem_value);
-/* gets a random mem location given in given number of trys */
-uint64 get_random_mem_location(mem_regions_t *  region, uint seed, uint trys, bool * ok);
 
+/* extracting mem regions */
+mem_regions_t* get_random_output_region(vector<mem_regions_t *> regions);
+/* gets a random mem location given in given number of trys */
+uint64 get_random_mem_location(mem_regions_t *  region, uint seed);
+vector<mem_regions_t *> get_image_regions_from_dump(vector<string> filenames, string in_image_filename, string out_image_filename);
+vector<mem_regions_t *> merge_instrace_and_dump_regions(vector<mem_info_t *> mem_info, vector<mem_regions_t *> mem_regions);
 
 #endif
 

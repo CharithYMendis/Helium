@@ -132,7 +132,7 @@ void Expression_tree::get_full_overlap_nodes(vector<Node *> &nodes, operand_t * 
 
 	ASSERT_MSG(((opnd->type != IMM_INT_TYPE) && (opnd->type != IMM_FLOAT_TYPE)), ("ERROR: immediate types cannot be in the frontier\n"));
 
-	DEBUG_PRINT(("entered full\n"), 3);
+	DEBUG_PRINT(("checking for full overlap nodes...\n"), 5);
 
 	if (opnd->type == REG_TYPE){
 		uint hash = generate_hash(opnd);
@@ -143,7 +143,7 @@ void Expression_tree::get_full_overlap_nodes(vector<Node *> &nodes, operand_t * 
 
 			if (((start > opnd->value) && (start + width <= opnd->value + opnd->width))  ||
 				((start >= opnd->value) && (start + width < opnd->value + opnd->width))){
-				DEBUG_PRINT(("reg full overlap found\n"), 3);
+				DEBUG_PRINT(("reg full overlap found\n"), 5);
 				nodes.push_back(frontier[hash].bucket[i]);
 			}
 
@@ -151,14 +151,12 @@ void Expression_tree::get_full_overlap_nodes(vector<Node *> &nodes, operand_t * 
 	}
 	else if ( (opnd->type == MEM_HEAP_TYPE) || (opnd->type == MEM_STACK_TYPE) ){
 
-#ifdef DEBUG
-#if DEBUG_LEVEL >= 3
-		for (int i = 0; i < mem_in_frontier.size(); i++){
-			printf("%d-", mem_in_frontier[i]);
+		if (debug_level > 5){
+			for (int i = 0; i < mem_in_frontier.size(); i++){
+				printf("%d-", mem_in_frontier[i]);
+			}
+			printf("\n");
 		}
-		printf("\n");
-#endif
-#endif
 
 		for (int i = 0; i < mem_in_frontier.size(); i++){
 			uint index = mem_in_frontier[i];
@@ -172,7 +170,7 @@ void Expression_tree::get_full_overlap_nodes(vector<Node *> &nodes, operand_t * 
 					/*check whether this memory is fully contained within the current memory operand*/
 					if (((start > opnd->value) && (start + width <= opnd->value + opnd->width)) ||
 						((start >= opnd->value) && (start + width < opnd->value + opnd->width))){
-						DEBUG_PRINT(("reg full overlap found\n"), 3);
+						DEBUG_PRINT(("reg full overlap found\n"), 5);
 						nodes.push_back(frontier[index].bucket[j]);
 					}
 
@@ -217,7 +215,7 @@ void Expression_tree::split_partial_overlaps(vector<pair<Node *,vector<Node *> >
 				splits.push_back(create_or_get_node(second));
 				nodes.push_back(make_pair(split_node, splits));
 
-				DEBUG_PRINT(("partial - %s %s\n", opnd_to_string(first), opnd_to_string(second)), 3);
+				DEBUG_PRINT(("partial - %s %s\n", opnd_to_string(first), opnd_to_string(second)), 5);
 			}
 
 			else if ((start < opnd->value) /*start strictly before*/
@@ -232,7 +230,7 @@ void Expression_tree::split_partial_overlaps(vector<pair<Node *,vector<Node *> >
 				splits.push_back(create_or_get_node(second));
 				nodes.push_back(make_pair(split_node, splits));
 
-				DEBUG_PRINT(("partial - %s %s\n", opnd_to_string(first), opnd_to_string(second)), 3);
+				DEBUG_PRINT(("partial - %s %s\n", opnd_to_string(first), opnd_to_string(second)), 5);
 			}
 
 			else if ((start < opnd->value) && (start + width > opnd->value + opnd->width)) /* strictly within start and end */ {
@@ -248,7 +246,7 @@ void Expression_tree::split_partial_overlaps(vector<pair<Node *,vector<Node *> >
 				splits.push_back(create_or_get_node(second));
 				nodes.push_back(make_pair(split_node, splits));
 
-				DEBUG_PRINT(("partial - %s %s %s\n", opnd_to_string(first), opnd_to_string(opnd), opnd_to_string(second)), 3);
+				DEBUG_PRINT(("partial - %s %s %s\n", opnd_to_string(first), opnd_to_string(opnd), opnd_to_string(second)), 5);
 
 			}
 		}
@@ -258,7 +256,7 @@ void Expression_tree::split_partial_overlaps(vector<pair<Node *,vector<Node *> >
 
 void Expression_tree::get_partial_overlap_nodes(vector<pair<Node *, vector<Node *> > > &nodes, operand_t * opnd){
 
-	DEBUG_PRINT(("entered partial\n"), 3);
+	DEBUG_PRINT(("checking for partial overlap nodes...\n"), 5);
 	if (opnd->type == REG_TYPE){
 		uint hash = generate_hash(opnd);
 		split_partial_overlaps(nodes, opnd, hash);
@@ -289,7 +287,7 @@ void add_dependancy(Node * dst, Node * src,uint operation){
 
 void Expression_tree::update_frontier(rinstr_t * instr){
 
-
+	
 	//TODO: have precomputed nodes for immediate integers -> can we do it for floats as well? -> just need to point to them in future (space optimization)
 
 	if(head == NULL){
@@ -326,7 +324,7 @@ void Expression_tree::update_frontier(rinstr_t * instr){
 
 	/*get the destination -> the partial overlap may have created the destination if it was contained with in a wide mem region*/
 	int hash_dst = generate_hash(&instr->dst);
-	DEBUG_PRINT(("dst_hash - %d\n", hash_dst), 3);
+	DEBUG_PRINT(("dst_hash : %d, frontier amount : %d\n", hash_dst, frontier[hash_dst].amount), 4);
 	Node * dst = search_node(&instr->dst);
 
 	/* now get the full overlap nodes */
@@ -339,24 +337,28 @@ void Expression_tree::update_frontier(rinstr_t * instr){
 			dst = new Node(&instr->dst);
 		}
 		for (int i = 0; i < full_overlap_nodes.size(); i++){
-			DEBUG_PRINT(("full overlap - %s\n", opnd_to_string(full_overlap_nodes[i]->symbol).c_str()), 3);
+			DEBUG_PRINT(("full overlap - %s\n", opnd_to_string(full_overlap_nodes[i]->symbol).c_str()), 4);
 			add_dependancy(full_overlap_nodes[i], dst, op_full_overlap);
 			remove_from_frontier(full_overlap_nodes[i]->symbol);
 		}
 	}
 
 	if(dst == NULL){
-		DEBUG_PRINT(("not affecting the frontier\n"), 3);
+		DEBUG_PRINT(("not affecting the frontier\n"), 4);
 		return;  //this instruction does not affect the slice
 	}
 	else{
-		DEBUG_PRINT(("dst - %s\n", opnd_to_string(dst->symbol).c_str()), 3);
-		DEBUG_PRINT(("affecting the frontier\n"), 3);
+		DEBUG_PRINT(("dst - %s : affecting the frontier\n", opnd_to_string(dst->symbol).c_str()), 4);
+		if (debug_level >= 5){
+			DEBUG_PRINT(("current expression:\n"), 5);
+			print_node_tree(head, cout);
+			cout << endl;
+		}
 	}
 
 	//update operation
 	dst->operation = instr->operation;
-	DEBUG_PRINT(("operation - %d\n", dst->operation), 3);
+	DEBUG_PRINT(("operation : %s\n", operation_to_string(dst->operation).c_str()), 4);
 
 
 	//ok now to remove the destination from the frontiers
@@ -370,7 +372,7 @@ void Expression_tree::update_frontier(rinstr_t * instr){
 		//creating a new node -> space and time efficient
 		int hash_src = generate_hash(&instr->srcs[i]);
 
-		DEBUG_PRINT(("src hash - %d\n", hash_src), 3);
+		DEBUG_PRINT(("src_hash : %d, frontier amount : %d\n", hash_src, frontier[hash_src].amount), 4);
 
 		bool add_node = false;
 		Node * src;  //now the node can be imme or another 
@@ -387,10 +389,10 @@ void Expression_tree::update_frontier(rinstr_t * instr){
 		if( (src == NULL) || (src == dst) ){  //I think now we can remove the src == dst check -> keeping for sanity purposes (why? because we remove the dst from the frontier)
 			src = new Node(&instr->srcs[i]);
 			add_node = true;
-			DEBUG_PRINT(("node added\n"), 3);
+			DEBUG_PRINT(("new node added to the frontier\n"), 4);
 		}
 
-		DEBUG_PRINT(("src - %s\n",opnd_to_string(src->symbol).c_str()), 3);
+		DEBUG_PRINT(("src - %s\n", opnd_to_string(src->symbol).c_str()), 4);
 
 
 		/* assign operation optimization - space */
@@ -409,11 +411,10 @@ void Expression_tree::update_frontier(rinstr_t * instr){
 				assign_opt = true;  /* this is here to differentitate between the head and the rest of the nodes */
 			}
 
-			DEBUG_PRINT(("after assign opt\n"), 3);
+			DEBUG_PRINT(("optimizing assign\n"), 4);
 
 			if (assign_opt)  delete dst; /* we have broken all linkages, so just delete it */
 
-			DEBUG_PRINT(("after delete\n"), 3);
 
 		}
 
@@ -428,19 +429,18 @@ void Expression_tree::update_frontier(rinstr_t * instr){
 
 		}
 
-		DEBUG_PRINT(("printing\n"), 3);
+		
 
-#ifdef DEBUG
-#if DEBUG_LEVEL >= 3
-		flatten_to_expression(head,cout);
-		cout << endl;
-#endif
-#endif
+		if(debug_level >= 5){
+			DEBUG_PRINT(("current expression after adding src\n"), 5);
+			print_node_tree(head,cout);
+			cout << endl;
+		}
 
 		/* update the frontiers - include the sources to the frontier if new nodes created */
 		if(add_node) add_to_frontier(hash_src,src);
 
-		DEBUG_PRINT(("completed adding a src\n"), 3);
+		DEBUG_PRINT(("completed adding a src\n"), 4);
 			
 	}
 

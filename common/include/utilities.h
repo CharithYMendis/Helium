@@ -26,6 +26,7 @@ std::string get_standard_folder(std::string type);
 bool is_prefix(std::string str, std::string prefix);
 
 void print_progress(uint32_t * count, uint32_t mod);
+bool is_overlapped(uint64_t start_1, uint64_t end_1, uint64_t start_2, uint64_t end_2);
 
 
 #endif

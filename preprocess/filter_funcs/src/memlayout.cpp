@@ -132,3 +132,37 @@ void print_app_pc_info(ofstream &file, func_composition_t * &funcs){
 	file << funcs->func_addr << endl;
 
 }
+
+void print_app_pc_file(ofstream &file, vector<pc_mem_region_t *> &pc_mems){
+
+	vector<string> modules;
+
+	for (int i = 0; i < pc_mems.size(); i++){
+		if (find(modules.begin(), modules.end(), pc_mems[i]->module) == modules.end()){
+			modules.push_back(pc_mems[i]->module);
+		}
+	}
+
+	file << modules.size() << endl;
+
+	for (int i = 0; i < modules.size(); i++){
+
+		file << modules[i] << endl;
+
+		uint32_t amount = 0;
+		for (int j = 0; j < pc_mems.size(); j++){
+			if (pc_mems[j]->module == modules[i]){
+				amount++;
+			}
+		}
+
+		file << amount << endl;
+		for (int j = 0; j < pc_mems.size(); j++){
+			if (pc_mems[j]->module == modules[i]){
+				file << dec << pc_mems[j]->pc << endl;
+			}
+		}
+
+	}
+
+}

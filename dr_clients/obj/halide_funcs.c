@@ -119,7 +119,8 @@ void do_nothing_halide(){
 
 }
 
-/*int main(){
+/*
+int main(){
 
 	uint8_t * input = malloc(144*120*3);
 	uint8_t * output = malloc(144*120*3);

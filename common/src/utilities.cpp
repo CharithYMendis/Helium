@@ -119,12 +119,23 @@ bool is_prefix(string str, string prefix){
 
 void print_progress(uint32_t * count, uint32_t mod){
 
-	if (debug){
+	if (debug && debug_level >= 3){
 		(*count)++;
 		if ( (*count % mod)  == 0){
-			printf("\t progress - %d\n", *count);
+			printf("-> progress - %d\n", *count);
 		}
 	}
+}
 
+bool is_overlapped(uint64_t start_1, uint64_t end_1, uint64_t start_2, uint64_t end_2){
+	
+	/* check whether there is an overlap between the two regions */
+
+	bool one_in_two = (start_1 >= start_2) && (end_1 <= end_2);
+	bool two_in_one = (start_2 >= start_1) && (end_2 <= end_1);
+
+	bool partial_overlap = ((start_1 >= start_2) && (start_1 <= end_2)) || ((end_1 >= start_2) && (end_1 <= end_2));
+
+	return one_in_two || two_in_one || partial_overlap;
 
 }

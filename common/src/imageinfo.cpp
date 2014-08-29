@@ -1,3 +1,4 @@
+#include <Windows.h>
 #include "imageinfo.h"
 #include "common_defines.h"
 #include <iostream>
@@ -69,6 +70,8 @@ void save_image(Gdiplus::Bitmap * image, const char * file){
 
 Gdiplus::Bitmap * open_image(const char * filename){
 
+	DEBUG_PRINT(("opening image - %s\n", filename), 3);
+
 	wchar_t * file_wchar = new wchar_t[strlen(filename) + 1];
 
 	mbstowcs(file_wchar, filename, strlen(filename) + 1);
@@ -106,9 +109,8 @@ byte * get_image_buffer(Gdiplus::Bitmap * image){
 
 	uint32_t height = image->GetHeight();
 	uint32_t width = image->GetWidth();
-	if (debug){
-		std::cout << height << " " << width << std::endl;
-	}
+	DEBUG_PRINT(("height : %d, width : %d\n", height, width), 3);
+	
 
 	for (int i = 0; i < image->GetWidth(); i++){
 		for (int j = 0; j < image->GetHeight(); j++){

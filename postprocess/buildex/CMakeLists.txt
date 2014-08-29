@@ -64,3 +64,5 @@ src/print_dot.cpp
 
 
 )
+
+target_link_libraries(buildex Gdiplus.lib)

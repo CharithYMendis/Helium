@@ -8,7 +8,7 @@ int main(int argc, char **argv) {
     Var x("x"), y("y"), xi("xi"), yi("yi"), c("c");
     
     // The algorithm
-    rotate(x,y,c) = 255 - input(x,y,c);
+    rotate(x,y,c) = cast<unsigned char>(x % 255);
 
     
     rotate.compile_to_file("halide_rotate_gen", input); 
