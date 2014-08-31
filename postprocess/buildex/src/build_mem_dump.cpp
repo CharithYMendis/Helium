@@ -296,49 +296,38 @@ uint64 get_mem_location(vector<uint> base, vector<int> offset, mem_regions_t * m
 
 }
 
-/* one color assumption and column major assumption */
-vector<uint> get_mem_position(mem_regions_t * mem_region, uint64 mem_value){
+/* above functions need to be corrected */
 
-	vector<uint> dims;
+/* one color assumption and column major assumption */
+vector<int> get_mem_position(mem_regions_t * mem_region, uint64 mem_value){
+
+	vector<int> dims;
 
 	/* dimensions would always be width dir(x), height dir(y) */
 
 	/*get the row */
 	uint64 offset = mem_value - mem_region->start;
 	int row = offset / mem_region->scanline_width;
+	if (row >= mem_region->height) { row = -1; }
 
 	/*get the column*/
 	uint64 col_offset = offset - row * mem_region->scanline_width;
 	int column = col_offset / (mem_region->bytes_per_pixel);
 
 	if (column >= mem_region->width) { column = -1; }
-	//
 	
-
-	//DEBUG_PRINT(("get_mem_position - row - %d, col - %d, color - %d\n", row, column, color), 3);
-	//
-	//if (mem_region->layout == XY_LAYOUT){
-	//	ASSERT_MSG((mem_region->height > row), ("ERROR: This memory location is out of bounds\n"));
-	//	ASSERT_MSG((mem_region->width > column), ("ERROR: This memory location is out of bounds\n"));
-	//	ASSERT_MSG((mem_region->colors > color), ("ERROR: This memory location is out of bounds\n"));
-	//	
-	//}
-	//else if (mem_region->layout == YX_LAYOUT) {
-	//	ASSERT_MSG((mem_region->width > row), ("ERROR: This memory location is out of bounds\n"));
-	//	ASSERT_MSG((mem_region->height > column), ("ERROR: This memory location is out of bounds\n"));
-	//	ASSERT_MSG((mem_region->colors > color), ("ERROR: This memory location is out of bounds\n"));
-	//}
-
-	//dims.push_back(row);
-	//dims.push_back(column);
-	//dims.push_back(color); /* will be 0 for only one color */
+	int color = 0;
+	
+	dims.push_back(row);
+	dims.push_back(column);
+	dims.push_back(color); /* will be 0 for only one color */
 
 	return dims;
 
 
 }
 
-/* above functions need to be corrected */
+
 
 /* one color assumption and column major assumption  - also assuming a paritcular mem layout */
 uint64 get_random_mem_location(mem_regions_t *  region, uint seed){
@@ -590,8 +579,27 @@ vector<mem_regions_t *> merge_instrace_and_dump_regions(vector<mem_info_t *> mem
 		}
 	}
 
-	/* create new mem_regions for the remaining mem_info which of type MEM_HEAP - postpone the implementation */
+	/* create new mem_regions for the remaining mem_info which of type MEM_HEAP - postpone the implementation; these are intermediate nodes */
 	
+
+
+	/* naming the memory regions */
+	int inputs = 0;
+	int intermediates = 0;
+	int outputs = 0;
+
+	for (int i = 0; i < final_regions.size(); i++){
+		if (final_regions[i]->type == IMAGE_INPUT){
+			final_regions[i]->name = "input_" + to_string(++inputs);
+		}
+		else if (final_regions[i]->type == IMAGE_OUTPUT){
+			final_regions[i]->name = "output_" + to_string(++outputs);
+		}
+		else if (final_regions[i]->type == IMAGE_INTERMEDIATE){
+			final_regions[i]->name = "inter_" + to_string(++intermediates);
+		}
+	}
+
 
 	DEBUG_PRINT((" no of mem regions after merging - %d\n", mem_regions.size()), 2);
 	DEBUG_PRINT(("merge_instrace_and_dump_regions - done\n"), 2);

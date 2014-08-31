@@ -28,5 +28,11 @@ bool is_prefix(std::string str, std::string prefix);
 void print_progress(uint32_t * count, uint32_t mod);
 bool is_overlapped(uint64_t start_1, uint64_t end_1, uint64_t start_2, uint64_t end_2);
 
+std::vector<double> solve_linear_eq(std::vector< std::vector<double> > A, std::vector<double> b);
+void test_linear_solver();
+void printout_matrices(std::vector<std::vector<double> >  values);
+void printout_vector(std::vector<double> values);
+int double_to_int(double value);
+
 
 #endif

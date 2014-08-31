@@ -1,12 +1,12 @@
 @echo off
 
 if "%1"=="help" (
-	echo usage {arch} {exec} {debug_on_off} {phase} {test_name} {filter_prefix} {filter_mode} {input_image} {output_image}
+	echo usage {arch} {exec} {test_name} {debug_on_off} {phase} {filter_file} {filter_mode} {input_image} {output_image}
 	echo 	{arch} m32, m64
 	echo 	{exec} photoshop, halide, ctests, asm
 	echo 	{test_name} - should be the executable name that DR is running on {without exe}
 	echo 	{debug_on_off} - 1,0
-	echo 	{phase} - phase of running dr clients "profile memtrace" "profile" "opndtrace" "opcodetrace" "disasmtrace" "instrace" "memdump"
+	echo 	{phase} - phase of running dr clients "profile memtrace" "profile" "opndtrace" "opcodetrace" "disasmtrace" "instrace" "memdump" "ins_distrace" "funcreplace" "instrace_memdump"
 	echo 	{filter_file} - the filter file name {only filename with ext}
 	echo 	{filter_mode} - module, bb, range, func, neg_module, app_pc, none
 	echo 	{input_image} - only the filename {with ext}
@@ -64,15 +64,23 @@ if "%DR_PHASE%" == "disasmtrace" (
 	call run_client %ARCH% %EXEC% %TEST_NAME% %DEBUG% "funcwrap instrace" %FILTER_FILE% %FILTER_MODE_STRING% disasmtrace
 )
 
+if "%DR_PHASE%" == "ins_distrace" (
+	del %EXALGO_OUTPUT_FOLDER%\instrace_%TEST_NAME%.exe_%IN_IMAGE%_asm_instr*
+	call run_client %ARCH% %EXEC% %TEST_NAME% %DEBUG% "funcwrap instrace" %FILTER_FILE% %FILTER_MODE_STRING% ins_distrace
+)
+
 if "%DR_PHASE%" == "instrace" (
 	del %EXALGO_OUTPUT_FOLDER%\instrace_%TEST_NAME%.exe_%IN_IMAGE%_instr*
 	call run_client %ARCH% %EXEC% %TEST_NAME% %DEBUG% "funcwrap instrace" %FILTER_FILE% %FILTER_MODE_STRING% instrace
 )
+
 
 if "%DR_PHASE%" == "instrace_memdump" (
 	del %EXALGO_OUTPUT_FOLDER%\instrace_%TEST_NAME%.exe_%IN_IMAGE%_instr*
 	del %EXALGO_OUTPUT_FOLDER%\memdump*
 	call run_client %ARCH% %EXEC% %TEST_NAME% %DEBUG% "funcwrap instrace memdump" %FILTER_FILE% %FILTER_MODE_STRING% instrace
 )
+
+
 
 

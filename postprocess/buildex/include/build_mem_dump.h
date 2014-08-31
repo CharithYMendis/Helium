@@ -91,7 +91,7 @@ mem_regions_t * get_mem_region(uint64 value, vector<mem_regions_t *> &mem_region
 /* given the (x,y,c) coordinates this returns the memory address */
 uint64 get_mem_location(vector<uint> base, vector<int> offset, mem_regions_t * mem_region, bool * success);
 /* given a memory location get the memory position in (x,y,c)*/
-vector<uint> get_mem_position(mem_regions_t * mem_region, uint64 mem_value);
+vector<int> get_mem_position(mem_regions_t * mem_region, uint64 mem_value);
 
 /* extracting mem regions */
 mem_regions_t* get_random_output_region(vector<mem_regions_t *> regions);

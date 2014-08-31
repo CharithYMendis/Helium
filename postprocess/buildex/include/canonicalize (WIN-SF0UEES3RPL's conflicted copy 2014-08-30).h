@@ -50,7 +50,6 @@ enum {
 	
  
  } rinstr_t;
-
  
  //functions
  rinstr_t * cinstr_to_rinstrs (cinstr_t * cinstr, int &amount);

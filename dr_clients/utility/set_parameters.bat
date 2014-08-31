@@ -57,3 +57,6 @@ if "%2" == "disasmtrace" (
 if "%2" == "instrace" (
 	SET INSTRACE_MODE=4
 )
+if "%2" == "ins_distrace" (
+	SET INSTRACE_MODE=5
+)

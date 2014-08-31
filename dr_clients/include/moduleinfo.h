@@ -81,6 +81,8 @@ bbinfo_t * md_add_bb_to_module(module_t * head, char * name, unsigned int addr, 
 module_t * md_lookup_module (module_t * head,char * name);
 /* check for the presence of an element */
 bbinfo_t * md_lookup_bb_in_module (module_t * head, char * name, unsigned int addr);
+/* gets the module position with respect to the module head */
+int md_get_module_position(module_t * head, char * name);
 
 /* parse the file and fill the linked list */
 void md_read_from_file (module_t * head, file_t file, bool extra_info);

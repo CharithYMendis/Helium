@@ -139,3 +139,167 @@ bool is_overlapped(uint64_t start_1, uint64_t end_1, uint64_t start_2, uint64_t 
 	return one_in_two || two_in_one || partial_overlap;
 
 }
+
+#define EPSILON 1e-6
+
+int get_rank_matrice_row_echelon(vector < vector<double> > A){
+
+	for (int i = 0; i < A.size(); i++){
+		vector<double> row = A[i];
+		int zeros = true;
+		for (int j = 0; j < row.size(); j++){
+			if (abs(row[j]) > EPSILON){
+				zeros = false;
+				break;
+			}
+		}
+
+		if (zeros){
+			return i;
+		}
+
+	}
+
+	return A.size();
+
+}
+
+int get_rank_vector(vector< double > b){
+	for (int i = 0; i < b.size(); i++){
+		if (b[i] < EPSILON){
+			return i;
+		}
+	}
+	return b.size();
+}
+
+vector<double> solve_linear_eq(vector<vector<double> > A, vector<double> b){
+
+	int M = b.size();
+	int N = A[0].size();
+
+	//M x N matrix
+
+	if (M < N){
+		ASSERT_MSG(false, ("ERROR: no of equations smaller than no of unknowns\n"));
+	}
+
+	for (int p = 0; p < N; p++) {
+
+		// find pivot row and swap
+		int max = p;
+		for (int i = p + 1; i < M; i++) {
+			if (abs(A[i][p]) > abs(A[max][p])) {
+				max = i;
+			}
+		}
+		vector<double> temp = A[p]; A[p] = A[max]; A[max] = temp;
+		double   t = b[p]; b[p] = b[max]; b[max] = t;
+
+		// singular or nearly singular
+		if (abs(A[p][p]) <= EPSILON) {
+			ASSERT_MSG((false), ("ERROR: the matrix is singular\n"));
+		}
+
+		// pivot within A and b
+		for (int i = p + 1; i < M; i++) {
+			double alpha = A[i][p] / A[p][p];
+			b[i] -= alpha * b[p];
+			for (int j = p; j < N; j++) {
+				A[i][j] -= alpha * A[p][j];
+			}
+			A[i][p] = 0;
+		}
+
+		printout_matrices(A);
+		printout_vector(b);
+	}
+
+	//get rank
+	int rank = get_rank_matrice_row_echelon(A);
+	int rank_b = get_rank_vector(b);
+
+	cout << rank_b << " " << rank << endl;
+
+	if (rank < N) {
+		ASSERT_MSG((false), (" not enough independent equations\n"));
+	}
+	else if ( (rank > N) || (rank != rank_b) ){
+		ASSERT_MSG((false), (" equations are not consistent; system may be non linear\n"));
+	}
+
+	// back substitution
+	vector<double> x(rank, 0.0);
+
+
+	for (int i = rank - 1; i >= 0; i--) {
+		double sum = 0.0;
+		for (int j = i + 1; j < rank; j++) {
+			sum += A[i][j] * x[j];
+		}
+		x[i] = (b[i] - sum) / A[i][i];
+	}
+	return x;
+
+
+}
+
+void test_linear_solver(){
+
+	double A_arr[4][2] =
+	{
+		{ 1, 1 },
+		{ 2, 1 },
+		{ 3, 1 },
+		{4, 1}
+	};
+
+	double B_arr[] = { 8, 14, 20, 26 };
+
+	std::vector<std::vector<double> > A(4, std::vector<double>(2, 0.0));
+	for (int i = 0; i < 4; ++i)
+	{
+		A[i].assign(A_arr[i], A_arr[i] + 2);
+	}
+
+	std::vector<double> b(B_arr, B_arr + 4);
+
+	cout << "*** matrices ***" << endl;
+	printout_matrices(A);
+	printout_vector(b);
+
+	vector<double> results = solve_linear_eq(A, b);
+
+	cout << "*** results ***" << endl;
+	for (int i = 0; i < results.size(); i++){
+		cout << results[i] << endl;
+	}
+
+
+}
+
+void printout_matrices(vector<vector<double> >  values){
+	for (int i = 0; i < values.size(); i++){
+		vector<double> row = values[i];
+		for (int j = 0; j < row.size(); j++){
+			cout << row[j] << " ";
+		}
+		cout << endl;
+	}
+}
+
+void printout_vector(vector<double> values){
+	for (int i = 0; i < values.size(); i++){
+		cout << values[i] << " ";
+	}
+	cout << endl;
+}
+
+int double_to_int(double value){
+	if (value >= 0){
+		return (int)(value + 0.5);
+	}
+	else{
+		return (int)(value - 0.5);
+	}
+}

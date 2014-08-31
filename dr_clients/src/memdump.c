@@ -190,12 +190,8 @@ static char * get_mem_dump_filename(app_pc base_pc, uint size, uint write, uint 
 
 	char other_details[MAX_STRING_LENGTH];
 	char * filename = dr_global_alloc(sizeof(char) * MAX_STRING_LENGTH);
-	if (!write){
-		dr_snprintf(other_details, MAX_STRING_LENGTH, "%x_%d_%d", base_pc, size, write);
-	}
-	else{
-		dr_snprintf(other_details, MAX_STRING_LENGTH, "%x_%d_%d_%d", base_pc, size, write, other_info);
-	}
+	
+	dr_snprintf(other_details, MAX_STRING_LENGTH, "%x_%d_%d_%d", base_pc, size, write, other_info);
 	populate_conv_filename(filename, client_arg->output_folder, ins_pass_name, other_details);
 	return filename;
 

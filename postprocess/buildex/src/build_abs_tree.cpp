@@ -1,11 +1,10 @@
 #include "build_abs_tree.h"
 #include <math.h>
+#include "utilities.h"
 
 
 Abs_node::Abs_node(){
-
 	order_num = -1;
-
 }
 
 Comp_Abs_node::Comp_Abs_node(){
@@ -13,13 +12,11 @@ Comp_Abs_node::Comp_Abs_node(){
 }
 
 
-
 Abs_tree::Abs_tree(){
-
 	head = NULL;
-
 }
 
+/* fills the abs_node from node and mem_regions */
 void fill_abs_node(Abs_node * abs_node, Node * node, vector<mem_regions_t *> &mem_regions){
 
 	if (node->symbol->type == MEM_HEAP_TYPE){
@@ -37,9 +34,9 @@ void fill_abs_node(Abs_node * abs_node, Node * node, vector<mem_regions_t *> &me
 		abs_node->mem_info.associated_mem = mem;
 		abs_node->mem_info.dimensions = DIMENSIONS;
 		abs_node->mem_info.indexes = new int * [DIMENSIONS];
-		abs_node->mem_info.pos = new uint[DIMENSIONS];
+		abs_node->mem_info.pos = new int[DIMENSIONS];
 
-		vector<uint> pos = get_mem_position(mem, node->symbol->value);
+		vector<int> pos = get_mem_position(mem, node->symbol->value);
 		for (int i = 0; i < DIMENSIONS; i++){
 			abs_node->mem_info.indexes[i] = new int[DIMENSIONS + 1];
 			abs_node->mem_info.pos[i] = pos[i];
@@ -55,21 +52,18 @@ void fill_abs_node(Abs_node * abs_node, Node * node, vector<mem_regions_t *> &me
 		else{
 			abs_node->type = OPERATION_ONLY;
 		}
-		
 	}
 	else if (node->symbol->type == IMM_INT_TYPE){
 		abs_node->operation = node->operation;
 		abs_node->value = node->symbol->value;
 		abs_node->width = node->symbol->width;
 		abs_node->type = IMMEDIATE_INT;
-
 	}
 	else if (node->symbol->type == IMM_FLOAT_TYPE){
 		abs_node->operation = node->operation;
 		abs_node->float_value = node->symbol->float_value;
 		abs_node->width = node->symbol->width;
 		abs_node->type = IMMEDIATE_FLOAT;
-
 	}
 	else{
 		ASSERT_MSG((false), ("ERROR: node type unknown\n"));
@@ -82,6 +76,7 @@ void fill_abs_node(Abs_node * abs_node, Node * node, vector<mem_regions_t *> &me
 
 }
 
+/* this builds the abs tree from the concrete tree */
 void Abs_tree::build_abs_tree(Abs_node * abs_node, Node * node, vector<mem_regions_t *> &mem_regions){
 
 	if (abs_node == NULL){
@@ -174,54 +169,6 @@ void Comp_Abs_tree::build_compound_tree(Comp_Abs_node * comp_node, vector<Abs_no
 
 }
 
-vector<double> solve_linear_eq(vector<vector<double> > A, vector<double> b){
-
-#define EPSILON 1e-10
-
-	int N = b.size();
-
-	for (int p = 0; p < N; p++) {
-
-		// find pivot row and swap
-		int max = p;
-		for (int i = p + 1; i < N; i++) {
-			if (abs(A[i][p]) > abs(A[max][p])) {
-				max = i;
-			}
-		}
-		vector<double> temp = A[p]; A[p] = A[max]; A[max] = temp;
-		double   t = b[p]; b[p] = b[max]; b[max] = t;
-
-		// singular or nearly singular
-		if (abs(A[p][p]) <= EPSILON) {
-			ASSERT_MSG((false), ("ERROR: the matrix is singular\n"));
-		}
-
-		// pivot within A and b
-		for (int i = p + 1; i < N; i++) {
-			double alpha = A[i][p] / A[p][p];
-			b[i] -= alpha * b[p];
-			for (int j = p; j < N; j++) {
-				A[i][j] -= alpha * A[p][j];
-			}
-		}
-	}
-
-	// back substitution
-	vector<double> x(b.size(), 0.0);
-
-
-	for (int i = N - 1; i >= 0; i--) {
-		double sum = 0.0;
-		for (int j = i + 1; j < N; j++) {
-			sum += A[i][j] * x[j];
-		}
-		x[i] = (b[i] - sum) / A[i][i];
-	}
-	return x;
-
-
-}
 
 void Comp_Abs_tree::abstract_buffer_indexes(Comp_Abs_node * comp_node){
 
@@ -233,34 +180,6 @@ void Comp_Abs_tree::abstract_buffer_indexes(Comp_Abs_node * comp_node){
 	}
 
 }
-
-void printout_matrices(vector<vector<double> >  values){
-	for (int i = 0; i < values.size(); i++){
-		vector<double> row = values[i];
-		for (int j = 0; j < row.size(); j++){
-			cout << row[j] << " ";
-		}
-		cout << endl;
-	}
-}
-
-void printout_vector(vector<double> values){
-	for (int i = 0; i < values.size(); i++){
-		cout << values[i] << " ";
-	}
-	cout << endl;
-}
-
-
-int double_to_int(double value){
-	if (value >= 0){
-		return (int)(value + 0.5);
-	}
-	else{
-		return (int)(value - 0.5);
-	}
-}
-
 
 void Comp_Abs_tree::abstract_buffer_indexes(Comp_Abs_node * head, Comp_Abs_node * node){
 

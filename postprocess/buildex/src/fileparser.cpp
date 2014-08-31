@@ -263,4 +263,110 @@ void print_cinstr(cinstr_t * instr){
 	cout << dr_operation_to_string(instr->opcode) << endl;
 }
 
+string parse_line_disasm(string line, uint32_t * module, uint32_t * app_pc){
+
+	int i = 0;
+	string value = "";
+	while (line[i] != ','){
+		value += line[i];
+		i++;
+	}
+	*module = atoi(value.c_str());
+	i++; value = "";
+	
+	while (line[i] != ','){
+		value += line[i];
+		i++;
+	}
+	*app_pc = atoi(value.c_str());
+
+	i++; value = "";
+	for (; i < line.size(); i++){
+		value += line[i];
+	}
+	
+	return value;
+
+}
+
+vector<disasm_t *> parse_debug_disasm(ifstream &file){
+
+
+	vector<disasm_t *> disasm;
+
+	while (!file.eof()){
+
+		char string_ins[MAX_STRING_LENGTH];
+		//we need to parse the file here - forward parsing and backward traversal
+		file.getline(string_ins, MAX_STRING_LENGTH);
+		string string_cpp(string_ins);
+
+		if (string_cpp.size() > 0){
+
+			uint32_t module_no;
+			uint32_t app_pc;
+
+			string disasm_string = parse_line_disasm(string_cpp, &module_no, &app_pc);
+
+			disasm_t * dissasm;
+
+			bool found = false;
+			for (int i = 0; i < disasm.size(); i++){
+				if (disasm[i]->module_no == module_no){
+					dissasm = disasm[i];
+					found = true;
+					break;
+				}
+			}
+
+			if (!found){
+				dissasm = new disasm_t;
+				dissasm->module_no = module_no;
+				disasm.push_back(dissasm);
+			}
+
+			found = false;
+			for (int i = 0; i < dissasm->app_pc.size(); i++){
+				if (dissasm->app_pc[i] == app_pc){
+					found = true;
+					break;
+				}
+			}
+
+			if (!found){
+				dissasm->app_pc.push_back(app_pc);
+				dissasm->disasm.push_back(disasm_string);
+			}
+		}
+		
+	}
+
+	return disasm;
+
+
+}
+
+void print_disasm(vector<disasm_t *> &disasm){
+	for (int i = 0; i < disasm.size(); i++){
+		for (int j = 0; j < disasm[i]->app_pc.size(); j++){
+			cout << disasm[i]->module_no << "," << disasm[i]->app_pc[j] << "," << disasm[i]->disasm[j] << endl;
+		}
+	}
+}
+
+vector<string> get_disasm_string(vector<disasm_t *> &disasm, uint32_t app_pc){
+
+	vector<string> string_disasm;
+
+	for (int i = 0; i < disasm.size(); i++){
+		for (int j = 0; j < disasm[i]->app_pc.size(); j++){
+			if (disasm[i]->app_pc[j] == app_pc){
+				string_disasm.push_back(disasm[i]->disasm[j]);
+			}
+		}
+	}
+
+	return string_disasm;
+}
+
 

@@ -2,6 +2,7 @@
 #include <fstream>
 #include <iostream>
 #include <vector>
+#include <string>
 #include "fileparser.h"
 #include "build_tree.h"
 #include "defines.h"
@@ -23,7 +24,7 @@ void cinstr_convert_reg(cinstr_t * instr){
 }
 
 
-void build_tree(uint64 destination, int start_trace, int end_trace, ifstream &file, Expression_tree * tree){
+void build_tree(uint64 destination, int start_trace, int end_trace, ifstream &file, Expression_tree * tree, vector<disasm_t *> disasm){
 
 	DEBUG_PRINT(("build_tree(concrete)....\n"), 2);
 
@@ -56,6 +57,15 @@ void build_tree(uint64 destination, int start_trace, int end_trace, ifstream &fi
 
 	curpos++;
 	rinstr = cinstr_to_rinstrs(instr, no_rinstrs);
+
+	vector<string> string_disasm = get_disasm_string(disasm, instr->pc);
+	if (debug && debug_level >= 5){
+		for (int i = 0; i < string_disasm.size(); i++){
+			cout << string_disasm[i] << endl;
+		}
+	}
+
+	if (debug_level >= 5){ print_rinstrs(rinstr, no_rinstrs);}
 	for (int i = no_rinstrs - 1; i >= 0; i--){
 		if (rinstr[i].dst.value == destination){
 			ASSERT_MSG((rinstr[i].dst.type != IMM_FLOAT_TYPE) && (rinstr[i].dst.type != IMM_INT_TYPE), ("ERROR: dest cannot be an immediate\n"));
@@ -82,6 +92,15 @@ void build_tree(uint64 destination, int start_trace, int end_trace, ifstream &fi
 		if (instr != NULL){
 			cinstr_convert_reg(instr);
 			rinstr = cinstr_to_rinstrs(instr, no_rinstrs);
+
+			vector<string> string_disasm = get_disasm_string(disasm, instr->pc);
+			if (debug && debug_level >= 5){
+				for (int i = 0; i < string_disasm.size(); i++){
+					cout << string_disasm[i] << endl;
+				}
+			}
+
+			if (debug_level >= 5){ print_rinstrs(rinstr, no_rinstrs); }
 			for (int i = no_rinstrs - 1; i >= 0; i--){
 				tree->update_frontier(&rinstr[i]);
 			}

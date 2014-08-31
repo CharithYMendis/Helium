@@ -3,6 +3,10 @@
 #include "defines.h"
 #include "print_common.h"
 #include <stdlib.h>
+#include <iostream>
+#include <string>
+
+using namespace std;
 
 
 #define assign_value(start,opnd)  \
@@ -17,7 +21,7 @@
 	case DR_REG_##v##L:   \
 						  \
 	 opnd->value = (start) * MAX_SIZE_OF_REG - opnd->width; \
-	 if( opnd->value == DR_REG_##v##H ){				  \
+	 if( value == DR_REG_##v##H ){						  \
 		opnd->value = (start) * MAX_SIZE_OF_REG - 2;      \
 	 }													  \
 	 break
@@ -151,6 +155,11 @@ void reg_to_mem_range(operand_t * opnd){
 			//virtual regs
 			fp_reg(VIRTUAL_1, 47, opnd); 
 			fp_reg(VIRTUAL_2, 48, opnd);
+
+			//null register
+		case DR_REG_NULL: 
+			DEBUG_PRINT(("warning NULL reg found - check if OP_lea\n"), 4);
+			break;
 
 		default:
 			ASSERT_MSG(false, ("ERROR: %d register not translated", value));
@@ -447,11 +456,29 @@ rinstr_t * cinstr_to_rinstrs (cinstr_t * cinstr, int &amount){
 
 	case OP_lea:
 
-		if_bounds(1, 1){
-			rinstr = new rinstr_t[1];
-			amount = 1;
-			operand_t immediate = { IMM_INT_TYPE, cinstr->dsts[0].width, cinstr->srcs[0].value };
-			rinstr[0] = { op_assign, cinstr->dsts[0], 1, {immediate}, false };
+		//[base, index, scale, disp]
+		if_bounds(1, 4){
+
+			if (cinstr->srcs[2].value == 0){
+				rinstr = new rinstr_t[1];
+				amount = 1;
+				//dst <= base(src0) + disp(src3)
+				rinstr[0] = { op_add, cinstr->dsts[0], 2, { cinstr->srcs[0], cinstr->srcs[3] }, true };
+
+			}
+			else{
+				rinstr = new rinstr_t[3];
+				amount = 3;
+				operand_t virtual_reg = { REG_TYPE, cinstr->srcs[0].width, DR_REG_VIRTUAL_1 };
+
+				//virtual <= scale(src2) * index(src1)
+				rinstr[0] = { op_mul, virtual_reg, 2, { cinstr->srcs[2], cinstr->srcs[1] }, true };
+				//virtual <= virtual + base(src0)
+				rinstr[1] = { op_add, virtual_reg, 2, { virtual_reg, cinstr->srcs[0] }, true };
+				//dst <= virtual + disp
+				rinstr[2] = { op_add, cinstr->dsts[0], 2, { virtual_reg, cinstr->srcs[3] }, true };
+
+			}
 		}
 		else_bounds;
 
@@ -529,6 +556,21 @@ static void populate_rinstr(rinstr_t * rinstr,
 	rinstr->sign = sign;
 
 
+}
+
+void print_rinstrs(rinstr_t * rinstr, int amount){
+	cout << "canonicalized instrs:" << endl;
+	for (int j = 0; j < amount; j++){
+		cout << opnd_to_string(&rinstr[j].dst) << " = ";
+		if (rinstr[j].operation != op_assign){
+			cout << operation_to_string(rinstr[j].operation) << " ";
+		}
+		for (int i = 0; i < rinstr[j].num_srcs; i++){
+			cout << opnd_to_string(&rinstr[j].srcs[i]) << " ";
+		}
+		cout << endl;
+	}
+	
 }
 
 

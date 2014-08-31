@@ -144,6 +144,7 @@ uint number_tree_nodes(Abs_node * node){
 
 }
 
+/* here the abs is whether you need the algebric form of the filter or the filter with filled out dimensionalities */
 string get_node_string(Abs_node *node, bool abs){
 
 	if (!abs){

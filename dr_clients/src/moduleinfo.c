@@ -154,6 +154,31 @@ module_t * md_lookup_module (module_t * head,char * name){
 
 }
 
+/* gets the module position with respect to the module head */
+int md_get_module_position(module_t * head, char * name){
+
+	int pos = 0;
+
+	while (head != NULL){
+
+		if (internal_is_prefix(head->module)){
+			if (internal_compare_prefix(head->module, name) == 0){
+				return pos;
+			}
+		}
+		else{
+			if (strcmp(name, head->module) == 0){
+				return pos;
+			}
+		}
+		head = head->next;
+		pos++;
+	}
+	
+	return -1;
+
+}
+
 
 bool md_add_module(module_t * head, char * name, uint length_list_bbs){
 	

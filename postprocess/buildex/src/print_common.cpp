@@ -17,7 +17,7 @@ string opnd_to_string(operand_t * opnd){
 		label += "imm[" + to_string(opnd->float_value) + "]";
 	}
 	else if (opnd->type == IMM_INT_TYPE){
-		label += "imm[" + to_string(opnd->value) + "]";
+		label += "imm[" + to_string((int)opnd->value) + "]";
 	}
 	else if (opnd->type == MEM_STACK_TYPE){
 		label += "ms[" + to_string(opnd->value) + "]";

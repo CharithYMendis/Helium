@@ -39,6 +39,9 @@
  uint32_t debug_level = 0;
  ofstream log_file;
 
+ void test_linear_solver();
+
+
  void print_usage(){
 	 printf("usage - format -<name> <value>\n");
 	 printf("\t exec - the executable which DR analyzed (without exe) \n");
@@ -128,7 +131,9 @@
 	 ifstream		  instrace_file;
 	 ifstream		  app_pc_file;
 	 ifstream		  config_file;
+	 ifstream		  disasm_file;
 
+	 string			  disasm_filename;
 	 string			  instrace_filename;
 	 string			  app_pc_filename;
 	 string			  config_filename;
@@ -161,6 +166,28 @@
 		 instrace_file.open(instrace_filename, ifstream::in);
 	 }
 	 ASSERT_MSG(instrace_file.good(), ("instrace file cannot be opened\n"));
+
+	 if (debug){
+		 struct _stat buf;
+		 int64_t max_size = -1;
+		 /* get the instrace files for this exec */
+		 for (int i = 0; i < files.size(); i++){
+			 if (is_prefix(files[i], "instrace_" + exec + ".exe_" + "low.png" + "_asm_instr")){
+				 /*open the file*/
+				 string file = output_folder + "\\" + files[i];
+				 _stat(file.c_str(), &buf);
+				 if (max_size < buf.st_size){
+					 max_size = buf.st_size;
+					 disasm_filename = file;
+				 }
+
+			 }
+		 }
+		 ASSERT_MSG((!disasm_filename.empty()), ("suitable disasm file cannot be located; please specify manually\n"));
+		 disasm_file.open(disasm_filename, ifstream::in);
+		 ASSERT_MSG(disasm_file.good(), ("disasm file cannot be opened\n"));
+	 }
+	 
 
 	 for (int i = 0; i < files.size(); i++){
 		 if (is_prefix(files[i], "memdump_" + exec)){
@@ -219,12 +246,22 @@
 	 printf("app_pc file - %s\n", app_pc_filename.c_str());
 	 printf("in image file - %s\n", in_image_filename.c_str());
 	 printf("out image file - %s\n", out_image_filename.c_str());
+	 if (debug){
+		 printf("disasm file - %s\n", disasm_filename.c_str());
+	 }
 	 printf("memdump files - \n");
 	 for (int i = 0; i < memdump_files.size(); i++){
 		 printf("%s\n", memdump_files[i].c_str());
 	 }
 
 	 ULONG_PTR token = initialize_image_subsystem();
+
+	 DEBUG_PRINT(("getting disassembly trace\n"), 1);
+
+	 vector<disasm_t *> disasm;
+	 if (debug){
+		 disasm = parse_debug_disasm(disasm_file);
+	 }
 
 	 DEBUG_PRINT(("analyzing mem dumps\n"), 1);
 
@@ -265,17 +302,23 @@
 
 	 ASSERT_MSG((start_trace != 0), ("ERROR: the selected destination does not exist\n"));
 
-	 build_tree(dest, start_trace, end_trace, instrace_file, tree);
-
-	 //do_remove_signex(tree->get_head(), tree->get_head());
-	 //remove_full_overlap_nodes_aggressive(tree->get_head(), tree->get_head(), 0);
+	 //first build the tree for this memory location for sanity purposes
+	 build_tree(dest, start_trace, end_trace, instrace_file, tree, disasm);
+	 do_remove_signex(tree->get_head(), tree->get_head());
+	 remove_full_overlap_nodes_aggressive(tree->get_head(), tree->get_head(), 0);
  
-	 /*uint nodes = number_tree_nodes(tree->get_head());
-	 cout << nodes << endl;
+	 uint nodes = number_tree_nodes(tree->get_head());
 	 DEBUG_PRINT(("printing to dot file...\n"), 2);
-	 print_to_dotfile(concrete_tree_file, tree->get_head(),nodes,0);*/
-
+	 print_to_dotfile(concrete_tree_file, tree->get_head(),nodes,0);
 	 print_node_tree(tree->get_head(), expression_file);
+
+	 Abs_tree  * abs_tree = new Abs_tree();
+	 abs_tree->build_abs_tree(NULL, tree->get_head(), final_regions);
+	 nodes = number_tree_nodes(abs_tree->head);
+	 print_to_dotfile(abs_tree_file, abs_tree->head, nodes, 0, false);
+
+
+
 
 	 shutdown_image_subsystem(token);
 	 exit(0);
@@ -452,6 +495,9 @@
 	//return 0;
 
  }
+
+
+ 
 
 
 

@@ -33,6 +33,7 @@
 #define OPCODE_TRACE		2  /* this prints to the console */
 #define DISASSEMBLY_TRACE	3  /* this prints to the out files*/
 #define INS_TRACE			4  /* this prints to the out file */
+#define INS_DISASM_TRACE	5  /* this prints to the out file */
 
 //debug prints
 //#define DEBUG_MEM_REGS   /* prints out the memory regs before dr util mem address calculation */
@@ -116,6 +117,8 @@ static bool opcodes_visited[OPCODE_COUNT];
 static file_t logfile;
 static char ins_pass_name[MAX_STRING_LENGTH];
 
+static module_t * instrace_head;
+
 /*********************** function prototypes *************************/
 
 /* instrumentation functions */
@@ -178,6 +181,7 @@ void instrace_init(client_id_t id, const char * name, const char * arguments)
 	DR_ASSERT(parse_commandline_args(arguments)==true);
 
 	head = md_initialize();
+	instrace_head = md_initialize();
 
 	if(client_arg->filter_mode != FILTER_NONE){
 		in_file = dr_open_file(client_arg->filter_filename,DR_FILE_READ);
@@ -200,6 +204,8 @@ void instrace_init(client_id_t id, const char * name, const char * arguments)
 	for(i=OP_FIRST;i<=OP_LAST; i++){
 		opcodes_visited[i] = false;
 	}
+
+	
 	
 
 }
@@ -221,7 +227,8 @@ void instrace_exit_event()
 		dr_printf("\n");
 	}
 
-	md_delete_list(head,false);
+	md_delete_list(head, false);
+	md_delete_list(instrace_head, false);
 	dr_global_free(client_arg,sizeof(client_arg_t));
     code_cache_exit();
     drmgr_unregister_tls_field(tls_index);
@@ -279,6 +286,9 @@ void instrace_thread_init(void *drcontext)
 	}
 	else if (client_arg->instrace_mode == DISASSEMBLY_TRACE){
 		mode = "disasm";
+	}
+	else if (client_arg->instrace_mode == INS_DISASM_TRACE){
+		mode = "asm_instr";
 	}
 	else{
 		mode = "instr";
@@ -442,7 +452,7 @@ static instr_t * static_info_instrumentation(void * drcontext, instr_t* instr){
 		return NULL;
 	}
 
-	if (client_arg->instrace_mode == OPERAND_TRACE){
+	if ( (client_arg->instrace_mode == OPERAND_TRACE) || (client_arg->instrace_mode == INS_DISASM_TRACE) ){
 		operand_trace(instr, drcontext);
 		return NULL;
 	}
@@ -709,34 +719,69 @@ static void dynamic_info_instrumentation(void *drcontext, instrlist_t *ilist, in
 
 /*****************************end instrumentation functions************************/
 
+static print_base_disp_for_lea(file_t file, opnd_t opnd){
+
+	/* [base + index * scale + disp] */
+	dr_fprintf(file, " base - %d %s\n", opnd_get_base(opnd), get_register_name(opnd_get_base(opnd)));
+	dr_fprintf(file, " index - %d %s\n", opnd_get_index(opnd), get_register_name(opnd_get_index(opnd)));
+	dr_fprintf(file, "reg - %d\n", opnd_is_reg(opnd_create_reg(opnd_get_index(opnd))));
+	dr_fprintf(file, " scale - %d\n", opnd_get_scale(opnd));
+	dr_fprintf(file, " disp - %d\n", opnd_get_disp(opnd));
+
+}
+
 /* this is only called when the instrace mode is operand trace (this happens at the instrumentation time) */
 static void operand_trace(instr_t * instr, void * drcontext){
 
 	int i;
 	char stringop[MAX_STRING_LENGTH];
-	int pc;
+	int pc = 0;
 	per_thread_t * data = drmgr_get_tls_field(drcontext, tls_index);
 	module_data_t * module_data = dr_lookup_module(instr_get_app_pc(instr));
 
-
-	instr_disassemble_to_buffer(drcontext, instr, stringop, MAX_STRING_LENGTH);
-	dr_fprintf(data->outfile, "%s\n", stringop);
-
-	for (i = 0; i<instr_num_dsts(instr); i++){
-		opnd_disassemble_to_buffer(drcontext, instr_get_dst(instr, i), stringop, MAX_STRING_LENGTH);
-		dr_fprintf(data->outfile, "dst-%d-%s\n", i, stringop);
-	}
-
-	for (i = 0; i<instr_num_srcs(instr); i++){
-		opnd_disassemble_to_buffer(drcontext, instr_get_src(instr, i), stringop, MAX_STRING_LENGTH);
-		dr_fprintf(data->outfile, "src-%d-%s\n", i, stringop);
-	}
-
 	if (module_data != NULL){
 		pc = instr_get_app_pc(instr) - module_data->start;
-		dr_fprintf(data->outfile, "app_pc-%d\n", pc);
-		dr_free_module_data(module_data);
 	}
+	instr_disassemble_to_buffer(drcontext, instr, stringop, MAX_STRING_LENGTH);
+	
+	if (client_arg->instrace_mode == OPERAND_TRACE){
+
+		dr_fprintf(data->outfile, "%s\n", stringop);
+
+		for (i = 0; i < instr_num_dsts(instr); i++){
+			opnd_disassemble_to_buffer(drcontext, instr_get_dst(instr, i), stringop, MAX_STRING_LENGTH);
+			if ((instr_get_opcode(instr) == OP_lea) && opnd_is_base_disp(instr_get_dst(instr,i))){
+				dr_fprintf(data->outfile, "dst-\n");
+				print_base_disp_for_lea(data->outfile, instr_get_dst(instr, i));
+			}
+			else{
+				dr_fprintf(data->outfile, "dst-%d-%s\n", i, stringop);
+			}
+		}
+
+		for (i = 0; i < instr_num_srcs(instr); i++){
+			opnd_disassemble_to_buffer(drcontext, instr_get_src(instr, i), stringop, MAX_STRING_LENGTH);
+			if ((instr_get_opcode(instr) == OP_lea) && opnd_is_base_disp(instr_get_src(instr, i))){
+				dr_fprintf(data->outfile, "src-\n");
+				print_base_disp_for_lea(data->outfile, instr_get_src(instr, i));
+			}
+			else{
+				dr_fprintf(data->outfile, "src-%d-%s\n", i, stringop);
+			}
+		}
+
+		if (module_data != NULL){
+			dr_fprintf(data->outfile, "app_pc-%d\n", pc);
+		}
+	}
+	else if (client_arg->instrace_mode == INS_DISASM_TRACE){
+		if (md_get_module_position(instrace_head, module_data->full_path) == -1){
+			md_add_module(instrace_head, module_data->full_path, MAX_BBS_PER_MODULE);
+		}
+		dr_fprintf(data->outfile, "%d,%d,%s\n", md_get_module_position(instrace_head, module_data->full_path), pc, stringop);
+	}
+
+	dr_free_module_data(module_data);
 
 }
 
@@ -793,7 +838,7 @@ static void clean_call_populate_mem(reg_t regvalue, uint pos, uint dest_or_src){
 static void output_populator_printer(void * drcontext, opnd_t opnd, instr_t * instr, uint64 addr, uint mem_type, operand_t * output){
 
 
-	uint value;
+	int value;
 	float float_value;
 	uint width;
 	int i;
@@ -804,7 +849,13 @@ static void output_populator_printer(void * drcontext, opnd_t opnd, instr_t * in
 	if(opnd_is_reg(opnd)){
 		
 		value = opnd_get_reg(opnd);
-		width = opnd_size_in_bytes(reg_get_size(value));
+		if (value != DR_REG_NULL){
+			width = opnd_size_in_bytes(reg_get_size(value));
+		}
+		else{
+			width = 0;
+		}
+		
 #ifdef READABLE_TRACE
 		dr_fprintf(data->outfile,",%u,%u,%u",REG_TYPE, width, value);
 #else	
@@ -839,7 +890,7 @@ static void output_populator_printer(void * drcontext, opnd_t opnd, instr_t * in
 			width = opnd_size_in_bytes(opnd_get_size(opnd));
 			value = opnd_get_immed_int(opnd);
 #ifdef READABLE_TRACE
-			dr_fprintf(data->outfile,",%u,%u,%u",IMM_INT_TYPE,width,value);
+			dr_fprintf(data->outfile,",%u,%u,%d",IMM_INT_TYPE,width,value);
 #else
 			output->type = IMM_INT_TYPE;
 			output->width = width;
@@ -891,18 +942,23 @@ static uint calculate_operands(instr_t * instr,uint dst_or_src){
 	if(dst_or_src == DST_TYPE){
 		for(i=0; i<instr_num_dsts(instr); i++){
 			op = instr_get_dst(instr,i);
+
 			if(opnd_is_immed(op) ||
 				opnd_is_memory_reference(op) ||
 				opnd_is_reg(op)){
 				ret++;
 			}
-
 		}
 	}
 	else if(dst_or_src == SRC_TYPE){
 		for(i=0; i<instr_num_srcs(instr); i++){
 			op = instr_get_src(instr,i);
-			if(opnd_is_immed(op) ||
+
+			if (instr_get_opcode(instr) == OP_lea && opnd_is_base_disp(op)){
+				ret += 4;
+
+			}
+			else if (opnd_is_immed(op) ||
 				opnd_is_memory_reference(op) ||
 				opnd_is_reg(op)){
 				ret++;
@@ -937,6 +993,8 @@ static void ins_trace(void *drcontext)
 	uint mem_type;
 	uint64 mem_addr;
 
+	opnd_t opnd;
+
 	
 #ifdef READABLE_TRACE
 	//TODO
@@ -956,7 +1014,17 @@ static void ins_trace(void *drcontext)
 		dr_fprintf(data->outfile,",%u",calculate_operands(instr,SRC_TYPE));
 		for(j=0; j<instr_num_srcs(instr); j++){
 			get_address(instr_trace, j, SRC_TYPE, &mem_type, &mem_addr);
-			output_populator_printer(drcontext,instr_get_src(instr,j),instr,mem_addr,mem_type,NULL); 
+			opnd = instr_get_src(instr, j);
+			if (instr_get_opcode(instr) == OP_lea && opnd_is_base_disp(opnd)){
+				/* four operands here for [base + index * scale + disp] */
+				output_populator_printer(drcontext, opnd_create_reg(opnd_get_base(opnd)), instr, mem_addr, mem_type, NULL);
+				output_populator_printer(drcontext, opnd_create_reg(opnd_get_index(opnd)), instr, mem_addr, mem_type, NULL);
+				output_populator_printer(drcontext, opnd_create_immed_int(opnd_get_scale(opnd),OPSZ_PTR), instr, mem_addr, mem_type, NULL);
+				output_populator_printer(drcontext, opnd_create_immed_int(opnd_get_disp(opnd), OPSZ_PTR), instr, mem_addr, mem_type, NULL);
+			}
+			else{
+				output_populator_printer(drcontext, opnd, instr, mem_addr, mem_type, NULL);
+			}
 		}
 		//dr_printf("%u,%u\n", instr_trace->eflags, instr_trace->pc);
 		dr_fprintf(data->outfile,",%u,%u\n",instr_trace->eflags,instr_trace->pc);
