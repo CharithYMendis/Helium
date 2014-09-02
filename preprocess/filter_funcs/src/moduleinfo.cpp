@@ -128,6 +128,45 @@ bool is_funcs_present(moduleinfo_t * head){
 	return false;
 }
 
+moduleinfo_t * get_call_targets(moduleinfo_t * head){
+
+	moduleinfo_t * new_head = NULL;
+	moduleinfo_t * prev = NULL;
+	moduleinfo_t * ret_head;
+
+
+	while (head != NULL){
+
+		ret_head = new moduleinfo_t;
+		strncpy(ret_head->name, head->name, MAX_STRING_LENGTH);
+		ret_head->start_addr = head->start_addr;
+
+		if (prev != NULL) prev->next = ret_head;
+		if (new_head == NULL) new_head = ret_head;
+
+		funcinfo_t * func = new funcinfo_t;
+		func->start_addr = 0;
+		ret_head->funcs.push_back(func);
+
+		for (int i = 0; i < head->funcs.size(); i++){
+			for (int j = 0; j < head->funcs[i]->bbs.size(); j++){
+				bbinfo_t * bb = head->funcs[i]->bbs[j];
+				if (bb->is_call_target){
+					func->bbs.push_back(bb);
+				}
+			}
+		}
+
+		prev = ret_head;
+		ret_head = ret_head->next;
+
+		head = head->next;
+	}
+
+	return new_head;
+
+
+}
 
 moduleinfo_t * get_probable_call_targets(moduleinfo_t * head){
 
@@ -440,7 +479,7 @@ void print_bbinfo(moduleinfo_t * module, ofstream &file){
 
 				bbinfo_t * bb = func->bbs[j];
 
-				file << hex << bb->start_addr << endl;
+				file << hex << bb->start_addr << "," << dec << bb->freq <<endl;
 			}
 		}
 
@@ -521,6 +560,7 @@ moduleinfo_t * populate_moduleinfo(ifstream &file){
 			new_bb->freq = strtoul(tokens[index++].c_str(), NULL, 10);
 			new_bb->is_call = strtoul(tokens[index++].c_str(), NULL, 10);
 			new_bb->is_ret = strtoul(tokens[index++].c_str(), NULL, 10);
+			new_bb->is_call_target = strtoul(tokens[index++].c_str(), NULL, 10);
 			new_bb->func_addr = 0;
 
 			uint32_t from_bbs = atoi(tokens[index++].c_str());

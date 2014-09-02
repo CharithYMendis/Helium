@@ -1,6 +1,7 @@
 #include "build_abs_tree.h"
 #include <math.h>
 #include "utilities.h"
+#include "memregions.h"
 
 
 Abs_node::Abs_node(){
@@ -32,13 +33,13 @@ void fill_abs_node(Abs_node * abs_node, Node * node, vector<mem_regions_t *> &me
 		abs_node->width = node->symbol->width;
 
 		abs_node->mem_info.associated_mem = mem;
-		abs_node->mem_info.dimensions = DIMENSIONS;
-		abs_node->mem_info.indexes = new int * [DIMENSIONS];
-		abs_node->mem_info.pos = new int[DIMENSIONS];
+		abs_node->mem_info.dimensions = mem->dimensions;
+		abs_node->mem_info.indexes = new int * [mem->dimensions];
+		abs_node->mem_info.pos = new int[mem->dimensions];
 
 		vector<int> pos = get_mem_position(mem, node->symbol->value);
-		for (int i = 0; i < DIMENSIONS; i++){
-			abs_node->mem_info.indexes[i] = new int[DIMENSIONS + 1];
+		for (int i = 0; i < mem->dimensions; i++){
+			abs_node->mem_info.indexes[i] = new int[mem->dimensions + 1];
 			abs_node->mem_info.pos[i] = pos[i];
 		}
 	}
@@ -189,7 +190,7 @@ void Comp_Abs_tree::abstract_buffer_indexes(Comp_Abs_node * head, Comp_Abs_node 
 		/*make a system of linear equations and solve them*/
 		vector<vector<double> > A;
 		//for (int i = 0; i < head->nodes.size(); i++){
-		for (int i = 0; i < DIMENSIONS + 1; i++){
+		for (int i = 0; i < node->nodes.size(); i++){
 			vector<double> coeff;
 			for (int j = 0; j < head->nodes[i]->mem_info.dimensions; j++){
 				coeff.push_back((double)head->nodes[i]->mem_info.pos[j]);
@@ -205,7 +206,7 @@ void Comp_Abs_tree::abstract_buffer_indexes(Comp_Abs_node * head, Comp_Abs_node 
 		for (int dim = 0; dim < first->mem_info.dimensions; dim++){
 			vector<double> b;
 			//for (int i = 0; i < node->nodes.size(); i++){
-			for (int i = 0; i < DIMENSIONS + 1; i++){
+			for (int i = 0; i < node->nodes.size(); i++){
 				b.push_back((double)node->nodes[i]->mem_info.pos[dim]);
 			}
 			/*cout << "b" << endl;

@@ -42,8 +42,10 @@ typedef struct _bbinfo_t {
 	uint start_addr;
 	uint freq;
 	uint size;
+
 	uint is_call;
 	uint is_ret;
+	uint is_call_target;
 	
 	call_bb_info_t * from_bbs;
 	call_bb_info_t * to_bbs;

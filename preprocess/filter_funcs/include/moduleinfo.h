@@ -27,6 +27,7 @@ struct bbinfo_t{
 	uint32_t freq;				/* number of times it gets executed */
 	uint32_t is_ret;
 	uint32_t is_call;
+	uint32_t is_call_target;
 
 	/* we are also keeping backward information - specially when global function information is missing */
 	uint32_t func_addr;
@@ -76,6 +77,7 @@ bool is_funcs_present(moduleinfo_t * head);
 uint32_t get_func_entry_points(moduleinfo_t * head, moduleinfo_t * current, uint32_t app_pc);
 moduleinfo_t * get_probable_call_targets(moduleinfo_t * head);
 moduleinfo_t * get_probable_callers(moduleinfo_t * head);
+moduleinfo_t * get_call_targets(moduleinfo_t * head);
 
 moduleinfo_t * populate_moduleinfo(std::ifstream &file);
 void print_moduleinfo(moduleinfo_t * module,std::ofstream &file);

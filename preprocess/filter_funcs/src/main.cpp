@@ -145,17 +145,23 @@ int main(int argc, char **argv){
 		DEBUG_PRINT( ("modules populated with profile information  \n") ,5);
 
 
-		/*moduleinfo_t * call_targets = get_probable_call_targets(module);
+		moduleinfo_t * call_targets = get_probable_call_targets(module);
 		moduleinfo_t * callers = get_probable_callers(module);
+		moduleinfo_t * call_targets_real = get_call_targets(module);
 
 
 		
-		log_file << "*****************call targets*****************" << endl;
+		/*log_file << "*****************call targets*****************" << endl;
 		print_bbinfo(call_targets, log_file);
 		log_file << "*****************callers*****************" << endl;
-		print_bbinfo(callers, log_file);
+		print_bbinfo(callers, log_file);*/
 
-		exit(0);*/
+
+		print_bbinfo(call_targets_real, log_file);
+		
+
+
+		exit(0);
 
 		//get the image information
 		Gdiplus::Bitmap * in_image_bitmap = open_image(in_image_filenames[0].c_str());

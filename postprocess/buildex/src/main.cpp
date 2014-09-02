@@ -209,6 +209,7 @@
 	 ofstream concrete_tree_file;
 	 ofstream compound_tree_file;
 	 ofstream abs_tree_file;
+	 ofstream algebric_tree_file;
 	 ofstream expression_file;
 	 ofstream halide_file;
 
@@ -231,6 +232,8 @@
 		 abs_tree_file.open(output_folder + file_substr + "_abstree.dot", ofstream::out);
 	     /* get the pseudo expression file */
 		 expression_file.open(output_folder + file_substr + "_expression.log", ofstream::out);
+		 /* final algebric filter file */
+		 algebric_tree_file.open(output_folder + file_substr + "_algebric.dot", ofstream::out);
 	 }
 
 	 /* create halide output file */
@@ -275,13 +278,15 @@
 	 print_mem_layout(log_file, mem_info);
 
 	 vector<mem_regions_t *> final_regions = merge_instrace_and_dump_regions(mem_info, regions);
+
+	 //print_mem_regions(final_regions);
 	 
 	 if (start_trace == FILE_BEGINNING){
 		 mem_regions_t * mem_region = get_random_output_region(final_regions);
 		 uint64 mem_location = get_random_mem_location(mem_region, 20);
 		 DEBUG_PRINT(("random mem location we got - %llx\n", mem_location), 1);
 		 dest = mem_location;
-		 stride = mem_region->stride;
+		 stride = mem_region->bytes_per_pixel;
 	 }
 
 	 
@@ -317,18 +322,106 @@
 	 nodes = number_tree_nodes(abs_tree->head);
 	 print_to_dotfile(abs_tree_file, abs_tree->head, nodes, 0, false);
 
+	 /* now for the abs_tree logic */
+	 vector<uint64_t> nbd_locations;
+	 
+	 mem_regions_t * mem_region = get_random_output_region(final_regions);
+	 uint64 mem_location = get_random_mem_location(mem_region, 20);
+	 vector<int> base = get_mem_position(mem_region, mem_location);
+	 nbd_locations.push_back(mem_location);
+
+	 //get a nbd of locations - diagonally choose pixels
+	 int boundary = (int)ceil((double)(mem_region->dimensions + 2) / 2.0);
+	 DEBUG_PRINT(("boundary : %d\n", boundary),1);
+	 int count = 0;
+	 for (int i = -boundary; i <= boundary; i++){  
+		 if (i == 0) continue;
+		 vector<int> offset;
+		 uint affected = count % mem_region->dimensions;
+		 for (int j = 0; j < base.size(); j++){
+			 if (j == affected) offset.push_back(i); 
+			 else offset.push_back(0);
+		 }
+		 bool success;
+		 mem_location = get_mem_location(base, offset, mem_region, &success);
+		 ASSERT_MSG(success, ("ERROR: memory location out of bounds\n"));
+		 nbd_locations.push_back(mem_location);
+		 count++;
+	 }
+
+	vector<Abs_node *> abs_nodes;
+
+	for (int i = 0; i < nbd_locations.size(); i++){
+
+	 	Expression_tree * conc_tree = new Expression_tree();
+
+	 	instrace_file.clear();
+	 	instrace_file.seekg(instrace_file.beg);
+
+	 	DEBUG_PRINT(("track info - dest %llu stride %d\n", nbd_locations[i], mem_region->bytes_per_pixel), 1);
+	 	uint lineno = go_to_line_dest(instrace_file, nbd_locations[i], mem_region->bytes_per_pixel);
+	 	DEBUG_PRINT(("line no - %d\n", lineno), 1);
+
+	 	ASSERT_MSG((lineno != 0), ("ERROR: the selected destination does not exist\n"));
+	 	instrace_file.clear();
+	 	instrace_file.seekg(instrace_file.beg);
+
+	 	build_tree(nbd_locations[i], lineno, FILE_ENDING, instrace_file, conc_tree, disasm);
+	 	do_remove_signex(conc_tree->get_head(), conc_tree->get_head());
+	 	remove_full_overlap_nodes_aggressive(conc_tree->get_head(), conc_tree->get_head(), 0);
+
+	 	Abs_tree  * abs_tree = new Abs_tree();
+	 	abs_tree->build_abs_tree(NULL, conc_tree->get_head(), final_regions);
+	 	abs_nodes.push_back(abs_tree->head);
+
+	}
 
 
+	//if similar construct comp tree
+	bool similar = Abs_tree::are_abs_trees_similar(abs_nodes);
+	if (similar){
+
+		DEBUG_PRINT(("the trees are similar, now getting the algebric filter....\n"), 1);
+		Comp_Abs_tree * comp_tree = new Comp_Abs_tree();
+		comp_tree->build_compound_tree(comp_tree->head, abs_nodes);
+		uint nodes = number_tree_nodes(comp_tree->head);
+		print_to_dotfile(compound_tree_file, comp_tree->head, nodes, 0);
+		
+
+		Comp_Abs_tree::abstract_buffer_indexes(comp_tree->head);
+
+		Abs_node * final_tree = comp_tree->compound_to_abs_tree();
+		nodes = number_tree_nodes(final_tree);
+		print_to_dotfile(algebric_tree_file, final_tree, nodes, 0, true);
+
+
+		/*Halide_program * program = new Halide_program(final_tree);
+
+		vector<Abs_node *> stack;
+		program->seperate_to_Funcs(program->head, stack);
+		program->print_seperated_funcs();
+		program->print_halide(halide_out);*/
+
+
+	}
+	else{
+		DEBUG_PRINT(("the trees are not similar; please check\n"), 1);
+	}
+
+	 concrete_tree_file.close();
+	 expression_file.close();
+	 compound_tree_file.close();
+	 expression_file.close();
+	 algebric_tree_file.close();
 
 	 shutdown_image_subsystem(token);
 	 exit(0);
 
 
-	
-	 
 
-	 
-	
+
+
+
 	//if (given_start){
 
 	//	/* build the tree */

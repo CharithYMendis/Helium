@@ -48,11 +48,13 @@ src/node.cpp
 src/canonicalize.cpp 
 src/fileparser.cpp 
 src/tree_transformations.cpp 
+src/memregions.cpp
 
 src/build_mem_instrace.cpp 
 src/build_mem_dump.cpp
 src/build_tree.cpp 
 src/build_abs_tree.cpp
+src/extract_memregions.cpp
 
 src/print_common.cpp 
 src/print_halide.cpp 

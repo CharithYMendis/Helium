@@ -5,59 +5,11 @@
 #include "imageinfo.h"
 #include <fstream>
 #include "build_mem_instrace.h"
+#include "memregions.h"
 
-#define DIMENSIONS 3
-
-/* layout options */
-#define ROW_MAJOR		 0x1  /* row major*/
-#define COLUMN_MAJOR	 0x2  /* column major*/
-
-/* type options */
-#define IMAGE_INPUT			0x1
-#define IMAGE_OUTPUT		0x2
-#define IMAGE_INTERMEDIATE	0x3
-
-using namespace std;
-
-struct mem_regions_t {
-
-	/* image related information */
-	uint bytes_per_pixel;  
-	uint stride;						//stride in bytes from one pixel to another
-
-	/* characteristics of the memory region */
-	uint type;							//image input, output or intermediate
-	uint layout;						//row, column major
-	uint scanline_width;				//in bytes the total scanline size
-
-	uint padding_filled;				//padding array filled right, left, up and down
-	uint padding[4];					//padding for all 4 directions 
-
-	/* physical demarcations of the memory regions */
-	uint64 start;
-	uint64 end;
-
-	/* dimensions of the image - read from the image itself */
-	uint width;
-	uint height;
-	uint colors;
-
-	/*name of the mem region */
-	string name;
-
-	mem_regions_t(){
-		
-		/* these are hardcoded values for a 256 bit grey scale image which we will be using for analysis */
-		bytes_per_pixel = 1;
-		stride = 1;
-
-		layout = COLUMN_MAJOR;
-		colors = 1;
-		
-	}
-
-};
-
+/* main interface for the application 
+1. This will have routines which build mem regions from dumps
+*/
 
 
 /* 
@@ -67,38 +19,13 @@ struct mem_regions_t {
 */
 
 /* use mem dump to identify the mem regions - this is independent of the instrace related mem info */
-void get_input_output_mem_regions(ofstream &dump_in, ofstream &dump_out, 
-	image_t * in_image, image_t * out_image, vector<mem_regions_t *> &mem_regions);
+std::vector<mem_regions_t *> get_image_regions_from_dump(std::vector<string> filenames, std::string in_image_filename, std::string out_image_filename);
 /*convert from mem regions identified by instrace to more information rich mem regions */
-void get_input_output_mem_regions(vector<mem_info_t *> &mem, vector<mem_regions_t *> &mem_regions,
-	ifstream &config, image_t * in_image, image_t * out_image);  
+std::vector<mem_regions_t *> get_image_regions_from_instrace(std::vector<mem_info_t *> &mem, std::ifstream &config, image_t * in_image, image_t * out_image);  
 
 
-/*
-* debug 
-*/
-/* prints out the identified mem regions */
-void print_mem_regions(vector<mem_regions_t *> regions);
-
-/*
-* information retrieval functions 
-*/
-
-
-mem_regions_t * get_mem_region(uint64 value, vector<mem_regions_t *> &mem_regions);
-
-/*extracting mem locations*/
-/* given the (x,y,c) coordinates this returns the memory address */
-uint64 get_mem_location(vector<uint> base, vector<int> offset, mem_regions_t * mem_region, bool * success);
-/* given a memory location get the memory position in (x,y,c)*/
-vector<int> get_mem_position(mem_regions_t * mem_region, uint64 mem_value);
-
-/* extracting mem regions */
-mem_regions_t* get_random_output_region(vector<mem_regions_t *> regions);
-/* gets a random mem location given in given number of trys */
-uint64 get_random_mem_location(mem_regions_t *  region, uint seed);
-vector<mem_regions_t *> get_image_regions_from_dump(vector<string> filenames, string in_image_filename, string out_image_filename);
-vector<mem_regions_t *> merge_instrace_and_dump_regions(vector<mem_info_t *> mem_info, vector<mem_regions_t *> mem_regions);
+/* merges / updates information that is present in mem_regions with instrace */
+std::vector<mem_regions_t *> merge_instrace_and_dump_regions(std::vector<mem_info_t *> mem_info, std::vector<mem_regions_t *> mem_regions);
 
 #endif
 

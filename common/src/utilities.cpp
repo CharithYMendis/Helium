@@ -7,6 +7,7 @@
 #include "common_defines.h"
 #include "utilities.h"
 
+#define EPSILON 1e-6
 
 using namespace std;
 
@@ -140,8 +141,6 @@ bool is_overlapped(uint64_t start_1, uint64_t end_1, uint64_t start_2, uint64_t 
 
 }
 
-#define EPSILON 1e-6
-
 int get_rank_matrice_row_echelon(vector < vector<double> > A){
 
 	for (int i = 0; i < A.size(); i++){
@@ -164,13 +163,16 @@ int get_rank_matrice_row_echelon(vector < vector<double> > A){
 
 }
 
-int get_rank_vector(vector< double > b){
-	for (int i = 0; i < b.size(); i++){
-		if (b[i] < EPSILON){
-			return i;
+bool is_b_consistent(vector<double> b, uint32_t start){
+
+	for (int i = start; i < b.size(); i++){
+		if (b[i] > EPSILON){
+			return false;
 		}
 	}
-	return b.size();
+
+	return true;
+
 }
 
 vector<double> solve_linear_eq(vector<vector<double> > A, vector<double> b){
@@ -211,20 +213,18 @@ vector<double> solve_linear_eq(vector<vector<double> > A, vector<double> b){
 			A[i][p] = 0;
 		}
 
-		printout_matrices(A);
-		printout_vector(b);
+		//printout_matrices(A);
+		//printout_vector(b);
 	}
 
 	//get rank
 	int rank = get_rank_matrice_row_echelon(A);
-	int rank_b = get_rank_vector(b);
 
-	cout << rank_b << " " << rank << endl;
 
 	if (rank < N) {
 		ASSERT_MSG((false), (" not enough independent equations\n"));
 	}
-	else if ( (rank > N) || (rank != rank_b) ){
+	else if ( (rank > N)  || !is_b_consistent(b,rank) ){
 		ASSERT_MSG((false), (" equations are not consistent; system may be non linear\n"));
 	}
 
