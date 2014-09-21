@@ -1,5 +1,0 @@
-1
-C:\Charith\Dropbox\Research\development\exalgo\tests\c_tests\output\image_blur.exe
-2
-37072
-37513

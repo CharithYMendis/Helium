@@ -208,7 +208,7 @@ static void do_mem_dump(file_t file, uint base_pc,uint size){
 	ok = dr_safe_read(base_pc, size, mem_values, &read);
 	DR_ASSERT(ok);
 	written = dr_write_file(file, mem_values, size);
-	DEBUG_PRINT("read %d from %d of size %d and written %d\n", read, base_pc, size, written);
+	DEBUG_PRINT("read %d from %x of size %d and written %d\n", read, base_pc, size, written);
 
 	dr_global_free(mem_values, sizeof(byte) * size);
 
@@ -238,8 +238,9 @@ void clean_call_mem_information(instr_t * instr, app_pc mem_val, uint write){
 		//DEBUG_PRINT("base pc - %x, size - %u, write - %u\n", base_pc, size, write);
 		if (write){  /* postpone till the end of the function */
 			if (!is_mem_region_present(write_regions, base_pc, size, write_region_size)){
-				DEBUG_PRINT("write registered - memval %x\n", mem_val);
+				DEBUG_PRINT("write registered - offset - %x memval %x\n", offset, mem_val);
 				add_to_mem_region(write_regions, base_pc, size, &write_region_size);
+				DEBUG_PRINT("base pc %x, size %d\n", base_pc, size); 
 			}
 		}
 		else{
@@ -248,7 +249,8 @@ void clean_call_mem_information(instr_t * instr, app_pc mem_val, uint write){
 				//DEBUG_PRINT("size - %d\n", read_region_size);
 				//DEBUG_PRINT("present - %d\n", is_mem_region_present(read_regions, base_pc, size, read_region_size));
 				//dr_abort();
-				DEBUG_PRINT("read registered - memval %x\n", mem_val);
+				DEBUG_PRINT("read registered - offset - %x memval %x\n", offset,  mem_val);
+				DEBUG_PRINT("base pc %x, size %d\n", base_pc, size);
 				dump_filename = get_mem_dump_filename(base_pc, size, write,0);
 				dump_file = dr_open_file(dump_filename, DR_FILE_WRITE_OVERWRITE);
 				DEBUG_PRINT("%s dumping file\n", dump_filename);
@@ -345,7 +347,7 @@ static void post_func_cb(void * wrapcxt, void ** user_data){
 
 	DEBUG_PRINT("post function call for dumping\n");
 
-	
+	/* if for same memdump it is overwritten */
 		for (i = 0; i < write_region_size; i++){
 			dump_filename = get_mem_dump_filename(write_regions[i].base_pc, write_regions[i].size, true, written_count);
 			dump_file = dr_open_file(dump_filename, DR_FILE_WRITE_OVERWRITE);
@@ -355,13 +357,6 @@ static void post_func_cb(void * wrapcxt, void ** user_data){
 		}
 		written_count++;
 	
-
-
-
-
-	
-	
-
 
 }
 

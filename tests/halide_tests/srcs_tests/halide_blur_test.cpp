@@ -10,9 +10,10 @@ extern "C" {
 #include "halide_blur_gen.h"
 }
 
-Image<uint16_t> blur_halide(Image<uint16_t> in) {
+Image<uint8_t> blur_halide(Image<uint8_t> in) {
 
-    Image<uint16_t> out(in.width()-8, in.height()-2);
+    Image<uint8_t> out(in.width()-8, in.height()-2);
+	out.set_min(1, 1, 0, 0);
 
     // Call it once to initialize the halide runtime stuff
     halide_blur_gen(in, out);
@@ -32,12 +33,12 @@ int main(int argc, char **argv) {
 	
 	string name(argv[1]);
 	
-	Image<uint16_t> ppm_in = load_image<uint16_t>(argv[1]);
+	Image<uint8_t> ppm_in = load_image<uint8_t>(argv[1]);
 	
 	
-    Image<uint16_t> halide = blur_halide(ppm_in);
+    Image<uint8_t> halide = blur_halide(ppm_in);
 
-	save_image<uint16_t>(argv[2], halide);
+	save_image<uint8_t>(argv[2], halide);
 
 	shutdown_image_subsystem(token);
 

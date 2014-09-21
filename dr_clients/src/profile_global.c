@@ -599,7 +599,7 @@ bbinfo_bb_instrumentation(void *drcontext, void *tag, instrlist_t *bb,
 		}
 
 
-		if (log_mode){
+		if (log_mode && (instr_current == first) ){
 			instrlist_disassemble(drcontext, instr_get_app_pc(first), bb, logfile);
 		}
 

@@ -1,4 +1,7 @@
 #include "dr_api.h"
+#include "defines.h"
+#include "moduleinfo.h"
+#include "utilities.h"
 
 
 /* for each client following functions may be implemented 

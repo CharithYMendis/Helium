@@ -45,6 +45,12 @@ static void code_cache_init(void);
 static void code_cache_exit(void);
 
 
+int amount_exec = 0;
+int amount_inner = 0;
+int amount_val = 0;
+
+
+
 static bool parse_commandline_args(const char * args) {
 
 	client_arg = (client_arg_t *)dr_global_alloc(sizeof(client_arg_t));
@@ -162,62 +168,129 @@ void clean_call_halide(){
 
 }
 
+static void pre_func_cb_2(void * wrapcxt, OUT void ** user_data){
+
+	//width and height eax and ecx -> previous function
+	//input  - 0x08
+	//output - 0x0c
+
+
+	uint input;
+	uint output;
+	uint width;
+	uint height;
+	uint other;
+	uint other_2;
+	unsigned char * values;
+	unsigned char * read_back;
+	uint written, read;
+	uint ok;
+	int i = 0;
+	int j = 0;
+
+	char filename[MAX_STRING_LENGTH];
+	char amount_exec_string[MAX_STRING_LENGTH];
+	file_t dump_file;
+
+	amount_exec++;
+	input = drwrap_get_arg(wrapcxt, 0);
+	output = drwrap_get_arg(wrapcxt, 1);
+	height = drwrap_get_arg(wrapcxt, 2); //120 - height
+	width = drwrap_get_arg(wrapcxt, 3);  //144 - width
+	other = drwrap_get_arg(wrapcxt, 4); 
+	other_2 = drwrap_get_arg(wrapcxt, 5);  
+
+	dr_printf("%d - input - %x, output - %x, %d, %d\n", amount_exec, input, output, width, height);
+
+	if (other != other_2){
+		dr_printf("not similar\n");
+	}
+
+	values = dr_global_alloc(sizeof(unsigned char) * other * height);
+	read_back = dr_global_alloc(sizeof(unsigned char) * other * height);
+
+	//do_func_test(width, height, input, output);
+
+	//ok = dr_safe_read(input, other * height, values, &read);
+	//dr_printf("%u %u read\n", ok, read);
+
+	/*dr_snprintf(amount_exec_string, MAX_STRING_LENGTH, "%d", amount_exec++);
+	populate_conv_filename(filename, logdir, ins_pass_name, amount_exec_string);
+	dump_file = dr_open_file(filename, DR_FILE_WRITE_OVERWRITE);
+	dr_write_file(dump_file, values, width * height);
+	dr_close_file(dump_file);*/
+
+	do_blur_test(other, height, input, output);
+	//dr_printf("%d,%d,%d\n", i, j, j*height + i);
+	//for (i = 0; i < 10; i++){
+	
+	
+	/*for (j = 0; j < height; j++){
+		for (i = 0; i < width; i++){
+			values[j * other + i] = 255 - values[j * other + i];
+		}
+	}*/
+	
+	//dr_printf("updating done\n");
+	//dr_safe_write(output, other * height, values, &read);
+	
+	//dr_printf("writing done\n");
+
+	//ok = dr_safe_read(output, other * height, read_back, &read);
+	//dr_printf("%u %u read\n", ok, read);
+	dr_global_free(values, other * height);
+	dr_global_free(read_back, other * height);
+
+	drwrap_skip_call(wrapcxt, 0, 0);
+	
+
+
+}
+
+static void pre_func_cb_3(void * wrapcxt, OUT void ** user_data){
+	//amount_val++;
+	//dr_printf("%d\n", amount_val);
+}
+
 static void pre_func_cb(void * wrapcxt, OUT void ** user_data){
 	
 
 	dr_mcontext_t mc = { sizeof(mc), DR_MC_ALL };
 	uint eax;
 	uint other_reg;
-	uint width = 144;
-	uint height = 120;
-	unsigned char * values = dr_global_alloc(sizeof(unsigned char) * width * height * 3);
-	unsigned char * read_back = dr_global_alloc(sizeof(unsigned char) * width * height * 3);
 	int i = 0;
 	int j = 0;
 	uint written, read;
 	uint ok;
 	uint count = 0;
 	uint arg = 0;
+	unsigned char * values;
 
+	//ecx - full size of the image
+	//0x08 - input image
+	//eax - output image
 
 	dr_printf("pre_func_cb pre\n");
 	arg = drwrap_get_arg(wrapcxt, 0);
-	ok = dr_safe_read(arg, width * height * 3, values, &read);
-	dr_printf("%u %u read\n", ok, read);
+	dr_printf("input - %x\n", arg);
 
-	/*for (int j = 0; j < height; j++){
-		for (int i = 0; i < width; i++){
-			values[i + (j + 0 * height) * width] = 255 - values[i + (j + 0 * height) * width];
-			values[i + (j + 1 * height) * width] = 255 - values[i + (j + 1 * height) * width];
-			values[i + (j + 2 * height) * width] = 255 - values[i + (j + 2 * height) * width];
-			count++;
-		}
-	}*/
-
-	
 	dr_get_mcontext(dr_get_current_drcontext(), &mc);
 	eax = reg_get_value(DR_REG_EAX, &mc);
-
+	dr_printf("output - %x\n", eax);
 	other_reg = reg_get_value(DR_REG_ECX, &mc);
 	dr_printf("ecx - %u\n", other_reg);
-	
-	
-	do_func_test(drwrap_get_arg(wrapcxt, 0), eax);
-	
-	ok = dr_safe_read(eax, width * height * 3, read_back, &read);
-	dr_printf("%u %u read\n", ok, read);
+	dr_printf("%d - inner\n", ++amount_inner);
 
-	for (i = 0; i < 10; i++){
-		dr_printf("%u %u\n", read_back[i], values[i]);
+	values = dr_global_alloc(sizeof(unsigned char) * other_reg);
+
+	dr_safe_read(arg, other_reg, values, &read);
+
+	for (i = 0; i < other_reg; i++){
+		values[i] = 255 - values[i];
 	}
 
-	//ok = dr_safe_write(eax, height * width * 3, values, &written);
-	//dr_printf("%u %u written\n",ok, written);
+	dr_safe_write(eax, other_reg, values, &read);
 
-	dr_global_free(values, sizeof(unsigned char) * width * height * 3);
-	dr_global_free(read_back, sizeof(unsigned char) * width * height * 3);
-
-	dr_printf("pre_func_cb post\n");
 	drwrap_skip_call(wrapcxt, 0, 0);
 
 }
@@ -273,11 +346,21 @@ void funcreplace_module_load(void * drcontext, module_data_t * module, bool load
 	if (md != NULL){
 		for (int i = 1; i <= md->bbs[0].start_addr; i++){
 			address = md->bbs[i].start_addr + module->start;
+			if (md->bbs[i].start_addr == 21420880){
+				drwrap_wrap(address, pre_func_cb, NULL);
+			}
+			else if (md->bbs[i].start_addr == 9645248){
+				drwrap_wrap(address, pre_func_cb_3, NULL);
+			}
+			else{
+				drwrap_wrap(address, pre_func_cb_2, NULL);
+			}
+			DEBUG_PRINT("replaced - %x\n", md->bbs[i].start_addr);
+			
 			//DEBUG_PRINT("replacing function %x of %s with %x\n", address, module->full_path, pre_func_cb);
 			//drwrap_replace(address, (app_pc)clean_call_halide, true);
 			//drwrap_replace_native(address, clean_call_halide, true, 0, NULL, false);
-			drwrap_wrap(address, pre_func_cb, NULL);
-			DEBUG_PRINT("replaced\n");
+			
 			
 		}
 	}

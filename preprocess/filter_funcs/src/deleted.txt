@@ -1,0 +1,95 @@
+
+static bbinfo_t * select_predecessor(moduleinfo_t * head, moduleinfo_t * current, vector<targetinfo_t *> from_bbs,
+	bbinfo_t * bb, moduleinfo_t ** from_module, vector<bbinfo_t *> visited){
+
+	/* need to check all the from_bbs */
+	bbinfo_t * selected_bb = NULL;
+	moduleinfo_t * selected_module = NULL;
+	bool current_module = false;
+
+	for (int i = 0; i < from_bbs.size(); i++){
+
+		moduleinfo_t * module;
+		/* muliple viable candidates - what to choose */
+		bbinfo_t * from_bb = find_bb(head, current, from_bbs[i]->target, &module);
+		if ( (from_bb != bb) && (find(visited.begin(), visited.end(), from_bb) == visited.end()) ) {
+			if ((module == current) && (from_bb->start_addr + from_bb->size == bb->start_addr)
+				|| ((module == current) && (!current_module))){
+				current_module = true;
+				selected_module = module;
+				selected_bb = from_bb;
+			}
+			else if (selected_bb == NULL){
+				selected_module = module;
+				selected_bb = from_bb;
+			}
+		}
+
+	}
+
+	*from_module = selected_module;
+	return selected_bb;
+
+}
+
+/* CAUTION: calls outside the filtered modules yields in false function entry points */
+static uint32_t recursive_populate_func(moduleinfo_t * head, moduleinfo_t * current, bbinfo_t * bb, 
+			moduleinfo_t * in_func_module, bbinfo_t * in_func_bb, uint32_t ret, vector<bbinfo_t *> visited){
+
+	moduleinfo_t * from_module = NULL;
+	bbinfo_t * selected_bb = NULL;
+	bool selected = false;
+
+	if (ret == 0){
+		if (bb->callees.size() > 0){
+			bb->func_addr = bb->start_addr;
+			return bb->start_addr;
+		}
+		if (bb->func_addr != 0){
+			return bb->func_addr;
+		}
+	}
+	else{
+		/* out of func call site */
+		if (bb->callees.size() > 0){
+			ret--;
+			if (ret == 0){
+				selected = true;
+				selected_bb = select_predecessor(head, in_func_module, bb->from_bbs, in_func_bb, &from_module, visited);
+			}
+		}
+	}
+
+	/* need to check all the from_bbs */
+	if (!selected)
+		selected_bb = select_predecessor(head, current, bb->from_bbs, bb, &from_module, visited);
+
+	ASSERT_MSG((selected_bb != NULL), ("from_bb candidate cannot be NULL\n"));
+
+	if (ret == 0 && !selected){
+		in_func_bb = bb;
+		in_func_module = current;
+	}
+	ret += selected_bb->is_ret;  
+
+	cout << "s: " << hex << selected_bb->start_addr << ret << endl;
+
+	visited.push_back(bb);
+	
+	bb->func_addr = recursive_populate_func(head, from_module, selected_bb, in_func_module, in_func_bb, ret, visited);
+	return bb->func_addr;
+
+}
+
+/* best effort analysis to get the function information */
+uint32_t get_func_entry_points(moduleinfo_t * head, moduleinfo_t * current, uint32_t app_pc){
+
+	/* caution of accuracy */
+	printf("CAUTION: this is not sound; e.g:- calls outside the filtered modules yields in false function entry points\n");
+
+	bbinfo_t * bb = find_bb(current, app_pc);
+
+	vector<bbinfo_t *> visited;
+	return recursive_populate_func(head, current, bb, NULL, NULL, 0, visited);
+
+}

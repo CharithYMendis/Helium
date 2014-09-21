@@ -293,12 +293,16 @@ rinstr_t * cinstr_to_rinstrs (cinstr_t * cinstr, int &amount){
 	case OP_mov_ld:
 	case OP_mov_imm:
 	case OP_movzx:
+	case OP_movdqa:
 
 	case OP_fstp:
+	case OP_fst:
 	case OP_fld:
 	case OP_fld1:
 	case OP_fistp:
 	case OP_fild:
+
+	case OP_cvttsd2si:
 		// dst[0] <- src[0]
 		if_bounds(1, 1){
 			rinstr = new rinstr_t[1];
@@ -319,6 +323,7 @@ rinstr_t * cinstr_to_rinstrs (cinstr_t * cinstr, int &amount){
 		else_bounds;
 
 	case OP_fmul: //same as op_imul can be merged
+	case OP_fmulp:
 		if_bounds(1, 2){
 			rinstr = new rinstr_t[1];
 			amount = 1;
@@ -378,15 +383,37 @@ rinstr_t * cinstr_to_rinstrs (cinstr_t * cinstr, int &amount){
 		}
 		else_bounds;
 
+	case OP_fxch:
+		//exchange the two registers
+		if_bounds(2, 2){
+			rinstr = new rinstr_t[3];
+			amount = 3;
+			operand_t virtual_reg = { REG_TYPE, cinstr->srcs[0].width, DR_REG_VIRTUAL_1 };
+			reg_to_mem_range(&virtual_reg);
+
+			ASSERT_MSG(((cinstr->dsts[0].value == cinstr->srcs[0].value) && (cinstr->dsts[1].value == cinstr->srcs[1].value)), ("op_fxch the dsts and srcs should match\n"));
+
+			//virtual <- src[0]
+			rinstr[0] = { op_assign, virtual_reg, 1, { cinstr->srcs[0] }, false };
+			//dst[0] <- src[1]
+			rinstr[1] = { op_assign, cinstr->dsts[0] , 1, { cinstr->srcs[1] }, false };
+			//dst[1] <- virtual 
+			rinstr[2] = { op_assign, cinstr->dsts[1], 1, { virtual_reg }, false };
+		}
+		else_bounds;
+		
 	case OP_sub:
 	case OP_xor:
 	case OP_add:
 	case OP_and:
 	case OP_or:
-
+		
+	case OP_faddp:
 	case OP_fadd:
+	case OP_fsubp:
 	case OP_fsub:
 	case OP_fdivp:
+	case OP_fdiv:
 		// dst[0] <- src[1] (op) src[0]
 		if_bounds(1, 2){
 			rinstr = new rinstr_t[1];
@@ -394,18 +421,30 @@ rinstr_t * cinstr_to_rinstrs (cinstr_t * cinstr, int &amount){
 			switch (cinstr->opcode){
 			case OP_sub: 
 			case OP_fsub:
+			case OP_fsubp:
 				operation = op_sub; break;
 			case OP_add: 
 			case OP_fadd:
+			case OP_faddp:
 				operation = op_add; break;
 			case OP_xor: operation = op_xor; break;
 			case OP_and: operation = op_and; break;
 			case OP_or: operation = op_or; break;
-			case OP_fdivp: operation = op_div; break;
+			case OP_fdivp: 
+			case OP_fdiv:
+				operation = op_div; break;
 			}
 			rinstr[0] = { operation, cinstr->dsts[0], 2, { cinstr->srcs[1], cinstr->srcs[0] }, false };  /* changed for SUB (src1, src0) from the reverse: please verify */
 
 
+		}
+		else_bounds;
+
+	case OP_neg:
+		if_bounds(1, 1){
+			rinstr = new rinstr_t[1];
+			amount = 1;
+			rinstr[0] = { op_sub, cinstr->dsts[0], 1, { cinstr->srcs[0] }, false };
 		}
 		else_bounds;
 
@@ -451,6 +490,15 @@ rinstr_t * cinstr_to_rinstrs (cinstr_t * cinstr, int &amount){
 			rinstr = new rinstr_t[1];
 			amount = 1;
 			rinstr[0] = { op_lsh, cinstr->dsts[0], 2, { cinstr->srcs[1], cinstr->srcs[0] }, false };
+		}
+		else_bounds;
+
+	case OP_not:
+
+		if_bounds(1, 1){
+			rinstr = new rinstr_t[1];
+			amount = 1;
+			rinstr[0] = { op_not, cinstr->dsts[0], 1, { cinstr->srcs[0] }, false };
 		}
 		else_bounds;
 
@@ -505,6 +553,7 @@ rinstr_t * cinstr_to_rinstrs (cinstr_t * cinstr, int &amount){
 	case OP_js_short:
 	case OP_jnbe_short:
 	case OP_jle_short:
+	case OP_jle:
 	case OP_jbe_short:
 	case OP_call_ind:
 	case OP_jns:
@@ -512,9 +561,15 @@ rinstr_t * cinstr_to_rinstrs (cinstr_t * cinstr, int &amount){
 	case OP_jnb:
 	case OP_js:
 
+		/* need to check these as they change esp and ebp ; for now just disregard */
+	case OP_enter:
+	case OP_leave:
+
 		/* floating point control word stores and loads */
 	case OP_fldcw:
 	case OP_fnstcw:
+
+	case OP_nop:
 		break;
 
 	default:

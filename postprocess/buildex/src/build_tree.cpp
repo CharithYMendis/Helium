@@ -122,3 +122,23 @@ void build_tree(uint64 destination, int start_trace, int end_trace, vector<cinst
 
 }
 
+vector<uint32_t> get_instrace_startpoints(ifstream &file, uint32_t pc){
+
+	vector<uint32_t> start_points;
+	int line = 0;
+
+	while (!file.eof()){
+		cinstr_t * instr = get_next_from_ascii_file(file);
+		line++;
+		if (instr != NULL){
+			if (instr->pc == pc){
+				start_points.push_back(line);
+			}
+		}
+		
+	}
+
+	return start_points;
+
+}
+

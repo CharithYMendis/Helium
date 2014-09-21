@@ -349,7 +349,7 @@ void Expression_tree::update_frontier(rinstr_t * instr){
 	}
 	else{
 		DEBUG_PRINT(("dst - %s : affecting the frontier\n", opnd_to_string(dst->symbol).c_str()), 4);
-		if (debug_level >= 5){
+		if (debug_level >= 6){
 			DEBUG_PRINT(("current expression:\n"), 5);
 			print_node_tree(head, cout);
 			cout << endl;
@@ -363,7 +363,8 @@ void Expression_tree::update_frontier(rinstr_t * instr){
 
 	//ok now to remove the destination from the frontiers
 	remove_from_frontier(&instr->dst);
-
+	/* assign operation optimization - space */
+	bool assign_opt = false;
 	//update srcs
 	for(int i=0; i<instr->num_srcs; i++){
 		
@@ -395,8 +396,7 @@ void Expression_tree::update_frontier(rinstr_t * instr){
 		DEBUG_PRINT(("src - %s\n", opnd_to_string(src->symbol).c_str()), 4);
 
 
-		/* assign operation optimization - space */
-		bool assign_opt = false;
+		
 		
 		if ( (instr->num_srcs == 1) && (instr->operation == op_assign) ){  //this is just an assign then remove the current node and place the new src node -> compiler didn't optimize for this?
 			
@@ -426,12 +426,13 @@ void Expression_tree::update_frontier(rinstr_t * instr){
 			dst->srcs.push_back(src);
 			src->prev.push_back(dst);
 			src->pos.push_back(src_index);
+			
 
 		}
 
 		
 
-		if(debug_level >= 5){
+		if(debug_level >= 6){
 			DEBUG_PRINT(("current expression after adding src\n"), 5);
 			print_node_tree(head,cout);
 			cout << endl;
@@ -443,6 +444,12 @@ void Expression_tree::update_frontier(rinstr_t * instr){
 		DEBUG_PRINT(("completed adding a src\n"), 4);
 			
 	}
+
+	/*if (!assign_opt){
+		canonicalize_node(dst);
+	}*/
+
+	
 
 }
 

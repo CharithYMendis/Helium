@@ -130,7 +130,7 @@ include_directories("$ENV{DYNAMORIO_HOME}/ext/drcontainers")
 include_directories("$ENV{DYNAMORIO_HOME}/ext/drwrap")
 include_directories("include")
 include_directories("obj")
-add_sample_client(exalgo    "src/main.c;src/funcwrap.c;src/profile_global.c;src/moduleinfo.c;src/cpuid.c;src/memtrace.c;src/inscount.c;src/instrace.c;src/utilities.c;src/debug.c;src/stack.c;src/functrace.c;src/memdump.c;src/funcreplace.c;obj/halide_blur_gen.o;obj/halide_rotate_gen.o;obj/halide_funcs.obj"      "drcontainers;drmgr;drutil;drwrap")
+add_sample_client(exalgo    "src/main.c;src/misc.c;src/funcwrap.c;src/profile_global.c;src/moduleinfo.c;src/cpuid.c;src/memtrace.c;src/inscount.c;src/instrace.c;src/utilities.c;src/debug.c;src/stack.c;src/functrace.c;src/memdump.c;src/funcreplace.c;obj/halide_blur_gen.o;obj/halide_rotate_gen.o;obj/halide_funcs.obj"      "drcontainers;drmgr;drutil;drwrap")
 # add utils.h for installation  # NON-PUBLIC
 set(srcs ${srcs} "utils.h")     # NON-PUBLIC
 # obj/halide_blur_gen.o;obj/halide_funcs.obj

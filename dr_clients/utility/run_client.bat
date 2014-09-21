@@ -43,8 +43,8 @@ call set_parameters %FILTER_MODE_STRING% %INSTRACE_MODE_STRING%
 ::set MD_FILTER_FILE=%EXALGO_FILTER_FOLDER%\memdump_filter.log
 ::set MD_APP_PC_FILE=%EXALGO_FILTER_FOLDER%\memdump_app_pc.log
 
-set MD_FILTER_FILE=%EXALGO_FILTER_FOLDER%\blur_func_filter.txt
-set MD_APP_PC_FILE=%EXALGO_FILTER_FOLDER%\blur_func_app_pc.txt
+set MD_FILTER_FILE=%EXALGO_FILTER_FOLDER%\filter_%TEST_NAME%.exe.log
+set MD_APP_PC_FILE=%EXALGO_FILTER_FOLDER%\filter_%TEST_NAME%.exe_app_pc.log
 
 set CURRENT_DIR=%CD%
 
@@ -77,6 +77,10 @@ for %%a in (%PHASE%) do (
 	if "%%a" == "funcreplace" (
 		set CLIENT_ARGUMENTS=!CLIENT_ARGUMENTS! -funcreplace %FILTER_FILE% %FILTER_MODE%
 	)
+	if "%%a" == "misc" (
+		set CLIENT_ARGUMENTS=!CLIENT_ARGUMENTS! -misc %FILTER_FILE% %FILTER_MODE%
+	)
+	
 )
 echo %CLIENT_ARGUMENTS%
 

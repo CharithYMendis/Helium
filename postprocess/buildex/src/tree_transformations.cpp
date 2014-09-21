@@ -2,16 +2,30 @@
 #include "canonicalize.h"
 #include "defines.h"
 #include <map>
+#include <iostream>
+
+using namespace std;
 
 
-/* internal helper functions */
+/* internal helper functions 
+* pos - the start pos for starting the search for ref in src->srcs
+*/
 /* (src -> ref) => (src) */
-void remove_forward_ref(Node * src, Node *ref){
+bool remove_forward_ref(Node * src, Node *ref){
 
 	bool erase = false;
 	for (int i = 0; i < src->srcs.size(); i++){
 		if (src->srcs[i] == ref){
 			src->srcs.erase(src->srcs.begin() + i);
+			/* update the ref as well */
+			for (int j = 0; j < ref->pos.size(); j++){
+				if (ref->prev[j] == src && ref->pos[j] == i){
+					ref->prev.erase(ref->prev.begin() + j);
+					ref->pos.erase(ref->pos.begin() + j);
+					j--;
+					break;
+				}
+			}
 			erase = true;
 			break;
 		}
@@ -27,6 +41,9 @@ void remove_forward_ref(Node * src, Node *ref){
 			}
 		}
 	}
+
+
+	return erase;
 }
 
 /* (ref -> src) => (src) */
@@ -41,6 +58,14 @@ void remove_backward_ref(Node * src, Node * ref){
 
 }
 
+/* src => (src->ref) */
+void add_forward_ref(Node * src, Node * ref){
+	src->srcs.push_back(ref);
+	ref->prev.push_back(src);
+	ref->pos.push_back(src->srcs.size() - 1);
+
+}
+
 /* (dst -> ref -> src)  => (dst -> src) */
 void change_ref(Node * dst, Node *ref, Node *src){
 
@@ -52,16 +77,18 @@ void change_ref(Node * dst, Node *ref, Node *src){
 			dst->srcs[i] = src;
 			dst->srcs[i]->prev.push_back(dst);
 			dst->srcs[i]->pos.push_back(i);
+			index = i;
 		}
-		index = i;
+		
 	}
 
 	/* remove the backward reference of the changed node */
 	if (index != -1){
-		for (int i = 0; i < ref->pos.size(); i++){
-			if (ref->pos[i] == index){
+		for (int i = 0; i < ref->prev.size(); i++){
+			if (ref->prev[i] == dst){
 				ref->pos.erase(ref->pos.begin() + i);
 				ref->prev.erase(ref->prev.begin() + i);
+				i--;
 			}
 		}
 	}
@@ -77,6 +104,41 @@ void safely_delete(Node * node, Node * head){
 			remove_backward_ref(node->srcs[i], node);
 		}
 		delete node;
+	}
+
+}
+
+bool is_operation_associative(uint32_t operation){
+	switch (operation){
+	case op_add:
+	case op_mul:
+		return true;
+	default:
+		return false;
+	}
+}
+
+void canonicalize_node(Node * node){
+
+	DEBUG_PRINT(("entered canc.node \n"), 4);
+	for (int i = 0; i < node->prev.size(); i++){
+		if ( (is_operation_associative(node->operation)) && (node->operation == node->prev[i]->operation) ){
+			Node * prev_node = node->prev[i];
+			bool rem = true;
+			while (rem){
+				DEBUG_PRINT(("stuck\n"), 4);
+				rem = remove_forward_ref(prev_node, node);
+				cout << prev_node->srcs.size() << endl;
+				for (int j = 0; j < node->srcs.size(); j++){
+					add_forward_ref(prev_node, node->srcs[j]);
+					if (node == node->srcs[j]){
+						cout << "what" << endl;
+					}
+				}
+				cout << prev_node->srcs.size() << endl;
+			}
+			
+		}
 	}
 
 }

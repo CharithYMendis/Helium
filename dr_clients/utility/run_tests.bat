@@ -81,6 +81,15 @@ if "%DR_PHASE%" == "instrace_memdump" (
 	call run_client %ARCH% %EXEC% %TEST_NAME% %DEBUG% "funcwrap instrace memdump" %FILTER_FILE% %FILTER_MODE_STRING% instrace
 )
 
+if "%DR_PHASE%" == "funcwrap" (
+	call run_client %ARCH% %EXEC% %TEST_NAME% %DEBUG% "funcwrap" %FILTER_FILE%
+)
+
+if "%DR_PHASE%" == "misc" (
+	call run_client %ARCH% %EXEC% %TEST_NAME% %DEBUG% "misc" %FILTER_FILE% %FILTER_MODE_STRING%
+)
+
+
 
 
 

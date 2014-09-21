@@ -104,7 +104,7 @@ vector<func_composition_t *> create_func_composition_wo_func(vector<pc_mem_regio
 	for (int i = 0; i < regions.size(); i++){
 		moduleinfo_t  * module = find_module(head, regions[i]->module);
 		cout << hex << regions[i]->pc << endl;
-		uint32_t start_addr =  get_func_entry_points(head, module, regions[i]->pc);
+		uint32_t start_addr =  get_probable_func(head, module, regions[i]->pc);
 		cout << hex << start_addr << endl;
 		func_composition_t * new_func = find_func_composition(comp, regions[i]->module, start_addr);
 		if (new_func == NULL){
@@ -147,7 +147,7 @@ void print_app_pc_file(ofstream &file, vector<pc_mem_region_t *> &pc_mems){
 
 	for (int i = 0; i < modules.size(); i++){
 
-		file << modules[i] << endl;
+		file << "\"" << modules[i] << "\"" << endl;
 
 		uint32_t amount = 0;
 		for (int j = 0; j < pc_mems.size(); j++){

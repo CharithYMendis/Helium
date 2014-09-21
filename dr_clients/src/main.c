@@ -17,8 +17,9 @@
 #include "utilities.h"
 #include "memdump.h"
 #include "funcreplace.h"
+#include "misc.h"
 
-#define ARGUMENT_LENGTH 10
+#define ARGUMENT_LENGTH 20
 
 typedef void(*thread_func_t) (void * drcontext);
 typedef void(*init_func_t) (client_id_t id, const char * name, const char * arguments);
@@ -399,8 +400,23 @@ static void setupInsPasses(){
 	ins_pass[8].module_load = funcreplace_module_load;
 	ins_pass[8].module_unload = NULL;
 
+	//ins pass 10 - misc
+	ins_pass[9].name = "misc";
+	ins_pass[9].priority = priority;
+	ins_pass[9].priority.name = ins_pass[9].name;
+	ins_pass[9].priority.priority = 0;
+	ins_pass[9].init_func = misc_init;
+	ins_pass[9].app2app_bb = NULL;
+	ins_pass[9].analysis_bb = NULL;
+	ins_pass[9].instrumentation_bb = misc_bb_instrumentation;
+	ins_pass[9].thread_init = misc_thread_init;
+	ins_pass[9].thread_exit = misc_thread_exit;
+	ins_pass[9].process_exit = misc_exit_event;
+	ins_pass[9].module_load = NULL;
+	ins_pass[9].module_unload = NULL;
 
-	pass_length = 9;
+
+	pass_length = 10;
 
 }
 

@@ -54,6 +54,7 @@
 	 printf("\t config - the middle name of the config file config_<name>.log\n");
 	 printf("\t debug - 1,0 which turns debug mode on/off \n");
 	 printf("\t debug_level - the level of debugging (higher means more debug info) \n");
+	 printf("\t seed - the seed to select the random memory point\n");
  }
 
  int main(int argc, char ** argv){
@@ -71,6 +72,8 @@
 	 uint32_t stride = 0;
 	 int32_t end_trace = FILE_ENDING;
 	 int32_t thread_id = -1;
+	 uint32_t start_pc = 0;
+	 uint32_t seed = 10;
 
 
 	 /***************************** command line args processing ************************/
@@ -115,6 +118,12 @@
 		 }
 		 else if (args[i]->name.compare("-stride") == 0){
 			 stride = atoi(args[i]->value.c_str());
+		 }
+		 else if (args[i]->name.compare("-pc") == 0){
+			 start_pc = atoi(args[i]->value.c_str());
+		 }
+		 else if (args[i]->name.compare("-seed") == 0){
+			 seed = atoi(args[i]->value.c_str());
 		 }
 	 }
 
@@ -172,7 +181,7 @@
 		 int64_t max_size = -1;
 		 /* get the instrace files for this exec */
 		 for (int i = 0; i < files.size(); i++){
-			 if (is_prefix(files[i], "instrace_" + exec + ".exe_" + "low.png" + "_asm_instr")){
+			 if (is_prefix(files[i], "instrace_" + exec + ".exe_" + in_image + "_asm_instr")){
 				 /*open the file*/
 				 string file = output_folder + "\\" + files[i];
 				 _stat(file.c_str(), &buf);
@@ -283,15 +292,29 @@
 	 
 	 if (start_trace == FILE_BEGINNING){
 		 mem_regions_t * mem_region = get_random_output_region(final_regions);
-		 uint64 mem_location = get_random_mem_location(mem_region, 20);
+		 uint64 mem_location = get_random_mem_location(mem_region, seed);
 		 DEBUG_PRINT(("random mem location we got - %llx\n", mem_location), 1);
 		 dest = mem_location;
 		 stride = mem_region->bytes_per_pixel;
 	 }
-
 	 
+	 DEBUG_PRINT(("func pc entry - %x\n", start_pc), 1);
+
 	 instrace_file.clear();
-	 instrace_file.seekg(instrace_file.beg);
+	 instrace_file.seekg(0,instrace_file.beg);
+
+	 vector<uint32_t> start_points;
+	 if (end_trace == FILE_ENDING){
+		 start_points = get_instrace_startpoints(instrace_file, start_pc);
+		 DEBUG_PRINT(("no of funcs captured - %d\n", start_points.size()), 1);
+		 for (int i = 0; i < start_points.size(); i++){
+			 DEBUG_PRINT(("%d-", start_points[i]), 1);
+		 }
+		 DEBUG_PRINT(("\n"), 1);
+	 }
+
+	 instrace_file.clear();
+	 instrace_file.seekg(0,instrace_file.beg);
 
 	 Expression_tree * tree = new Expression_tree();
 
@@ -303,24 +326,42 @@
 	 DEBUG_PRINT(("line no - %d\n", start_trace), 1);
 
 	 instrace_file.clear();
-	 instrace_file.seekg(instrace_file.beg);
+	 instrace_file.seekg(0,instrace_file.beg);
 
 	 ASSERT_MSG((start_trace != 0), ("ERROR: the selected destination does not exist\n"));
 
+	 if (end_trace == FILE_ENDING){
+		 for (int i = 0; i < start_points.size(); i++){
+			 if (start_points[i] >= start_trace){
+				 end_trace = start_points[i];
+				 break;
+			 }
+		 }
+	 }
+
+	 //exit(0);
+
 	 //first build the tree for this memory location for sanity purposes
 	 build_tree(dest, start_trace, end_trace, instrace_file, tree, disasm);
-	 do_remove_signex(tree->get_head(), tree->get_head());
-	 remove_full_overlap_nodes_aggressive(tree->get_head(), tree->get_head(), 0);
+	 //do_remove_signex(tree->get_head(), tree->get_head());
+	 //remove_full_overlap_nodes_aggressive(tree->get_head(), tree->get_head(), 0);
+
+	 DEBUG_PRINT(("printing out the expression\n"), 2);
+	 print_node_tree(tree->get_head(), expression_file);
  
 	 uint nodes = number_tree_nodes(tree->get_head());
 	 DEBUG_PRINT(("printing to dot file...\n"), 2);
 	 print_to_dotfile(concrete_tree_file, tree->get_head(),nodes,0);
-	 print_node_tree(tree->get_head(), expression_file);
+	 
+	 //exit(0);
+	 
 
 	 Abs_tree  * abs_tree = new Abs_tree();
 	 abs_tree->build_abs_tree(NULL, tree->get_head(), final_regions);
 	 nodes = number_tree_nodes(abs_tree->head);
 	 print_to_dotfile(abs_tree_file, abs_tree->head, nodes, 0, false);
+
+	 exit(0);
 
 	 /* now for the abs_tree logic */
 	 vector<uint64_t> nbd_locations;
@@ -356,7 +397,7 @@
 	 	Expression_tree * conc_tree = new Expression_tree();
 
 	 	instrace_file.clear();
-	 	instrace_file.seekg(instrace_file.beg);
+	 	instrace_file.seekg(0,instrace_file.beg);
 
 	 	DEBUG_PRINT(("track info - dest %llu stride %d\n", nbd_locations[i], mem_region->bytes_per_pixel), 1);
 	 	uint lineno = go_to_line_dest(instrace_file, nbd_locations[i], mem_region->bytes_per_pixel);
@@ -364,7 +405,7 @@
 
 	 	ASSERT_MSG((lineno != 0), ("ERROR: the selected destination does not exist\n"));
 	 	instrace_file.clear();
-	 	instrace_file.seekg(instrace_file.beg);
+	 	instrace_file.seekg(0,instrace_file.beg);
 
 	 	build_tree(nbd_locations[i], lineno, FILE_ENDING, instrace_file, conc_tree, disasm);
 	 	do_remove_signex(conc_tree->get_head(), conc_tree->get_head());
@@ -373,6 +414,13 @@
 	 	Abs_tree  * abs_tree = new Abs_tree();
 	 	abs_tree->build_abs_tree(NULL, conc_tree->get_head(), final_regions);
 	 	abs_nodes.push_back(abs_tree->head);
+
+		nodes = number_tree_nodes(abs_tree->head);
+
+		ofstream abs_file(output_folder + file_substr + "_abstree_" + to_string(i) + ".dot", ofstream::out);
+
+		print_to_dotfile(abs_file, abs_tree->head, nodes, 0, false);
+
 
 	}
 
@@ -391,16 +439,16 @@
 		Comp_Abs_tree::abstract_buffer_indexes(comp_tree->head);
 
 		Abs_node * final_tree = comp_tree->compound_to_abs_tree();
-		nodes = number_tree_nodes(final_tree);
+		//nodes = number_tree_nodes(final_tree);
 		print_to_dotfile(algebric_tree_file, final_tree, nodes, 0, true);
 
 
-		/*Halide_program * program = new Halide_program(final_tree);
+		Halide_program * program = new Halide_program(final_tree);
 
 		vector<Abs_node *> stack;
 		program->seperate_to_Funcs(program->head, stack);
 		program->print_seperated_funcs();
-		program->print_halide(halide_out);*/
+		program->print_halide(halide_file);
 
 
 	}

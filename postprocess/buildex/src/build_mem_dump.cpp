@@ -162,7 +162,7 @@ vector<mem_regions_t *> merge_instrace_and_dump_regions(vector<mem_info_t *> mem
 	}
 
 
-	DEBUG_PRINT((" no of mem regions after merging - %d\n", mem_regions.size()), 2);
+	DEBUG_PRINT((" no of mem regions after merging - %d\n", final_regions.size()), 2);
 	DEBUG_PRINT(("merge_instrace_and_dump_regions - done\n"), 2);
 
 	return final_regions;

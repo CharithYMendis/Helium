@@ -161,6 +161,7 @@ uint32_t go_to_line_dest(ifstream &file, uint64_t dest, uint32_t stride){
 		if (instr != NULL){
 			for (int i = 0; i < instr->num_dsts; i++){
 				if ( (instr->dsts[i].value == dest) && (instr->dsts[i].width == stride) ){
+					DEBUG_PRINT(("found - pc %d\n", instr->pc), 4);
 					return lineno;
 				}
 			}

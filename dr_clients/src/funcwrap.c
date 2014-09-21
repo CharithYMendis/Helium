@@ -194,6 +194,10 @@ void *user_data)
 		}
 	}
 
+	/*if (data->filter_func){
+		instrlist_disassemble(drcontext, instr_get_app_pc(instrlist_first(bb)), bb, logfile);
+	}*/
+
 	dr_free_module_data(module_data);
 
 

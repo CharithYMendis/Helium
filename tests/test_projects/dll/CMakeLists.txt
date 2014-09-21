@@ -36,6 +36,10 @@ if ("${CMAKE_GENERATOR}" MATCHES "Visual Studio")
   endforeach ()
 endif ()
 
+find_library(GMP gmp
+				PATHS C:/Charith/libraries/gmp-dynamic)
+message(${GMP})
+
 include_directories("include")
 add_library(dll_example
 
