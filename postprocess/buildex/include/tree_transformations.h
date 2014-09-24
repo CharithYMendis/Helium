@@ -10,5 +10,8 @@ bool remove_full_overlap_nodes_aggressive(Node * node, Node * head, uint width);
 int remove_full_overlap_nodes_conservative(Node * node, Node * head);
 
 void canonicalize_node(Node * node);
+void simplify_identity_mul(Node * node);
+void simplify_identity_add(Node * node);
+void order_tree(Node * node);
 
 #endif

@@ -3,6 +3,8 @@
 #include "defines.h"
 #include <map>
 #include <iostream>
+#include "print_common.h"
+#include <algorithm>
 
 using namespace std;
 
@@ -118,24 +120,174 @@ bool is_operation_associative(uint32_t operation){
 	}
 }
 
+void remove_forward_all_srcs(Node * node){
+	for (int i = 0; i < node->srcs.size(); i++){
+		bool rem = true;
+		Node * src = node->srcs[i];
+		while (rem){
+			rem = remove_forward_ref(node, src);
+			if (rem) i--;
+		}
+	}
+}
+
+bool sort_function(pair<Node *, uint32_t> first_node, pair<Node *, uint32_t> second_node){
+	return (first_node.first->symbol->value < second_node.first->symbol->value);
+}
+
+void order_node(Node * node){
+
+	vector<pair<Node *, uint32_t> > other;
+	vector<pair<Node *, uint32_t> > heap;
+
+	for (int i = 0; i < node->srcs.size(); i++){
+		
+		if (node->srcs[i]->symbol->type == MEM_HEAP_TYPE){
+			heap.push_back(make_pair(node->srcs[i],i));
+		}
+		else{
+			other.push_back(make_pair(node->srcs[i], i));
+		}
+
+	}
+
+	sort(heap.begin(), heap.end(), sort_function);
+
+	/*first rearrange the other elements*/
+	for (int i = 0; i < other.size(); i++){
+		node->srcs[i] = other[i].first;
+		for (int j = 0; j < other[i].first->prev.size(); j++){
+			if (other[i].first->prev[j] == node && other[i].first->pos[j] == other[i].second){
+				other[i].first->pos[j] = i;
+			}
+		}
+	}
+
+	/* now for the heap */
+	uint32_t beg = other.size();
+	for (int i = 0; i < heap.size(); i++){
+		node->srcs[beg + i] = heap[i].first;
+		for (int j = 0; j < heap[i].first->prev.size(); j++){
+			if (heap[i].first->prev[j] == node && heap[i].first->pos[j] == heap[i].second){
+				heap[i].first->pos[j] = beg + i;
+			}
+		}
+	}
+
+}
+
+void order_tree(Node * node){
+
+	order_node(node);
+
+	for (int i = 0; i < node->srcs.size(); i++){
+		order_tree(node->srcs[i]);
+	}
+
+}
+
+void simplify_identity_add(Node * node){
+	for (int i = 0; i < node->prev.size(); i++){
+		if (node->operation == op_add){
+			/* no need to check for more than 1 forward reference for immediates */
+			for (int j = 0; j < node->srcs.size(); j++){
+				if (node->srcs[j]->symbol->type == IMM_INT_TYPE && node->srcs[j]->symbol->value == 0){
+					bool rem = remove_forward_ref(node, node->srcs[j]);
+					if (rem) j--;
+				}
+				
+			}
+		}
+	}
+}
+
+void simplify_identity_mul(Node * node){
+	if (node->operation == op_mul){
+		if (node->srcs[0]->symbol->value == 1 && node->srcs[0]->symbol->type == IMM_INT_TYPE){
+			for (int i = 0; i < node->prev.size(); i++){
+				bool rem = true;
+				Node * prev_node = node->prev[i];
+				while (rem){
+					rem = remove_forward_ref(prev_node, node);
+					if (rem){
+						add_forward_ref(prev_node, node->srcs[1]);
+						i--;
+					}
+				}
+			}
+			remove_forward_all_srcs(node);
+		}
+		else if (node->srcs[1]->symbol->value == 1 && node->srcs[1]->symbol->type == IMM_INT_TYPE){
+			for (int i = 0; i < node->prev.size(); i++){
+				bool rem = true;
+				Node * prev_node = node->prev[i];
+				while (rem){
+					rem = remove_forward_ref(prev_node, node);
+					if (rem){
+						add_forward_ref(prev_node, node->srcs[0]);
+						i--;
+					}
+				}
+			}
+			remove_forward_all_srcs(node);
+		}
+	}
+}
+
 void canonicalize_node(Node * node){
 
 	DEBUG_PRINT(("entered canc.node \n"), 4);
 	for (int i = 0; i < node->prev.size(); i++){
+		//cout << node->prev[i]->operation << " " << node->operation << endl;
 		if ( (is_operation_associative(node->operation)) && (node->operation == node->prev[i]->operation) ){
 			Node * prev_node = node->prev[i];
 			bool rem = true;
+			//cout << node->prev.size() << endl;
+			//cout << i << endl;
 			while (rem){
-				DEBUG_PRINT(("stuck\n"), 4);
-				rem = remove_forward_ref(prev_node, node);
-				cout << prev_node->srcs.size() << endl;
-				for (int j = 0; j < node->srcs.size(); j++){
-					add_forward_ref(prev_node, node->srcs[j]);
-					if (node == node->srcs[j]){
-						cout << "what" << endl;
-					}
+				DEBUG_PRINT(("opportunity to canoc.\n"), 4);
+
+				/*cout << "b:prev - " << opnd_to_string(prev_node->symbol) <<  endl;
+				for (int j = 0; j < prev_node->srcs.size(); j++){
+					cout << opnd_to_string(prev_node->srcs[j]->symbol) << endl;
 				}
-				cout << prev_node->srcs.size() << endl;
+				cout << "b:current" << opnd_to_string(node->symbol) << endl;
+				for (int j = 0; j < node->srcs.size(); j++){
+					cout << opnd_to_string(node->srcs[j]->symbol) << endl;
+				}*/
+
+				rem = remove_forward_ref(prev_node, node);
+
+				/*cout << "after removal - " << endl;
+				if (rem){
+					cout << "r:prev" << endl;
+					for (int j = 0; j < prev_node->srcs.size(); j++){
+						cout << opnd_to_string(prev_node->srcs[j]->symbol) << endl;
+					}
+					cout << "r:current" << endl;
+					for (int j = 0; j < node->prev.size(); j++){
+						cout << opnd_to_string(node->prev[j]->symbol) << endl;
+					}
+					
+				}*/
+				
+				if (rem){
+					for (int j = 0; j < node->srcs.size(); j++){
+						add_forward_ref(prev_node, node->srcs[j]);
+					}
+					i--;
+				}
+
+				//cout << "after add - " << endl;
+				/*if (rem){
+					cout << "a:prev" << endl;
+					for (int j = 0; j < prev_node->srcs.size(); j++){
+						cout << opnd_to_string(prev_node->srcs[j]->symbol) << endl;
+					}
+				}*/
+
+				
+
 			}
 			
 		}

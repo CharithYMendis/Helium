@@ -21,7 +21,7 @@ mem_regions_t * get_mem_region(uint64_t value, vector<mem_regions_t *> &mem_regi
 
 uint64_t get_mem_location(vector<int> base, vector<int> offset, mem_regions_t * mem_region, bool * success){
 
-	ASSERT_MSG((base.size() == mem_region->dimensions), ("ERROR: there should be three dimensions\n"));
+	ASSERT_MSG((base.size() == mem_region->dimensions), ("ERROR: dimensions dont match up\n"));
 
 	for (int i = 0; i < base.size(); i++){
 		base[i] += offset[i];

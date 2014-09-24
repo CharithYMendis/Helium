@@ -445,9 +445,12 @@ void Expression_tree::update_frontier(rinstr_t * instr){
 			
 	}
 
-	/*if (!assign_opt){
-		canonicalize_node(dst);
-	}*/
+	if (!assign_opt){
+		/*simplify_identity_add(dst);
+		simplify_identity_mul(dst);
+		canonicalize_node(dst);*/
+
+	}
 
 	
 

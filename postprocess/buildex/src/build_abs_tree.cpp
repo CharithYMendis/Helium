@@ -27,14 +27,14 @@ void fill_abs_node(Abs_node * abs_node, Node * node, vector<mem_regions_t *> &me
 
 		switch (mem->type){
 		case IMAGE_INPUT: abs_node->type = INPUT_NODE; break;
-		case IMAGE_OUTPUT: abs_node->type = OUTPUT_NODE; break; 
+		case IMAGE_OUTPUT: abs_node->type = OUTPUT_NODE; break;
 		case IMAGE_INTERMEDIATE: abs_node->type = INTERMEDIATE_NODE; break;
 		}
 		abs_node->width = node->symbol->width;
 
 		abs_node->mem_info.associated_mem = mem;
 		abs_node->mem_info.dimensions = mem->dimensions;
-		abs_node->mem_info.indexes = new int * [mem->dimensions];
+		abs_node->mem_info.indexes = new int *[mem->dimensions];
 		abs_node->mem_info.pos = new int[mem->dimensions];
 
 		vector<int> pos = get_mem_position(mem, node->symbol->value);
@@ -42,6 +42,7 @@ void fill_abs_node(Abs_node * abs_node, Node * node, vector<mem_regions_t *> &me
 			abs_node->mem_info.indexes[i] = new int[mem->dimensions + 1];
 			abs_node->mem_info.pos[i] = pos[i];
 		}
+		
 	}
 	else if ((node->symbol->type == MEM_STACK_TYPE) || (node->symbol->type == REG_TYPE)){ /*parameters can be here*/
 		abs_node->operation = node->operation;

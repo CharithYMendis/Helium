@@ -16,5 +16,7 @@
 void build_tree(uint64 destination, int start_trace, int end_trace, std::ifstream &file, Expression_tree * tree, std::vector<disasm_t *> disasm);
 void build_tree(uint64 destination, int start_trace, int end_trace, std::vector<cinstr_t *> &instrs, Expression_tree * tree);
 std::vector<uint32_t> get_instrace_startpoints(std::ifstream &file, uint32_t pc);
+bool are_conc_trees_similar(Node * first, Node * second);
+
 
 #endif

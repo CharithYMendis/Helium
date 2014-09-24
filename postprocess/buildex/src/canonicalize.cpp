@@ -518,6 +518,7 @@ rinstr_t * cinstr_to_rinstrs (cinstr_t * cinstr, int &amount){
 				rinstr = new rinstr_t[3];
 				amount = 3;
 				operand_t virtual_reg = { REG_TYPE, cinstr->srcs[0].width, DR_REG_VIRTUAL_1 };
+				reg_to_mem_range(&virtual_reg);
 
 				//virtual <= scale(src2) * index(src1)
 				rinstr[0] = { op_mul, virtual_reg, 2, { cinstr->srcs[2], cinstr->srcs[1] }, true };
@@ -527,6 +528,7 @@ rinstr_t * cinstr_to_rinstrs (cinstr_t * cinstr, int &amount){
 				rinstr[2] = { op_add, cinstr->dsts[0], 2, { virtual_reg, cinstr->srcs[3] }, true };
 
 			}
+			
 		}
 		else_bounds;
 

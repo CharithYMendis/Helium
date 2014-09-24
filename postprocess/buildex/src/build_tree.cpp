@@ -59,13 +59,13 @@ void build_tree(uint64 destination, int start_trace, int end_trace, ifstream &fi
 	rinstr = cinstr_to_rinstrs(instr, no_rinstrs);
 
 	vector<string> string_disasm = get_disasm_string(disasm, instr->pc);
-	if (debug && debug_level >= 5){
+	if (debug && debug_level >= 4){
 		for (int i = 0; i < string_disasm.size(); i++){
 			cout << string_disasm[i] << endl;
 		}
 	}
 
-	if (debug_level >= 5){ print_rinstrs(rinstr, no_rinstrs);}
+	if (debug_level >= 4){ print_rinstrs(rinstr, no_rinstrs);}
 	for (int i = no_rinstrs - 1; i >= 0; i--){
 		if (rinstr[i].dst.value == destination){
 			ASSERT_MSG((rinstr[i].dst.type != IMM_FLOAT_TYPE) && (rinstr[i].dst.type != IMM_INT_TYPE), ("ERROR: dest cannot be an immediate\n"));
@@ -94,13 +94,13 @@ void build_tree(uint64 destination, int start_trace, int end_trace, ifstream &fi
 			rinstr = cinstr_to_rinstrs(instr, no_rinstrs);
 
 			vector<string> string_disasm = get_disasm_string(disasm, instr->pc);
-			if (debug && debug_level >= 5){
+			if (debug && debug_level >= 4){
 				for (int i = 0; i < string_disasm.size(); i++){
 					cout << string_disasm[i] << endl;
 				}
 			}
 
-			if (debug_level >= 5){ print_rinstrs(rinstr, no_rinstrs); }
+			if (debug_level >= 4){ print_rinstrs(rinstr, no_rinstrs); }
 			for (int i = no_rinstrs - 1; i >= 0; i--){
 				tree->update_frontier(&rinstr[i]);
 			}
@@ -142,3 +142,30 @@ vector<uint32_t> get_instrace_startpoints(ifstream &file, uint32_t pc){
 
 }
 
+
+bool are_conc_trees_similar(Node * first, Node * second){
+
+
+	if ((first->symbol->type != second->symbol->type) || (first->operation != second->operation)){
+		return false;
+	}
+
+
+	/*check whether all the nodes have same number of sources*/
+	if (first->srcs.size() != second->srcs.size()){
+		return false;
+	}
+	
+
+	/* recursively check whether the src nodes are similar*/
+	bool ret = true;
+	for (int i = 0; i < first->srcs.size(); i++){
+		if (!are_conc_trees_similar(first->srcs[i], second->srcs[i])){
+			ret = false;
+			break;
+		}
+	}
+
+	return ret;
+
+}
