@@ -23,7 +23,7 @@ if "%2" == "" (
 if NOT EXIST %DR_HOME%\NUL (
 	mkdir %DR_HOME%
 	cd %DR_HOME%
-	svn co http://dynamorio.googlecode.com/svn/trunk/ .
+	svn co -r2773 http://dynamorio.googlecode.com/svn/trunk/ .
 )
 
 :: setting up dynamorio environment variables
@@ -38,7 +38,7 @@ call "C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\vcvars32.bat"
 cd %DR_HOME%
 
 :: update svn
-svn up
+svn up -r2773
 
 :: building 32 bit debug 
 if NOT EXIST build_debug_32\NUL mkdir build_debug_32

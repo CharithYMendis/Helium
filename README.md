@@ -9,10 +9,11 @@ Please see documentation for implementation and conventions used
 1.	Install VS2013 and have VC++ 2013 runtime. (MSDN allows free download and activation for @edu emails)
 	Make sure you do a default installation with default paths.
 2.  SVN - http://www.visualsvn.com/downloads/ download it here and put it on to the path
-3.  CMake latest version  http://www.cmake.org/download/
-4.	Download the github repository for the project
-5.	Installing Dynamorio – run the batch file <repo>\utility\dr_build.bat {folder} {dr_folder_name}
-6.	Installing Halide – just use the nightly builds of Halide (do not try to build it in windows 
+3.  Install Cygwin64 https://cygwin.com/install.html and install Perl, but not its SVN!! Put Cygwin's bin into the path.
+4.  CMake latest version  http://www.cmake.org/download/
+5.	Download the github repository for the project
+6.	Installing Dynamorio – run the batch file <repo>\utility\dr_build.bat {folder} {dr_folder_name}
+7.	Installing Halide – just use the nightly builds of Halide (do not try to build it in windows 
 OR use the powershell scripts in <repo>\utility\halide_<type>_build.ps -> but this is PAINFUL!!
 https://drive.google.com/folderview?id=0B3x1cdB8WoSDSy1ZMVZoYmhnaTQ&usp=sharing
 
