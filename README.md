@@ -7,10 +7,14 @@ Please see documentation for implementation and conventions used
 
 
 1.	Install VS2013 and have VC++ 2013 runtime. (MSDN allows free download and activation for @edu emails)
-2.	Download the github repository for the project
-3.	Installing Dynamorio – run the batch file <repo>\utility\dr_build.bat {folder} {dr_folder_name}
-4.	Installing Halide – just use the nightly builds of Halide (do not try to build it in windows 
+	Make sure you do a default installation with default paths.
+2.  SVN - http://www.visualsvn.com/downloads/ download it here and put it on to the path
+3.  CMake latest version  http://www.cmake.org/download/
+4.	Download the github repository for the project
+5.	Installing Dynamorio – run the batch file <repo>\utility\dr_build.bat {folder} {dr_folder_name}
+6.	Installing Halide – just use the nightly builds of Halide (do not try to build it in windows 
 OR use the powershell scripts in <repo>\utility\halide_<type>_build.ps -> but this is PAINFUL!!
+https://drive.google.com/folderview?id=0B3x1cdB8WoSDSy1ZMVZoYmhnaTQ&usp=sharing
 
 
 building the project (all batch files should be run inside their folder)
