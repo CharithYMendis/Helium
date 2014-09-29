@@ -147,18 +147,28 @@ void print_tree(Node * node, std::ostream &file){
 			file << ")";		
 	}
 	else{
-		ASSERT_MSG((node->operation == op_partial_overlap), ("ERROR: unexpected operation with more than two srcs\n"));
+		//ASSERT_MSG((node->operation == op_partial_overlap), ("ERROR: unexpected operation with more than two srcs\n"));
 		/*here it is important to see how each source contributes
 		another important problem is that what source updates first
 		 */
-		file << "(";
+		/*file << "(";
 		for (int i = 0; i < no_srcs; i++){
 			print_tree(node->srcs[0], file);
 			if (i != no_srcs - 1){
 				file << "," << endl;
 			}
 		}
+		file << ")";*/
+		file << "(";
+		file << operation_to_string(node->operation) << " ";
+		for (int i = 0; i < no_srcs; i++){
+		print_tree(node->srcs[0], file);
+		if (i != no_srcs - 1){
+		file << "," ;
+		}
+		}
 		file << ")";
+
 	}
 
 }

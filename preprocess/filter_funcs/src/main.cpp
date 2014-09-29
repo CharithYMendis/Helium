@@ -214,7 +214,7 @@ int main(int argc, char **argv){
 
 		/* printing out the call stack */
 		DEBUG_PRINT(("probable call stack information (upto 10 calls) for the given app_pc - %x\n", max_start_addr), 1);
-		for (int i = 0; i < 3; i++){
+		for (int i = 0; i < 5; i++){
 			uint32_t func = get_probable_func(module, max_module, max_start_addr);
 			DEBUG_PRINT(("func - %x %d", func, i), 1);
 			if (func == 0) break;

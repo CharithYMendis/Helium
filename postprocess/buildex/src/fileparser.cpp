@@ -166,6 +166,7 @@ uint32_t go_to_line_dest(ifstream &file, uint64_t dest, uint32_t stride){
 				}
 			}
 		}
+		delete instr;
 	}
 
 	return 0;

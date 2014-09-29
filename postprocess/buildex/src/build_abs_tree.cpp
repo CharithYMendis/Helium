@@ -32,6 +32,7 @@ void fill_abs_node(Abs_node * abs_node, Node * node, vector<mem_regions_t *> &me
 		}
 		abs_node->width = node->symbol->width;
 
+
 		abs_node->mem_info.associated_mem = mem;
 		abs_node->mem_info.dimensions = mem->dimensions;
 		abs_node->mem_info.indexes = new int *[mem->dimensions];
@@ -218,7 +219,7 @@ void Comp_Abs_tree::abstract_buffer_indexes(Comp_Abs_node * head, Comp_Abs_node 
 			/*cout << "results" << endl;
 			printout_vector(results);*/
 
-			ASSERT_MSG((results.size() == (first->mem_info.dimensions + 1)), ("ERROR: the result vector is inconsistent\n"));
+			//ASSERT_MSG((results.size() == (first->mem_info.dimensions + 1)), ("ERROR: the result vector is inconsistent\n"));
 			for (int i = 0; i < results.size(); i++){
 				first->mem_info.indexes[dim][i] = double_to_int(results[i]);
 				//cout << first->mem_info.indexes[dim][i] << " ";

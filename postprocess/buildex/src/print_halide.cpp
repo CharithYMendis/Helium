@@ -140,17 +140,17 @@ void Halide_program::print_full_overlap_string(Abs_node * node, Abs_node * head,
 	uint overlap_end = overlap->range + overlap->width;
 	uint node_end = node->range + node->width;
 
-	if (overlap_end == node_end){
+	//if (overlap_end == node_end){
 		out << " ( "; 
 		print_abs_tree_in_halide(overlap, head, out);
-		out << " ) & " << (node->width * 8);
-	}
-	else{
+		out << " ) & " <<  ( uint32_t(~0) >> (32 - node->width * 8) ) ;
+	//}
+	/*else{
 		out << " ( ( ";
 		print_abs_tree_in_halide(overlap, head, out);
 		out << " >> " << (overlap_end - node_end) * 8  << " ) ";
 		out << " ) & " << (node->width * 8);
-	}
+	}*/
 
 }
 
@@ -174,6 +174,15 @@ void Halide_program::print_partial_overlap_string(Abs_node * node, Abs_node * he
 	}
 }
 
+string get_cast_string(uint32_t width, uint32_t sign){
+	
+	string ret = "";
+	ret += "cast<";
+	if (!sign) ret += "u";
+	ret += "int" + to_string(width * 8) + "_t>";
+	return ret;
+}
+
 /* main print functions for the halide module */
 void Halide_program::print_abs_tree_in_halide(Abs_node* node, Abs_node * head, ostream &out){
 
@@ -189,18 +198,38 @@ void Halide_program::print_abs_tree_in_halide(Abs_node* node, Abs_node * head, o
 			print_partial_overlap_string(node, head, out);
 			out << " ) ";
 		}
+		else if (node->operation == op_split_h){
+			out << " ( ";
+			print_abs_tree_in_halide(node->srcs[0], head, out);
+			out << " ) >> ( " << to_string(node->srcs[0]->width * 8 / 2) << ")";
+		}
+		else if (node->operation == op_split_l){
+			out << " ( ";
+			print_abs_tree_in_halide(node->srcs[0], head, out);
+			out << " ) & " <<  to_string((node->srcs[0]->width / 2) * 8);
+		}
 		else if (node->srcs.size() == 1){
 			out << " " << get_abs_node_string(node) << " ";
 			print_abs_tree_in_halide(node->srcs[0],head,out);
 		}
-		else if (node->srcs.size() == 2){
-			out << " ( ";
-			print_abs_tree_in_halide(node->srcs[0], head, out);
-			out << " " << get_abs_node_string(node) << " ";
-			print_abs_tree_in_halide(node->srcs[1], head, out);
-			out << " ) ";
+		else{
+
+			out << "(";
+			for (int i = 0; i < node->srcs.size(); i++){
+
+				if (node->srcs[i]->width < node->width){
+					out << get_cast_string(node->width, false) << "(";
+				}
+				print_abs_tree_in_halide(node->srcs[i], head, out);
+				if (node->srcs[i]->width < node->width){
+					out << ")";
+				}
+				if (i != node->srcs.size() - 1){
+					out << " " << get_abs_node_string(node) << " ";
+				}
+			}
+			out << ")";
 		}
-		
 	}
 	else if(node->type == SUBTREE_BOUNDARY){
 		return;

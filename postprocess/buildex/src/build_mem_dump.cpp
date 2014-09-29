@@ -213,7 +213,9 @@ vector<mem_regions_t *> merge_instrace_and_dump_regions(vector<mem_regions_t *> 
 				
 				mem->strides[0] = 1;
 				mem->extents[0] = mem->end - mem->start + 1;
+				mem->padding_filled = 0;
 				
+				mem->type = 0;
 				if ((mem_info[i]->direction  & MEM_INPUT) == MEM_INPUT){ mem->type |= IMAGE_INPUT; }
 				if ((mem_info[i]->direction & MEM_OUTPUT) == MEM_OUTPUT){ mem->type |= IMAGE_OUTPUT; }
 
@@ -233,17 +235,19 @@ vector<mem_regions_t *> merge_instrace_and_dump_regions(vector<mem_regions_t *> 
 		if (total_regions[i]->type == IMAGE_INPUT){
 			total_regions[i]->name = "input_" + to_string(++inputs);
 		}
-		else if (final_regions[i]->type == IMAGE_OUTPUT){
+		else if (total_regions[i]->type == IMAGE_OUTPUT){
 			total_regions[i]->name = "output_" + to_string(++outputs);
 		}
-		else if (final_regions[i]->type == IMAGE_INTERMEDIATE){
+		else if (total_regions[i]->type == IMAGE_INTERMEDIATE){
 			total_regions[i]->name = "inter_" + to_string(++intermediates);
 		}
 	}
 
 
-	DEBUG_PRINT((" no of mem regions after merging - %d\n", final_regions.size()), 2);
-	DEBUG_PRINT(("merge_instrace_and_dump_regions - done\n"), 2);
+	DEBUG_PRINT((" no of image mem regions after merging - %d\n", final_regions.size()), 2);
+	DEBUG_PRINT((" total number of mem regions (from instrace) - %d\n", total_regions.size()), 2);
+
+	DEBUG_PRINT((" merge_instrace_and_dump_regions - done\n"), 2);
 
 	return final_regions;
 }

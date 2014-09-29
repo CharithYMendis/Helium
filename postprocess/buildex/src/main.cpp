@@ -39,8 +39,14 @@
  uint32_t debug_level = 0;
  ofstream log_file;
 
- void test_linear_solver();
+ void													test_linear_solver();
+ Expression_tree *										create_tree_for_dest(uint64_t dest, uint32_t stride, ifstream &instrace_file, vector<uint32_t> start_points, int32_t start_trace, int32_t end_trace, vector<disasm_t *> disasm);
+ vector< pair<uint32_t, Expression_tree * > >			create_trees_for_all(mem_regions_t * region, ifstream &instrace_file, vector<uint32_t> start_points, int32_t end_trace, vector<disasm_t *> disasm);
+ vector< vector< pair<uint32_t, Node *> > >				categorize_trees(vector<pair < uint32_t, Node *> > trees);
+ vector<uint64_t>										get_nbd_of_random_points(vector<mem_regions_t *> image_regions, uint32_t seed, uint32_t * stride);
 
+ vector<Node *> get_similar_trees(vector<mem_regions_t *> image_regions, uint32_t seed, uint32_t * stride, ifstream &instrace_file,
+	 vector<uint32_t> start_points, int32_t end_trace, vector<disasm_t *> disasm);
 
  void print_usage(){
 	 printf("usage - format -<name> <value>\n");
@@ -55,7 +61,22 @@
 	 printf("\t debug - 1,0 which turns debug mode on/off \n");
 	 printf("\t debug_level - the level of debugging (higher means more debug info) \n");
 	 printf("\t seed - the seed to select the random memory point\n");
+	 printf("\t stride - the memory width at the particular location\n");
+	 printf("\t tree_build - the tree building method \"random - 1\",\"random set - 2\",\"all - 3\"\n");
+	 printf("\t mode - the mode in which this tool is running mem_info_stage, tree_build_stage, abstraction_stage, halide_output_stage\n");
  }
+
+ /* tree build modes */
+#define BUILD_RANDOM		1
+#define BUILD_RANDOM_SET	2
+#define	BUILD_ALL			3
+
+
+ /* stage to stop */
+#define MEM_INFO_STAGE			1	
+#define TREE_BUILD_STAGE		2
+#define ABSTRACTION_STAGE		3
+#define HALIDE_OUTPUT_STAGE		4
 
  int main(int argc, char ** argv){
 
@@ -74,6 +95,8 @@
 	 int32_t thread_id = -1;
 	 uint32_t start_pc = 0;
 	 uint32_t seed = 10;
+	 uint32_t tree_build = BUILD_RANDOM;
+	 uint32_t mode = TREE_BUILD_STAGE;
 
 
 	 /***************************** command line args processing ************************/
@@ -124,6 +147,15 @@
 		 }
 		 else if (args[i]->name.compare("-seed") == 0){
 			 seed = atoi(args[i]->value.c_str());
+		 }
+		 else if (args[i]->name.compare("-tree_build") == 0){
+			 tree_build = atoi(args[i]->value.c_str());
+		 }
+		 else if (args[i]->name.compare("-mode") == 0){
+			 mode = atoi(args[i]->value.c_str());
+		 }
+		 else{
+			 ASSERT_MSG(false, ("ERROR: unknown option\n"));
 		 }
 	 }
 
@@ -268,48 +300,62 @@
 
 	 ULONG_PTR token = initialize_image_subsystem();
 
-	 DEBUG_PRINT(("getting disassembly trace\n"), 1);
+	 /********************************MEMORY INFORMATION***************************************/
 
+	 /* disassembly of instructions acquired */
+	 DEBUG_PRINT(("getting disassembly trace\n"), 1);
 	 vector<disasm_t *> disasm;
 	 if (debug){
 		 disasm = parse_debug_disasm(disasm_file);
 	 }
 
+	 /* analyzing mem dumps for input and output image locations */
 	 DEBUG_PRINT(("analyzing mem dumps\n"), 1);
-
 	 vector<mem_regions_t *> regions = get_image_regions_from_dump(memdump_files, in_image_filename, out_image_filename);
-
 	 DEBUG_PRINT(("analyzing instrace file - %s\n", instrace_filename.c_str()), 1);
 
+	 /* independently create the memory layout from the instrace */
 	 vector<mem_info_t *> mem_info;
 	 create_mem_layout(instrace_file, mem_info);
 	 link_mem_regions_greedy(mem_info, 0);
 	 print_mem_layout(log_file, mem_info);
 
+	 /* merge these two information - instrace mem info + mem dump info */
 	 vector<mem_regions_t *> total_mem_regions;
 	 vector<mem_regions_t *> image_regions = merge_instrace_and_dump_regions(total_mem_regions, mem_info, regions);
 
-	 //exit(0);
+	 print_mem_regions(total_mem_regions);
 
-	 //print_mem_regions(final_regions);
-	 
-	 if (start_trace == FILE_BEGINNING){
-		 mem_regions_t * mem_region = get_random_output_region(image_regions);
-		 uint64 mem_location = get_random_mem_location(mem_region, seed);
-		 DEBUG_PRINT(("random mem location we got - %llx\n", mem_location), 1);
-		 dest = mem_location;
-		 stride = mem_region->bytes_per_pixel;
+	 if (mode == MEM_INFO_STAGE){
+		 exit(0);
 	 }
+	
+	 /******************************************************************************************/
 	 
-	 DEBUG_PRINT(("func pc entry - %x\n", start_pc), 1);
+	 /*******************************TREE BUILDING**********************************************/
+	 
+	 /* Q1. what points do I build the dependancy tree?  
+			(i) capture random points and see if they are similar; otherwise repeat
+			(ii) capture for all the points and then select a random sample of points with similar trees
+
+		Q2. What if not enough similar points are there?
+			e.g:- filters with big dependancies (box blur)
+			(i) canonicalize and simplify the filters -> they should have the same form if not -> some input dependancy is there
+			(ii) need to identify their iterative operation and represent it in some way (stop at intermediate points)
+	 
+	 */
+
+	 /* data structures that will be passed to the next stage */
+	 vector<Node *> conc_trees;
 
 	 instrace_file.clear();
-	 instrace_file.seekg(0,instrace_file.beg);
+	 instrace_file.seekg(0, instrace_file.beg);
 
+	 /* capture the function start points if the end trace is not given specifically */
 	 vector<uint32_t> start_points;
 	 if (end_trace == FILE_ENDING){
 		 start_points = get_instrace_startpoints(instrace_file, start_pc);
-		 DEBUG_PRINT(("no of funcs captured - %d\n", start_points.size()), 1);
+		 DEBUG_PRINT(("no of funcs captured - %d\n start points : \n", start_points.size()), 1);
 		 for (int i = 0; i < start_points.size(); i++){
 			 DEBUG_PRINT(("%d-", start_points[i]), 1);
 		 }
@@ -317,151 +363,120 @@
 	 }
 
 	 instrace_file.clear();
-	 instrace_file.seekg(0,instrace_file.beg);
+	 instrace_file.seekg(0, instrace_file.beg);
 
-	 Expression_tree * tree = new Expression_tree();
 
-	 DEBUG_PRINT(("track info - dest %llx stride %d\n", dest, stride), 1);
+	 if (tree_build == BUILD_RANDOM){
 
-	 if (start_trace == FILE_BEGINNING){
-		 start_trace = go_to_line_dest(instrace_file, dest, stride);
+		 if (start_trace == FILE_BEGINNING){
+			 mem_regions_t * random_mem_region = get_random_output_region(image_regions);
+			 uint64 mem_location = get_random_mem_location(random_mem_region, seed);
+			 DEBUG_PRINT(("random mem location we got - %llx\n", mem_location), 1);
+			 dest = mem_location;
+			 stride = random_mem_region->bytes_per_pixel;
+		 }
+		 else{
+			 /* else I assume that the stride and the dest are set properly */
+			 ASSERT_MSG((stride != 0 && dest != 0), ("ERROR: if the starting point is given please specify the dest and stride\n"));
+		 }
+		 DEBUG_PRINT(("func pc entry - %x\n", start_pc), 1);
+
+		 Node * node = create_tree_for_dest(dest, stride, instrace_file, start_points, start_trace, end_trace, disasm)->get_head();
+		 if (node != NULL){
+			 conc_trees.push_back(node);
+		 }
 	 }
-	 DEBUG_PRINT(("line no - %d\n", start_trace), 1);
+	 else if (tree_build == BUILD_RANDOM_SET){
 
-	 instrace_file.clear();
-	 instrace_file.seekg(0,instrace_file.beg);
+		 /*ok we need find a set of random locations */
+		 vector<uint64_t> nbd_locations = get_nbd_of_random_points(image_regions, seed, &stride);
 
-	 ASSERT_MSG((start_trace != 0), ("ERROR: the selected destination does not exist\n"));
-
-	 if (end_trace == FILE_ENDING){
-		 for (int i = 0; i < start_points.size(); i++){
-			 if (start_points[i] >= start_trace){
-				 end_trace = start_points[i];
-				 break;
+		 /* ok now build trees for the set of locations */
+		 for (int i = 0; i < nbd_locations.size(); i++){
+			 Node * node = create_tree_for_dest(nbd_locations[i], stride, instrace_file, start_points, FILE_BEGINNING, end_trace, disasm)->get_head();
+			 if (node != NULL){
+				 conc_trees.push_back(node);
 			 }
 		 }
+
+		 /* checking similarity of the trees and if not repeat?? */
+		 uint32_t count = 0;
+		 vector< pair<uint32_t, Node*> > numbered_trees;
+		 for (int i = 0; i < conc_trees.size(); i++){
+			 numbered_trees.push_back(make_pair(count++, conc_trees[i]));
+		 }
+		 vector< vector< pair<uint32_t, Node *> > > cat_trees = categorize_trees(numbered_trees);
+
 	 }
+	 else if (tree_build == BUILD_ALL){
+		 /*mem_regions_t * random_mem_region = get_random_output_region(image_regions);		
+		 vector< pair<uint32_t, Expression_tree *> > numbered_trees = create_trees_for_all(random_mem_region, instrace_file, start_points, end_trace, disasm);
+		 
+		 vector<pair<uint32_t, Node *> > nodes_vector;
 
-	 //exit(0);
-
-	 //first build the tree for this memory location for sanity purposes
-	 build_tree(dest, start_trace, end_trace, instrace_file, tree, disasm);
-	 order_tree(tree->get_head());
-	 //do_remove_signex(tree->get_head(), tree->get_head());
-	 //remove_full_overlap_nodes_aggressive(tree->get_head(), tree->get_head(), 0);
-
-	 DEBUG_PRINT(("printing out the expression\n"), 2);
-	 //print_node_tree(tree->get_head(), expression_file);
- 
-	 uint nodes = number_tree_nodes(tree->get_head());
-	 cout << nodes << endl;
-	 DEBUG_PRINT(("printing to dot file...\n"), 2);
-	 print_to_dotfile(concrete_tree_file, tree->get_head(),nodes,0);
-	 
-	 //exit(0);
-	 
-
-	 Abs_tree  * abs_tree = new Abs_tree();
-	 abs_tree->build_abs_tree(NULL, tree->get_head(), image_regions);
-	 nodes = number_tree_nodes(abs_tree->head);
-	 print_to_dotfile(abs_tree_file, abs_tree->head, nodes, 0, false);
-
-	 //exit(0);
-
-	 /* now for the abs_tree logic */
-	 vector<uint64_t> nbd_locations;
-	 
-	 mem_regions_t * mem_region = get_random_output_region(image_regions);
-	 uint64 mem_location = get_random_mem_location(mem_region, seed);
-	 vector<int> base = get_mem_position(mem_region, mem_location);
-	 nbd_locations.push_back(mem_location);
-
-	 cout << "base : " << endl;
-	 for (int j = 0; j < base.size(); j++){
-		 cout << base[j] << ",";
-	 }
-	 cout << endl;
-
-	 //get a nbd of locations - diagonally choose pixels
-	 int boundary = (int)ceil((double)(mem_region->dimensions + 2) / 2.0);
-	 DEBUG_PRINT(("boundary : %d\n", boundary),1);
-	 int count = 0;
-	 for (int i = -boundary; i <= boundary; i++){  
-		 if (i == 0) continue;
-		 vector<int> offset;
-		 uint affected = count % mem_region->dimensions;
-		 for (int j = 0; j < base.size(); j++){
-			 if (j == affected) offset.push_back(i); 
-			 else offset.push_back(0);
+		 for (int i = 0; i < numbered_trees.size(); i++){
+			 nodes_vector.push_back(make_pair(numbered_trees[i].first, numbered_trees[i].second->get_head()));
 		 }
 
-		 cout << "offset" << endl;
-		 for (int j = 0; j < offset.size(); j++){
-			 cout << offset[j] << ",";
-		 }
-		 cout << endl;
+		 vector< vector< pair<uint32_t, Node *> > > cat_trees = categorize_trees(nodes_vector);
 
-		 bool success;
-		 mem_location = get_mem_location(base, offset, mem_region, &success);
+		 cout << cat_trees.size() << endl;
+		 for (int i = 0; i < cat_trees.size(); i++){
+			 cout << "{";
+			 for (int j = 0; j < cat_trees[j].size(); j++){
+				 cout << cat_trees[i][j].first << ",";
+			 }
+			 cout << "}" <<  endl;
 
-		 cout << hex << "dest - " << mem_location << dec << endl;
+		 }*/
 
-		 ASSERT_MSG(success, ("ERROR: memory location out of bounds\n"));
-		 nbd_locations.push_back(mem_location);
-		 count++;
+		 conc_trees = get_similar_trees(image_regions, seed, &stride, instrace_file, start_points, end_trace, disasm);
+
+		 
+
+ 	 }
+
+	 /*debug printing*/
+	 for (int i = 0; i < conc_trees.size(); i++){
+		 //DEBUG_PRINT(("printing out the expression\n"), 2);
+		 //ofstream expression_file(output_folder + file_substr + "_expression_" + to_string(i) + ".txt", ofstream::out);
+		 //print_node_tree(conc_trees[i], expression_file);
+		 uint no_nodes = number_tree_nodes(conc_trees[i]);
+		 DEBUG_PRINT(("printing to dot file...\n"), 2);
+		 ofstream conc_file(output_folder + file_substr + "_conctree_" + to_string(i) + ".dot", ofstream::out);
+		 print_to_dotfile(conc_file, conc_trees[i], no_nodes, 0);
 	 }
 
-	vector<Abs_node *> abs_nodes;
+	 if (mode == TREE_BUILD_STAGE){
+		 exit(0);
+	 }
 
-	for (int i = 0; i < nbd_locations.size(); i++){
+	 
+	 /***************************************ABSTRACTION*********************************************************/
 
-	 	Expression_tree * conc_tree = new Expression_tree();
-
-	 	instrace_file.clear();
-	 	instrace_file.seekg(0,instrace_file.beg);
-
-	 	DEBUG_PRINT(("track info - dest %llx stride %d\n", nbd_locations[i], mem_region->bytes_per_pixel), 1);
-	 	uint lineno = go_to_line_dest(instrace_file, nbd_locations[i], mem_region->bytes_per_pixel);
-	 	DEBUG_PRINT(("line no - %d\n", lineno), 1);
-
-	 	ASSERT_MSG((lineno != 0), ("ERROR: the selected destination does not exist\n"));
-	 	instrace_file.clear();
-	 	instrace_file.seekg(0,instrace_file.beg);
-
-		if (end_trace == FILE_ENDING){
-			for (int j = 0; j < start_points.size(); j++){
-				if (start_points[j] >= start_trace){
-					end_trace = start_points[j];
-					break;
-				}
-			}
-		}
-
-	 	build_tree(nbd_locations[i], lineno, end_trace, instrace_file, conc_tree, disasm);
-		order_tree(conc_tree->get_head());
-
-		nodes = number_tree_nodes(conc_tree->get_head());
-		ofstream conc_file(output_folder + file_substr + "_conctree_" + to_string(i) + ".dot", ofstream::out);
-		print_to_dotfile(conc_file, conc_tree->get_head(), nodes, 0);
-
-	 	//do_remove_signex(conc_tree->get_head(), conc_tree->get_head());
-	 	//remove_full_overlap_nodes_aggressive(conc_tree->get_head(), conc_tree->get_head(), 0);
-
-	 	Abs_tree  * abs_tree = new Abs_tree();
-	 	abs_tree->build_abs_tree(NULL, conc_tree->get_head(), image_regions);
-	 	abs_nodes.push_back(abs_tree->head);
-
-		nodes = number_tree_nodes(abs_tree->head);
-
-		ofstream abs_file(output_folder + file_substr + "_abstree_" + to_string(i) + ".dot", ofstream::out);
-
-		print_to_dotfile(abs_file, abs_tree->head, nodes, 0, false);
+	 vector<Abs_node *> abs_nodes;
+	 for (int i = 0; i < conc_trees.size(); i++){
+		 Abs_tree  * abs_tree = new Abs_tree();
+		 abs_tree->build_abs_tree(NULL, conc_trees[i], total_mem_regions);
+		 abs_nodes.push_back(abs_tree->head);
+	 }
 
 
-	}
+	 /* debug printing */
+	 for (int i = 0; i < abs_nodes.size(); i++){
+		 uint32_t nodes = number_tree_nodes(abs_nodes[i]);
+		 ofstream abs_file(output_folder + file_substr + "_abstree_" + to_string(i) + ".dot", ofstream::out);
+		 print_to_dotfile(abs_file, abs_nodes[i], nodes, 0, false);
+	 }
 
 
-	//if similar construct comp tree
+	 if (mode == ABSTRACTION_STAGE){
+		 exit(0);
+	 }
+
+
+	 /**************************************HALIDE OUTPUT + ALGEBRIC FILTERS********************************************************/
+	 
 	bool similar = Abs_tree::are_abs_trees_similar(abs_nodes);
 	if (similar){
 
@@ -486,7 +501,6 @@
 		program->print_seperated_funcs();
 		program->print_halide(halide_file);
 
-
 	}
 	else{
 		DEBUG_PRINT(("the trees are not similar; please check\n"), 1);
@@ -499,56 +513,69 @@
 	 algebric_tree_file.close();
 
 	 shutdown_image_subsystem(token);
-	 exit(0);
-
+	 return 0;
 
  }
 
 
- Node * create_tree_for_dest(uint64_t dest, uint32_t stride, ifstream &instrace_file, vector<uint32_t> start_points, vector<disasm_t *> disasm){
+ Expression_tree * create_tree_for_dest(uint64_t dest, uint32_t stride, ifstream &instrace_file, vector<uint32_t> start_points,
+	 int32_t start_trace, int32_t end_trace, vector<disasm_t *> disasm){
 
-	 uint32_t lineno = go_to_line_dest(instrace_file, dest, stride);
+	 DEBUG_PRINT(("building tree for %llx...\n", dest), 2);
+
 	 instrace_file.clear();
 	 instrace_file.seekg(0, instrace_file.beg);
 
-	 if (lineno == 0) return NULL;
+	 if (start_trace == FILE_BEGINNING){
+		 start_trace = go_to_line_dest(instrace_file, dest, stride);
+	 }
+
+	 instrace_file.clear();
+	 instrace_file.seekg(0, instrace_file.beg);
+
+	 if (start_trace == 0) return NULL;
 
 	 Expression_tree * conc_tree = new Expression_tree();
 
-	 int32_t end_trace = FILE_ENDING;
-	 for (int i = 0; i < start_points.size(); i++){
-		 if (lineno <= start_points[i]){
-			 end_trace = start_points[i];
-			 break;
+	 if (end_trace == FILE_ENDING){
+		 for (int i = 0; i < start_points.size(); i++){
+			 if (start_trace <= start_points[i]){
+				 end_trace = start_points[i];
+				 break;
+			 }
 		 }
 	 }
 
-	 build_tree(dest, lineno, end_trace, instrace_file, conc_tree, disasm);
+	 build_tree(dest, start_trace, end_trace, instrace_file, conc_tree, disasm);
+	 order_tree(conc_tree->get_head());
 
 	 instrace_file.clear();
 	 instrace_file.seekg(0, instrace_file.beg);
 
-	 return conc_tree->get_head();
+	 return conc_tree;
 
  }
 
-
- void create_trees_for_all(mem_regions_t * region, ifstream &instrace_file, vector<uint32_t> start_points, vector<disasm_t *> disasm){
+ vector< pair<uint32_t, Expression_tree * > > create_trees_for_all(mem_regions_t * region, ifstream &instrace_file, vector<uint32_t> start_points,
+	 int32_t end_trace, vector<disasm_t *> disasm){
 
 	 uint64_t start = region->start;
 	 uint64_t end = region->end;
 
-	 vector< pair<uint32_t,Node * > > tree;
+	 vector< pair<uint32_t, Expression_tree * > > trees;
 
 	 uint32_t count = 0;
 	 for (uint64_t i = start; i < end; i++){
-
-		 Node * node = create_tree_for_dest(i, region->bytes_per_pixel, instrace_file, start_points, disasm);
-
-		 if (node != NULL){
-			 tree.push_back(make_pair(count++,node));
+		 DEBUG_PRINT(("tree no - %d\n", count), 2);
+		 Expression_tree * tree = create_tree_for_dest(i, region->bytes_per_pixel, instrace_file, start_points, FILE_BEGINNING, end_trace, disasm);
+		 print_node_tree(tree->get_head(), cout);
+		 cout << endl;
+		 if (tree != NULL){
+			 trees.push_back(make_pair(count++, tree));
 		 }
 	 }
+
+	 return trees;
  }
 
  vector< vector< pair<uint32_t, Node *> > > categorize_trees(vector<pair < uint32_t, Node *> > trees){
@@ -572,6 +599,183 @@
 	 return categorized_trees;
 
  }
+
+ vector<uint64_t> get_nbd_of_random_points(vector<mem_regions_t *> image_regions,uint32_t seed, uint32_t * stride){
+
+	 /*ok we need find a set of random locations */
+	 mem_regions_t * random_mem_region = get_random_output_region(image_regions);
+	 uint64_t mem_location = get_random_mem_location(random_mem_region, seed);
+	 DEBUG_PRINT(("random mem location we got - %llx\n", mem_location), 1);
+	 *stride = random_mem_region->bytes_per_pixel;
+
+	 vector<uint64_t> nbd_locations;
+	 vector<int> base = get_mem_position(random_mem_region, mem_location);
+	 nbd_locations.push_back(mem_location);
+
+	 cout << "base : " << endl;
+	 for (int j = 0; j < base.size(); j++){
+		 cout << base[j] << ",";
+	 }
+	 cout << endl;
+
+	 //get a nbd of locations - diagonally choose pixels
+	 int boundary = (int)ceil((double)(random_mem_region->dimensions + 2) / 2.0);
+	 DEBUG_PRINT(("boundary : %d\n", boundary), 1);
+	 int count = 0;
+	 for (int i = -boundary; i <= boundary; i++){
+
+		 if (i == 0) continue;
+		 vector<int> offset;
+		 uint affected = count % random_mem_region->dimensions;
+		 for (int j = 0; j < base.size(); j++){
+			 if (j == affected) offset.push_back(i);
+			 else offset.push_back(0);
+		 }
+
+		 cout << "offset" << endl;
+		 for (int j = 0; j < offset.size(); j++){
+			 cout << offset[j] << ",";
+		 }
+		 cout << endl;
+
+		 bool success;
+		 mem_location = get_mem_location(base, offset, random_mem_region, &success);
+		 cout << hex << "dest - " << mem_location << dec << endl;
+		 ASSERT_MSG(success, ("ERROR: memory location out of bounds\n"));
+
+		 nbd_locations.push_back(mem_location);
+		 count++;
+	 }
+
+	 return nbd_locations;
+
+
+ }
+
+ vector<Node *> get_similar_trees(vector<mem_regions_t *> image_regions, uint32_t seed, uint32_t * stride, ifstream &instrace_file,
+	 vector<uint32_t> start_points, int32_t end_trace, vector<disasm_t *> disasm){
+
+	 vector<Node *> nodes;
+
+	 /*ok we need find a set of random locations */
+	 mem_regions_t * random_mem_region = get_random_output_region(image_regions);
+	 uint64_t mem_location = get_random_mem_location(random_mem_region,seed);
+	 DEBUG_PRINT(("random mem location we got - %llx\n", mem_location), 1);
+	 *stride = random_mem_region->bytes_per_pixel;
+
+	 vector<uint64_t> nbd_locations;
+	 vector<int> base = get_mem_position(random_mem_region, mem_location);
+	 nbd_locations.push_back(mem_location);
+
+	 cout << "base : " << endl;
+	 for (int j = 0; j < base.size(); j++){
+		 cout << base[j] << ",";
+	 }
+	 cout << endl;
+
+	 /* build the expression tree for this node */
+	 Expression_tree * main_tree = create_tree_for_dest(mem_location, random_mem_region->bytes_per_pixel, 
+		 instrace_file, start_points, FILE_BEGINNING, end_trace, disasm);
+	 nodes.push_back(main_tree->get_head());
+
+	 uint32_t nodes_needed = random_mem_region->dimensions + 2;
+	 int32_t sign = 1;
+	 int i = 0;
+
+	 vector<uint32_t> dims;
+	 for (int i = 0; i < random_mem_region->dimensions; i++){
+		 dims.push_back(0);
+	 }
+
+	 while(true) {
+		 
+		 vector<int> offset;
+		 uint32_t affected_dim = i % random_mem_region->dimensions;
+		 i++;
+
+		 if (nodes.size() >= nodes_needed) break;
+
+		 bool cont = false;
+		 for (int j = 0; j < affected_dim; j++){
+			 if (dims[j] < dims[affected_dim]){
+				 cont = true;
+				 break;
+			 }
+		 }
+
+		 for (int j = 0; j < dims.size(); j++){
+			 cout << dims[j] << ",";
+		 }
+		 cout << endl;
+
+		 if (cont){
+			 continue;
+		 }
+
+
+		 uint32_t next_value = 0;
+
+		 while (true){
+			 vector<int32_t> offset;
+			 for (int j = 0; j < base.size(); j++){
+				 if (j == affected_dim) { offset.push_back(sign); }
+				 else { offset.push_back(next_value++); }
+			 }
+
+			 cout << "searching for tree: " << nodes.size() + 1 << endl;
+			 for (int j = 0; j < base.size(); j++){
+				 cout << dec << (base[j] + offset[j]) << ",";
+			 }
+			 cout << endl;
+
+			 bool success;
+			 mem_location = get_mem_location(base, offset, random_mem_region, &success);
+
+			 if (success){
+				 Expression_tree * created_tree = create_tree_for_dest(mem_location, random_mem_region->bytes_per_pixel, instrace_file,
+					 start_points, FILE_BEGINNING, end_trace, disasm);
+				 order_tree(created_tree->get_head());
+
+				 print_node_tree(created_tree->get_head(), cout);
+				 cout << endl;
+				 print_node_tree(main_tree->get_head(), cout);
+				 cout << endl;
+
+				 if (are_conc_trees_similar(main_tree->get_head(), created_tree->get_head())){
+					 nodes.push_back(created_tree->get_head());
+					 dims[affected_dim]++;
+					 sign = -1 * sign * (int)ceil((i + 1) / (double)random_mem_region->dimensions);
+					 cout << ceil((i + 1) / (double)random_mem_region->dimensions) << endl;
+					 cout << sign << endl;
+					 cout << i << endl;
+					 break;
+				 }
+				 else{
+					 delete created_tree;
+				 }
+			 }
+			 else{
+				 sign = -1 * sign * (int)ceil((i + 1) / (double)random_mem_region->dimensions);
+				 cout << sign << endl;
+				 break;
+			 }
+
+		 }
+
+		 
+	 }
+
+	 return nodes;
+
+
+ }
+
+
+
+
+
+
+
 
 
  

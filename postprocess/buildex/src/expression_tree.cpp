@@ -24,9 +24,26 @@ Expression_tree::Expression_tree(){
 
 }
 
+void collect_all_nodes(Node * node, vector<Node *> &nodes){
+
+	if (find(nodes.begin(), nodes.end(), node) == nodes.end()){
+		nodes.push_back(node);
+	}
+
+	for (int i = 0; i < node->srcs.size(); i++){
+		collect_all_nodes(node->srcs[i], nodes);
+	}
+
+}
+
 Expression_tree::~Expression_tree(){
 	//need to destroy all the objects and dynamic arrays created
-	
+	vector<Node *> nodes;
+	collect_all_nodes(head, nodes);
+	for (int i = 0; i < nodes.size(); i++){
+		delete nodes[i];
+	}
+	delete[] frontier;
 
 }
 
@@ -348,6 +365,12 @@ void Expression_tree::update_frontier(rinstr_t * instr){
 		return;  //this instruction does not affect the slice
 	}
 	else{
+
+		/*if (dst != head && dst->symbol->type == MEM_HEAP_TYPE){
+			DEBUG_PRINT(("stopping at a heap location (intermediate node)"), 5);
+			return;
+		}*/
+
 		DEBUG_PRINT(("dst - %s : affecting the frontier\n", opnd_to_string(dst->symbol).c_str()), 4);
 		if (debug_level >= 6){
 			DEBUG_PRINT(("current expression:\n"), 5);
@@ -404,6 +427,9 @@ void Expression_tree::update_frontier(rinstr_t * instr){
 			
 			for (int i = 0; i < num_references; i++){
 
+				//cout << dst << endl;
+				//cout << dst->prev[i] << " " << dst->pos[i] << " " << dst->prev[i]->srcs[dst->pos[i]] << endl;
+
 				src->prev.push_back(dst->prev[i]);
 				src->pos.push_back(dst->pos[i]);
 				dst->prev[i]->srcs[dst->pos[i]] = src;
@@ -446,13 +472,10 @@ void Expression_tree::update_frontier(rinstr_t * instr){
 	}
 
 	if (!assign_opt){
-		/*simplify_identity_add(dst);
+		simplify_identity_add(dst);
 		simplify_identity_mul(dst);
-		canonicalize_node(dst);*/
-
+		canonicalize_node(dst);
 	}
-
-	
 
 }
 

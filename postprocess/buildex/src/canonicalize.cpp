@@ -293,6 +293,7 @@ rinstr_t * cinstr_to_rinstrs (cinstr_t * cinstr, int &amount){
 	case OP_mov_ld:
 	case OP_mov_imm:
 	case OP_movzx:
+	case OP_movsx:
 	case OP_movdqa:
 
 	case OP_fstp:
@@ -507,6 +508,12 @@ rinstr_t * cinstr_to_rinstrs (cinstr_t * cinstr, int &amount){
 		//[base, index, scale, disp]
 		if_bounds(1, 4){
 
+			if (cinstr->srcs[0].value == 0 && cinstr->srcs[0].type == REG_TYPE){
+				cinstr->srcs[0].type = IMM_INT_TYPE;
+				cinstr->srcs[0].width = 4;
+				cinstr->srcs[0].value = 0;
+			}
+
 			if (cinstr->srcs[2].value == 0){
 				rinstr = new rinstr_t[1];
 				amount = 1;
@@ -532,6 +539,9 @@ rinstr_t * cinstr_to_rinstrs (cinstr_t * cinstr, int &amount){
 		}
 		else_bounds;
 
+	case OP_sbb:
+		DEBUG_PRINT(("warning - op_sbb not handled properly\n"), 1);
+		break;
 
 	case OP_jmp:
 	case OP_jmp_short:

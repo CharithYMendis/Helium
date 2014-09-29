@@ -86,6 +86,7 @@ void build_tree(uint64 destination, int start_trace, int end_trace, ifstream &fi
 	//do the rest of expression tree building
 	while (!file.eof()){
 		instr = get_next_from_ascii_file(file);
+		rinstr = NULL;
 		//print_cinstr(instr);
 		curpos++;
 		DEBUG_PRINT(("->line - %d\n", curpos), 3);
@@ -109,6 +110,9 @@ void build_tree(uint64 destination, int start_trace, int end_trace, ifstream &fi
 		if ( (end_trace != FILE_ENDING) && (curpos == end_trace)){
 			break;
 		}
+
+		delete instr;
+		delete[] rinstr;
 
 	}
 
