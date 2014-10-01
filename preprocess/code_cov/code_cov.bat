@@ -14,6 +14,8 @@ if "%1"=="m64" (
 %DREXPORT%\bin64\drrun.exe -root %DREXPORT% -t drcov -dump_text -logdir %LOGDIR% -- %PHOTOSHOP64%
 )
 
-if "%1" NEQ "m32" (
-%DREXPORT%\bin64\drrun.exe -root %DREXPORT% -t drcov -dump_text -logdir %LOGDIR% -- %1%
+if "%1"=="gimp" (
+%DREXPORT%\bin32\drrun.exe -root %DREXPORT% -t drcov -dump_text -logdir %LOGDIR% -- %GIMP%
 )
+
+
