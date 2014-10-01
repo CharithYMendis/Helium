@@ -23,6 +23,7 @@ set PHOTOSHOP="C:\Program Files\Adobe\Adobe Photoshop CS6 (64 Bit)\Photoshop.exe
 set HALIDE_TEST=%EXALGO_TEST_FOLDER%\halide_tests\bin64\%4.exe
 set ASM_TEST=%EXALGO_TEST_FOLDER%\asm_tests\bin64\%4.exe
 set C_TEST=%EXALGO_TEST_FOLDER%\c_tests\bin64\%4.exe
+set GIMP="C:\Program Files\GIMP 2\bin\gimp-2.8.exe"
 )
 
 if "%1"=="m32" (
@@ -33,6 +34,7 @@ set PHOTOSHOP="C:\Program Files (x86)\Adobe\Adobe Photoshop CS6\Photoshop.exe"
 set HALIDE_TEST=%EXALGO_TEST_FOLDER%\halide_tests\bin32\%4.exe
 set ASM_TEST=%EXALGO_TEST_FOLDER%\asm_tests\bin32\%4.exe
 set C_TEST=%EXALGO_TEST_FOLDER%\c_tests\bin32\%4.exe
+set GIMP="C:\Program Files\GIMP 2\bin\gimp-2.8.exe"
 )
 
 set INPUT_IMAGE=%EXALGO_IMAGE_FOLDER%\%IN_IMAGE%
@@ -51,6 +53,9 @@ if "%2" == "ctest" (
 )
 if "%2" == "asm" (
 	set EXEC=%ASM_TEST%
+)
+if "%2" == "gimp" (
+	set EXEC=%GIMP%
 )
  
  ::-msgbox_mask 0xf
