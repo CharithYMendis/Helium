@@ -36,8 +36,6 @@ if ("${CMAKE_GENERATOR}" MATCHES "Visual Studio")
   endforeach ()
 endif ()
 
-find_library(GDIPLUS gdiplus)
-
 include_directories("include")
 add_executable(code_diff
 
@@ -45,4 +43,4 @@ src/diff.cpp
 
 )
 
-target_link_libraries(code_diff ${GDIPLUS})
+target_link_libraries(code_diff gdiplus)
