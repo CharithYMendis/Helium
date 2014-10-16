@@ -37,9 +37,11 @@ if ("${CMAKE_GENERATOR}" MATCHES "Visual Studio")
 endif ()
 
 include_directories("include")
+include_directories("../../common/include")
 add_executable(code_diff
 
 src/diff.cpp
+../../common/src/utilities.cpp
 
 )
 

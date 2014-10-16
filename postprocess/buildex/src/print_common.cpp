@@ -113,6 +113,7 @@ string abs_node_to_string(Abs_node* node){
 
 }
 
+
 /* print an expression tree to an expression */
 void print_tree(Node * node, std::ostream &file){
 
@@ -180,6 +181,10 @@ void print_node_tree(Node * head, std::ostream &file){
 	print_tree(head, file);
 
 }
+
+
+
+/* these are printing expressions to be simplified */
 
 
 

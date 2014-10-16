@@ -3,6 +3,7 @@
  
 #include  "..\..\..\dr_clients\include\output.h"
 #include <vector>
+#include <stdint.h>
 
 #define NODE_RIGHT	1
 #define NODE_LEFT	2
@@ -29,6 +30,10 @@ using namespace std;
 
 		/*forward references also srcs of the destination */
 		vector<Node *> srcs;
+
+		/*variables for debugging*/
+		uint32_t pc;
+		uint32_t line;
 
 		/*auxiliary variables*/
 		int order_num;

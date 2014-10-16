@@ -12,8 +12,7 @@ extern "C" {
 
 Image<uint8_t> blur_halide(Image<uint8_t> in) {
 
-    Image<uint8_t> out(in.width()-8, in.height()-2);
-	out.set_min(1, 1, 0, 0);
+    Image<uint8_t> out(in.width()-2, in.height()-2);
 
     // Call it once to initialize the halide runtime stuff
     halide_blur_gen(in, out);

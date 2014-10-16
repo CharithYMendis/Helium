@@ -1335,6 +1335,15 @@ enum {
 	DR_REG_ST6, /**< The "st6" register. */
 	DR_REG_ST7, /**< The "st7" register. */
 
+	DR_REG_ST8,
+	DR_REG_ST9,
+	DR_REG_ST10,
+	DR_REG_ST11,
+	DR_REG_ST12,
+	DR_REG_ST13,
+	DR_REG_ST14,
+	DR_REG_ST15,
+
 	/* segments (order from "Sreg" description in Intel manual) */
 	DR_SEG_ES, /**< The "es" register. */
 	DR_SEG_CS, /**< The "cs" register. */
@@ -1412,6 +1421,8 @@ enum {
 	/*virtual registers for split and joins*/
 	DR_REG_VIRTUAL_1, /*"virtual1"*/
 	DR_REG_VIRTUAL_2, /*"virtual2"*/
+
+
 
     
 };

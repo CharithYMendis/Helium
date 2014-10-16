@@ -24,6 +24,7 @@ uint number_tree_internal(Node * node){
 	if (node->order_num == -1){
 		node->order_num = num;
 		num++;
+		cout << num << endl;
 	}
 
 	for (int i = 0; i < node->srcs.size(); i++){
@@ -43,7 +44,7 @@ uint number_tree_nodes(Node * node){
 
 string get_node_string(Node *node){
 
-	return to_string(node->order_num) + " [label=\"" + operation_to_string(node->operation) + "\\n" + opnd_to_string(node->symbol) + "\"];";
+	return to_string(node->order_num) + " [label=\"" + operation_to_string(node->operation) + "\\n" + opnd_to_string(node->symbol) + "\n" + to_string(node->pc) + " " + to_string(node->line) + "\"];";
 
 }
 

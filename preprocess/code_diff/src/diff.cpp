@@ -8,12 +8,18 @@
 #include <vector>
 #include <set>
 
+#include "utilities.h"
+#include "common_defines.h"
+
 //dynamically generated code not handled
 
 using namespace std;
 
 typedef unsigned long long uint64;
 typedef unsigned int uint32;
+
+bool debug;
+unsigned int debug_level;
 
 struct modules_t {
   string name;
@@ -85,7 +91,7 @@ void checkDuplicates(returnParse_t* first){
 }
 
 
-void searchAndReport(returnParse_t* first, returnParse_t* second, returnParse_t* report){
+void searchAndReport(returnParse_t* first, returnParse_t* second, returnParse_t* report, string exec){
   
   uint64 matched = 0;
   uint64 notMatched = 0;
@@ -110,15 +116,10 @@ void searchAndReport(returnParse_t* first, returnParse_t* second, returnParse_t*
     string firstName = first->module[i].name;
     int secondIndex = -1;
     
-    //if it is not a photoshop module
-    if(firstName.find("Photo") == string::npos){
+	//filter out modules that are not part of the exec
+    if(firstName.find(exec) == string::npos){
       continue;
     }
-	
-	//remove unknowns
-	if(firstName.find("C:") == string::npos){
-		continue;
-	}
 
 
     for(int j=0;j<second->noOfModules;j++){
@@ -323,25 +324,52 @@ void printToFile(ofstream &out, returnParse_t* data){
 
 }
 
+void print_usage(){
+	printf("\t-first the first code coverage file\n ");
+	printf("\t-second the second code coverage file\n ");
+	printf("\t-output output file which the diff is written to\n ");
+	printf("\t-exec the executable which the \n ");
+}
+
+
 int main(int argc, char ** argv){
 
-  if(argc != 4) { 
-    cout << "not enough arguments" << endl;
-    return 1; 
-  }
+	string first_filename;
+	string second_filename;
+	string output_filename;
+	string exec;
 
+	vector<cmd_args_t *> args = get_command_line_args(argc, argv);
+
+	if (args.size() == 0){
+		print_usage();
+		exit(0);
+	}
+
+	for (int i = 0; i < args.size(); i++){
+		cout << args[i]->name << " " << args[i]->value << endl;
+		if (args[i]->name.compare("-first") == 0){
+			first_filename = args[i]->value;
+		}
+		else if (args[i]->name.compare("-second") == 0){
+			second_filename = args[i]->value;
+		}
+		else if (args[i]->name.compare("-output") == 0){
+			output_filename = args[i]->value;
+		}
+		else if (args[i]->name.compare("-exec") == 0){
+			exec = args[i]->value;
+		}
+		else{
+			ASSERT_MSG(false, ("ERROR: unknown option\n"));
+		}
+	}
 
   //first should be the one having more bbs - (first - second)
-
-  //pass the two files
-  string first(argv[1], find(argv[1], argv[1] + 400, '\0'));
-  string second(argv[2], find(argv[2], argv[2] + 400, '\0'));
-  string outname(argv[3], find(argv[3], argv[3] + 400, '\0'));
-  
   ifstream first_file, second_file;
   
-  first_file.open(first.c_str());
-  second_file.open(second.c_str());
+  first_file.open(first_filename.c_str());
+  second_file.open(second_filename.c_str());
   
   returnParse_t* first_data = parseFiles(first_file);
   returnParse_t* second_data = parseFiles(second_file);
@@ -361,18 +389,17 @@ int main(int argc, char ** argv){
   //search and if there is a difference, then dump it
   
   ofstream outFile;
-  outFile.open(outname.c_str());
+  outFile.open(output_filename.c_str());
   
   
   returnParse_t* dataReported = new returnParse_t;
   dataReported->module = new modules_t[first_data->noOfModules];
 
-  searchAndReport(first_data,second_data,dataReported);
+  searchAndReport(first_data,second_data,dataReported,exec);
   
   printToFile(outFile,dataReported);
 
   outFile.close();
-
   first_file.close();
   second_file.close();
 

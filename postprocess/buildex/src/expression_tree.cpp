@@ -302,7 +302,7 @@ void add_dependancy(Node * dst, Node * src,uint operation){
 }
 
 
-void Expression_tree::update_frontier(rinstr_t * instr){
+bool Expression_tree::update_frontier(rinstr_t * instr, uint32_t pc, uint32_t line){
 
 	
 	//TODO: have precomputed nodes for immediate integers -> can we do it for floats as well? -> just need to point to them in future (space optimization)
@@ -356,13 +356,15 @@ void Expression_tree::update_frontier(rinstr_t * instr){
 		for (int i = 0; i < full_overlap_nodes.size(); i++){
 			DEBUG_PRINT(("full overlap - %s\n", opnd_to_string(full_overlap_nodes[i]->symbol).c_str()), 4);
 			add_dependancy(full_overlap_nodes[i], dst, op_full_overlap);
+			full_overlap_nodes[i]->pc = pc;
+			full_overlap_nodes[i]->line = line;
 			remove_from_frontier(full_overlap_nodes[i]->symbol);
 		}
 	}
 
 	if(dst == NULL){
 		DEBUG_PRINT(("not affecting the frontier\n"), 4);
-		return;  //this instruction does not affect the slice
+		return false;  //this instruction does not affect the slice
 	}
 	else{
 
@@ -377,6 +379,11 @@ void Expression_tree::update_frontier(rinstr_t * instr){
 			print_node_tree(head, cout);
 			cout << endl;
 		}
+
+		/* we need to update the line and pc information */
+		dst->line = line;
+		dst->pc = pc;
+
 	}
 
 	//update operation
@@ -421,7 +428,7 @@ void Expression_tree::update_frontier(rinstr_t * instr){
 
 		
 		
-		if ( (instr->num_srcs == 1) && (instr->operation == op_assign) ){  //this is just an assign then remove the current node and place the new src node -> compiler didn't optimize for this?
+		/*if ( (instr->num_srcs == 1) && (instr->operation == op_assign) ){  //this is just an assign then remove the current node and place the new src node -> compiler didn't optimize for this?
 			
 			uint num_references = dst->prev.size();
 			
@@ -433,16 +440,18 @@ void Expression_tree::update_frontier(rinstr_t * instr){
 				src->prev.push_back(dst->prev[i]);
 				src->pos.push_back(dst->pos[i]);
 				dst->prev[i]->srcs[dst->pos[i]] = src;
+				src->line = line;
+				src->pc = pc;
 				
-				assign_opt = true;  /* this is here to differentitate between the head and the rest of the nodes */
+				assign_opt = true;  //this is here to differentitate between the head and the rest of the nodes
 			}
 
 			DEBUG_PRINT(("optimizing assign\n"), 4);
 
-			if (assign_opt)  delete dst; /* we have broken all linkages, so just delete it */
+			if (assign_opt)  delete dst;  //we have broken all linkages, so just delete it 
 
 
-		}
+		}*/
 
 		/* update the tree + backward references */
 
@@ -472,10 +481,12 @@ void Expression_tree::update_frontier(rinstr_t * instr){
 	}
 
 	if (!assign_opt){
-		simplify_identity_add(dst);
-		simplify_identity_mul(dst);
+		//simplify_identity_add(dst);
+		//simplify_identity_mul(dst);
 		canonicalize_node(dst);
 	}
+
+	return true;
 
 }
 

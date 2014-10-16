@@ -226,6 +226,8 @@ void simplify_identity_add(Node * node){
 	}
 }
 
+
+
 void simplify_identity_mul(Node * node){
 	if (node->operation == op_mul){
 		if (node->srcs[0]->symbol->value == 1 && node->srcs[0]->symbol->type == IMM_INT_TYPE){

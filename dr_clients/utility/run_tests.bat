@@ -3,7 +3,7 @@
 if "%1"=="help" (
 	echo usage {arch} {exec} {test_name} {debug_on_off} {phase} {filter_file} {filter_mode} {input_image} {output_image}
 	echo 	{arch} m32, m64
-	echo 	{exec} photoshop, halide, ctests, asm
+	echo 	{exec} photoshop, halide, ctests, asm, gimp
 	echo 	{test_name} - should be the executable name that DR is running on {without exe}
 	echo 	{debug_on_off} - 1,0
 	echo 	{phase} - phase of running dr clients "profile memtrace" "profile" "opndtrace" "opcodetrace" "disasmtrace" "instrace" "memdump" "ins_distrace" "funcreplace" "instrace_memdump"
@@ -69,9 +69,19 @@ if "%DR_PHASE%" == "ins_distrace" (
 	call run_client %ARCH% %EXEC% %TEST_NAME% %DEBUG% "funcwrap instrace" %FILTER_FILE% %FILTER_MODE_STRING% ins_distrace
 )
 
+if "%DR_PHASE%" == "funcwrap" (
+	del %EXALGO_OUTPUT_FOLDER%\instrace_%TEST_NAME%.exe_%IN_IMAGE%_instr*
+	call run_client %ARCH% %EXEC% %TEST_NAME% %DEBUG% "funcwrap" %FILTER_FILE% %FILTER_MODE_STRING% instrace
+)
+
 if "%DR_PHASE%" == "instrace" (
 	del %EXALGO_OUTPUT_FOLDER%\instrace_%TEST_NAME%.exe_%IN_IMAGE%_instr*
 	call run_client %ARCH% %EXEC% %TEST_NAME% %DEBUG% "funcwrap instrace" %FILTER_FILE% %FILTER_MODE_STRING% instrace
+)
+
+if "%DR_PHASE%" == "memdump" (
+	del %EXALGO_OUTPUT_FOLDER%\memdump*
+	call run_client %ARCH% %EXEC% %TEST_NAME% %DEBUG% "funcwrap memdump" %FILTER_FILE% %FILTER_MODE_STRING% instrace
 )
 
 

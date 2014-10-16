@@ -12,8 +12,9 @@ using namespace std;
 typedef struct _disasm_t{
 
 	uint32_t module_no;
-	std::vector<uint32_t> app_pc;
-	std::vector<std::string> disasm;
+	std::vector<pair<uint32_t, string> > pc_disasm;
+	//std::vector<uint32_t> app_pc;
+	//std::vector<std::string> disasm;
 
 } disasm_t;
 

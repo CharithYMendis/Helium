@@ -23,6 +23,8 @@ Node::Node(operand_t * symbol){
 	prev.reserve(2); /* mostly it will be one - but let's reserve two*/
 	this->order_num = -1;
 	this->is_para = false;
+	this->line = 0;
+	this->pc = 0;
 }
 
 Node::Node(uint type, uint value, uint width, float float_value){
@@ -43,6 +45,8 @@ Node::Node(uint type, uint value, uint width, float float_value){
 	prev.reserve(2); /* mostly it will be one - but let's reserve two*/
 	this->order_num = -1;
 	this->is_para = false;
+	this->line = 0;
+	this->pc = 0;
 	
 }
 

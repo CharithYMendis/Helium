@@ -16,6 +16,9 @@ void create_mem_layout(std::ifstream &in, vector<mem_info_t *> &mem_info){
 
 	uint32_t count = 0;
 
+	in.clear();
+	in.seekg(0, in.beg);
+
 	DEBUG_PRINT(("create_mem_layout(mem_info)...\n"), 2);
 
 	while (!in.eof()){
@@ -68,6 +71,9 @@ void create_mem_layout(std::ifstream &in, vector<mem_info_t *> &mem_info){
 void create_mem_layout(std::ifstream &in, vector<pc_mem_region_t *> &mem_info){
 
 	uint32_t count = 0;
+
+	in.clear();
+	in.seekg(0, in.beg);
 
 	DEBUG_PRINT(("create_mem_layout(pc_mem_regions)...\n"), 2);
 

@@ -21,6 +21,9 @@ thread_func_t thread_exit;
 
 */
 
+uint is_within_func = false;
+uint thread_id_func = 0;
+
 typedef struct _client_arg_t{
 	char filter_filename[MAX_STRING_LENGTH];
 } client_arg_t;
@@ -159,18 +162,14 @@ bool should_filter_thread(uint thread_id){
 
 static void clean_call(uint pc){
 
-	//DEBUG_PRINT("funcwrap - entered the pre-call clean call\n");
+	DEBUG_PRINT("funcwrap - entered the pre-call clean call\n");
 	
-	dr_mcontext_t mc = { sizeof(mc), DR_MC_ALL };
-	dr_get_mcontext(dr_get_current_drcontext(), &mc);
-	mc.pc = pc;
 	if (dumped == 0){
+		dr_unlink_flush_region(0, ~((ptr_uint_t)0));
 		dumped = 1;
-		dr_flush_region(0, ~((ptr_uint_t)0));
-		dr_redirect_execution(&mc);
 	}
 	
-	//DEBUG_PRINT("funcwrap - entered the pre-call done\n");
+	DEBUG_PRINT("funcwrap - entered the pre-call done\n");
 
 	
 	
@@ -208,10 +207,14 @@ void *user_data)
 				if (offset == md->bbs[i].start_addr){
 					DEBUG_PRINT("bb instrumenting function\n");
 					data->filter_func = true;
-					dr_insert_clean_call(drcontext, bb, instr, clean_call, false, 1, OPND_CREATE_INTPTR(instr_get_app_pc(instr)));
+					//dr_insert_clean_call(drcontext, bb, instr, clean_call, false, 1, OPND_CREATE_INTPTR(instr_get_app_pc(instr)));
 					wrap_thread_id = dr_get_thread_id(drcontext);
-					DEBUG_PRINT("done bb instrumenting function\n");
 
+					is_within_func = true;
+					thread_id_func = dr_get_thread_id(drcontext);
+
+
+					DEBUG_PRINT("done bb instrumenting function\n");
 				}
 			}
 		}
@@ -234,6 +237,9 @@ static void pre_func_cb(void * wrapcxt, OUT void ** user_data){
 	DEBUG_PRINT("funcwrap - pre_func_cb\n");
 	per_thread_t * data = drmgr_get_tls_field(dr_get_current_drcontext(), tls_index);
 	data->filter_func = true;
+
+	is_within_func = true;
+
 	data->nesting++;
 }
 
@@ -245,6 +251,7 @@ static void post_func_cb(void * wrapcxt, void ** user_data){
 	DR_ASSERT(data->nesting >= 0); 
 	if (data->nesting == 0){
 		data->filter_func = false;
+		is_within_func = false;
 	}
 	DEBUG_PRINT("funcwrap - post_func_cb done \n");
 	

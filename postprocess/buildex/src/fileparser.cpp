@@ -14,7 +14,7 @@
 #include "utilities.h"
 #include "print_common.h"
 #include "common_defines.h"
-
+#include <algorithm>
 
 using namespace std;
 
@@ -140,7 +140,7 @@ void walk_instructions(ifstream &file){
 	while (!file.eof()){
 		instr = get_next_from_ascii_file(file);
 		if (instr != NULL){
-			rinstr = cinstr_to_rinstrs(instr, no_rinstrs);
+			rinstr = cinstr_to_rinstrs(instr, no_rinstrs,"");
 			delete[] rinstr;
 		}
 		delete instr;
@@ -291,6 +291,22 @@ string parse_line_disasm(string line, uint32_t * module, uint32_t * app_pc){
 
 }
 
+
+bool compare_disasm(pair<uint32_t, string> first, pair<uint32_t, string> second){
+
+	return first.first < second.first;
+
+}
+
+void print_disasm(vector<disasm_t *> &disasm){
+	for (int i = 0; i < disasm.size(); i++){
+		for (int j = 0; j < disasm[i]->pc_disasm.size(); j++){
+			cout << disasm[i]->module_no << "," << disasm[i]->pc_disasm[j].first << "," << disasm[i]->pc_disasm[j].second << endl;
+		}
+	}
+}
+
+
 vector<disasm_t *> parse_debug_disasm(ifstream &file){
 
 
@@ -328,19 +344,22 @@ vector<disasm_t *> parse_debug_disasm(ifstream &file){
 			}
 
 			found = false;
-			for (int i = 0; i < dissasm->app_pc.size(); i++){
-				if (dissasm->app_pc[i] == app_pc){
+			for (int i = 0; i < dissasm->pc_disasm.size(); i++){
+				if (dissasm->pc_disasm[i].first == app_pc){
 					found = true;
 					break;
 				}
 			}
 
 			if (!found){
-				dissasm->app_pc.push_back(app_pc);
-				dissasm->disasm.push_back(disasm_string);
+				dissasm->pc_disasm.push_back(make_pair(app_pc,disasm_string));
 			}
 		}
 		
+	}
+
+	for (int i = 0; i < disasm.size(); i++){
+		sort(disasm[i]->pc_disasm.begin(), disasm[i]->pc_disasm.end(), compare_disasm);
 	}
 
 	return disasm;
@@ -348,22 +367,17 @@ vector<disasm_t *> parse_debug_disasm(ifstream &file){
 
 }
 
-void print_disasm(vector<disasm_t *> &disasm){
-	for (int i = 0; i < disasm.size(); i++){
-		for (int j = 0; j < disasm[i]->app_pc.size(); j++){
-			cout << disasm[i]->module_no << "," << disasm[i]->app_pc[j] << "," << disasm[i]->disasm[j] << endl;
-		}
-	}
-}
+
+
 
 vector<string> get_disasm_string(vector<disasm_t *> &disasm, uint32_t app_pc){
 
 	vector<string> string_disasm;
 
 	for (int i = 0; i < disasm.size(); i++){
-		for (int j = 0; j < disasm[i]->app_pc.size(); j++){
-			if (disasm[i]->app_pc[j] == app_pc){
-				string_disasm.push_back(disasm[i]->disasm[j]);
+		for (int j = 0; j < disasm[i]->pc_disasm.size(); j++){
+			if (disasm[i]->pc_disasm[j].first == app_pc){
+				string_disasm.push_back(disasm[i]->pc_disasm[j].second);
 			}
 		}
 	}

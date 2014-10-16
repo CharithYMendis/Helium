@@ -33,6 +33,8 @@
 #include "meminfo.h"
 #include "imageinfo.h"
 
+#include "sympy.h"
+
  using namespace std;
 
  bool debug = false;
@@ -307,6 +309,7 @@
 	 vector<disasm_t *> disasm;
 	 if (debug){
 		 disasm = parse_debug_disasm(disasm_file);
+		 print_disasm(disasm);
 	 }
 
 	 /* analyzing mem dumps for input and output image locations */
@@ -316,9 +319,13 @@
 
 	 /* independently create the memory layout from the instrace */
 	 vector<mem_info_t *> mem_info;
+	 vector<pc_mem_region_t *> pc_mem_info;
 	 create_mem_layout(instrace_file, mem_info);
+	 //create_mem_layout(instrace_file, pc_mem_info);
 	 link_mem_regions_greedy(mem_info, 0);
+	 //link_mem_regions(pc_mem_info, 1);
 	 print_mem_layout(log_file, mem_info);
+	 //print_mem_layout(log_file, pc_mem_info);
 
 	 /* merge these two information - instrace mem info + mem dump info */
 	 vector<mem_regions_t *> total_mem_regions;
@@ -441,10 +448,12 @@
 		 //DEBUG_PRINT(("printing out the expression\n"), 2);
 		 //ofstream expression_file(output_folder + file_substr + "_expression_" + to_string(i) + ".txt", ofstream::out);
 		 //print_node_tree(conc_trees[i], expression_file);
+		 //cout << get_simplify_string(conc_trees[i]) << endl;
 		 uint no_nodes = number_tree_nodes(conc_trees[i]);
 		 DEBUG_PRINT(("printing to dot file...\n"), 2);
 		 ofstream conc_file(output_folder + file_substr + "_conctree_" + to_string(i) + ".dot", ofstream::out);
 		 print_to_dotfile(conc_file, conc_trees[i], no_nodes, 0);
+		
 	 }
 
 	 if (mode == TREE_BUILD_STAGE){
@@ -547,7 +556,7 @@
 	 }
 
 	 build_tree(dest, start_trace, end_trace, instrace_file, conc_tree, disasm);
-	 order_tree(conc_tree->get_head());
+	 //order_tree(conc_tree->get_head());
 
 	 instrace_file.clear();
 	 instrace_file.seekg(0, instrace_file.beg);

@@ -14,13 +14,22 @@ using namespace std;
 void cinstr_convert_reg(cinstr_t * instr){
 
 	for (int i = 0; i < instr->num_srcs; i++){
+		if ((instr->srcs[i].type == REG_TYPE) && (instr->srcs[i].value > DR_REG_ST7)) instr->srcs[i].value += 8;
 		reg_to_mem_range(&instr->srcs[i]);
 	}
 
 	for (int i = 0; i < instr->num_dsts; i++){
+		if (instr->dsts[i].type == REG_TYPE && (instr->dsts[i].value > DR_REG_ST7)) instr->dsts[i].value += 8;
 		reg_to_mem_range(&instr->dsts[i]);
 	}
 
+}
+
+
+void print_vector(vector<pair<uint32_t,uint32_t> > lines){
+	for (int i = 0; i < lines.size(); i++){
+		cout << lines[i].first << " - " << lines[i].second << endl;
+ 	}
 }
 
 
@@ -55,15 +64,22 @@ void build_tree(uint64 destination, int start_trace, int end_trace, ifstream &fi
 	ASSERT_MSG((instr != NULL), ("ERROR: you have given a line no beyond this file\n"));
 	cinstr_convert_reg(instr);
 
-	curpos++;
-	rinstr = cinstr_to_rinstrs(instr, no_rinstrs);
-
 	vector<string> string_disasm = get_disasm_string(disasm, instr->pc);
 	if (debug && debug_level >= 4){
 		for (int i = 0; i < string_disasm.size(); i++){
 			cout << string_disasm[i] << endl;
 		}
 	}
+
+	curpos++;
+	if (string_disasm.size()>0){
+		rinstr = cinstr_to_rinstrs(instr, no_rinstrs, string_disasm[0]);
+	}
+	else{
+		rinstr = cinstr_to_rinstrs(instr, no_rinstrs, "");
+	}
+
+	
 
 	if (debug_level >= 4){ print_rinstrs(rinstr, no_rinstrs);}
 	for (int i = no_rinstrs - 1; i >= 0; i--){
@@ -79,9 +95,10 @@ void build_tree(uint64 destination, int start_trace, int end_trace, ifstream &fi
 
 	//do the initial processing
 	for (int i = index; i >= 0; i--){
-		tree->update_frontier(&rinstr[i]);
+		tree->update_frontier(&rinstr[i],instr->pc,curpos);
 	}
 
+	vector<pair<uint32_t,uint32_t> > lines;
 
 	//do the rest of expression tree building
 	while (!file.eof()){
@@ -92,7 +109,6 @@ void build_tree(uint64 destination, int start_trace, int end_trace, ifstream &fi
 		DEBUG_PRINT(("->line - %d\n", curpos), 3);
 		if (instr != NULL){
 			cinstr_convert_reg(instr);
-			rinstr = cinstr_to_rinstrs(instr, no_rinstrs);
 
 			vector<string> string_disasm = get_disasm_string(disasm, instr->pc);
 			if (debug && debug_level >= 4){
@@ -101,9 +117,18 @@ void build_tree(uint64 destination, int start_trace, int end_trace, ifstream &fi
 				}
 			}
 
+			if (string_disasm.size() > 0){
+				rinstr = cinstr_to_rinstrs(instr, no_rinstrs, string_disasm[0]);
+			}
+			else{
+				rinstr = cinstr_to_rinstrs(instr, no_rinstrs, "not captured\n");
+			}
+			
 			if (debug_level >= 4){ print_rinstrs(rinstr, no_rinstrs); }
+			bool updated = false;
 			for (int i = no_rinstrs - 1; i >= 0; i--){
-				tree->update_frontier(&rinstr[i]);
+				updated = tree->update_frontier(&rinstr[i],instr->pc,curpos);
+				if(updated) lines.push_back(make_pair(curpos,instr->pc));
 			}
 		}
 
@@ -117,6 +142,7 @@ void build_tree(uint64 destination, int start_trace, int end_trace, ifstream &fi
 	}
 
 	DEBUG_PRINT(("build_tree(concrete) - done\n"), 2);
+	print_vector(lines);
 
 
 }
