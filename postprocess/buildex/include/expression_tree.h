@@ -39,7 +39,7 @@ class Expression_tree {
 		Expression_tree();
 		~Expression_tree();
 		
-		bool update_frontier(rinstr_t * instr, uint32_t pc, uint32_t line);
+		bool update_frontier(rinstr_t * instr, uint32_t pc, std::string disasm, uint32_t line);
 		Node * get_head();
 		
 

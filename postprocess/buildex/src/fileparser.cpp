@@ -140,7 +140,7 @@ void walk_instructions(ifstream &file){
 	while (!file.eof()){
 		instr = get_next_from_ascii_file(file);
 		if (instr != NULL){
-			rinstr = cinstr_to_rinstrs(instr, no_rinstrs,"");
+			rinstr = cinstr_to_rinstrs(instr, no_rinstrs,"",0);
 			delete[] rinstr;
 		}
 		delete instr;

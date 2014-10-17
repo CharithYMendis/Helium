@@ -6,6 +6,8 @@
 
 #include  "..\..\..\dr_clients\include\output.h"
 #include <string>
+#include <iostream>
+#include <stdint.h>
 
 #define MAX_SIZE_OF_REG 32
 
@@ -54,7 +56,7 @@ enum {
 
  
  //functions
- rinstr_t * cinstr_to_rinstrs (cinstr_t * cinstr, int &amount, std::string disasm);
+ rinstr_t * cinstr_to_rinstrs (cinstr_t * cinstr, int &amount, std::string disasm, uint32_t line);
  void reg_to_mem_range(operand_t * opnd);
  int mem_range_to_reg(operand_t * opnd);
  void print_rinstrs(rinstr_t * rinstr, int amount);

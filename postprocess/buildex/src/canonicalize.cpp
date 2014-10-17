@@ -326,19 +326,19 @@ int mem_range_to_reg(operand_t * opnd){
 /* assuming there are no floating points pushed at the entry of this function */
 int32_t tos = DR_REG_ST8;
 
-void get_floating_point_reg(operand_t  * opnd){
+void get_floating_point_reg(operand_t  * opnd, string disasm, uint32_t line){
 
 	int32_t reg = mem_range_to_reg(opnd);
 	int32_t offset = reg - DR_REG_ST0;
 	int32_t ret = tos - offset;
-	//cout << "ret: " << ret << endl;
+	//cout << line << " floating point reg : " << regname_to_string(ret)  << " " << disasm << endl;
 	//cout << "tos_f: " << tos << endl;
 	ASSERT_MSG((ret <= (int32_t)DR_REG_ST15) && (ret >= (int32_t)DR_REG_ST0), ("ERROR: floating point stack under/overflow"));
 	opnd->value = (uint32_t)ret;
 	reg_to_mem_range(opnd);
 }
 
-void update_tos(uint32_t type, string disasm){
+void update_tos(uint32_t type, string disasm, uint32_t line){
 	
 	if (type == FP_PUSH){
 		ASSERT_MSG(tos >= DR_REG_ST0, ("ERROR: floating point stack overflow\n"));
@@ -349,7 +349,7 @@ void update_tos(uint32_t type, string disasm){
 		tos++;
 	}
 
-	cout << disasm <<  "- tos : " << tos - DR_REG_ST8 << endl;
+	//cout << line << " " << disasm <<  " - tos : " << tos - DR_REG_ST8 << endl;
 	
 
 }
@@ -364,39 +364,64 @@ bool is_floating_point_reg(operand_t * opnd){
 		);
 }
 
-void update_fp_reg(cinstr_t * cinstr, string disasm){
+bool is_floating_point_ins(uint32_t opcode){
+	switch (opcode){
+
+	case OP_fld: //Push m32fp onto the FPU register stack.
+	case OP_fld1: //Push +1.0 onto the FPU register stack
+	case OP_fild: //Push m32int onto the FPU register stack.
+	case OP_fldz: //Push +0.0 onto the FPU register stack.
+	case OP_fst: //Copy ST(0) to m32fp.
+	case OP_fstp:  //Copy ST(0) to m32fp and pop register stack.
+	case OP_fistp:  //Store ST(0) in m32int and pop register stack.
+	case OP_fmul: //Multiply ST(0) by m32fp and store result in ST(0).
+	case OP_fmulp:  //Multiply ST(i) by ST(0), store result in ST(i), and pop the register stack.
+	case OP_fxch:
+	case OP_faddp:  //Add ST(0) to ST(i), store result in ST(i), and pop the register stack
+	case OP_fadd:   //Add m32fp to ST(0) and store result in ST(0).
+	case OP_fsubp:  //Subtract ST(0) from ST(1), store result in ST(1), and pop register stack.
+	case OP_fsub:   //Subtract m32fp from ST(0) and store result in ST(0).
+	case OP_fdivp:  //Divide ST(1) by ST(0), store result in ST(1), and pop the register stack.
+	case OP_fdiv:   //Divide ST(0) by m32fp and store result in ST(0).
+		return true;
+	default:
+		return false;
+	}
+
+}
+
+void update_fp_reg(cinstr_t * cinstr, string disasm, uint32_t line){
 
 	for (int i = 0; i < cinstr->num_dsts; i++){
 		if (is_floating_point_reg(&cinstr->dsts[i])){
-			get_floating_point_reg(&cinstr->dsts[i]);
+			get_floating_point_reg(&cinstr->dsts[i], disasm, line);
 		}
 	}
 	for (int i = 0; i < cinstr->num_srcs; i++){
 		if (is_floating_point_reg(&cinstr->srcs[i])){
-			get_floating_point_reg(&cinstr->srcs[i]);
+			get_floating_point_reg(&cinstr->srcs[i], disasm, line);
 		}
 	}
 
 }
 
-void update_fp_dest(cinstr_t * cinstr){
+void update_fp_dest(cinstr_t * cinstr, string disasm, uint32_t line){
 	for (int i = 0; i < cinstr->num_dsts; i++){
 		if (is_floating_point_reg(&cinstr->dsts[i])){
-			get_floating_point_reg(&cinstr->dsts[i]);
+			get_floating_point_reg(&cinstr->dsts[i], disasm, line);
 		}
 	}
 }
 
-void update_fp_src(cinstr_t * cinstr){
+void update_fp_src(cinstr_t * cinstr, string disasm, uint32_t line){
 	for (int i = 0; i < cinstr->num_srcs; i++){
 		if (is_floating_point_reg(&cinstr->srcs[i])){
-			get_floating_point_reg(&cinstr->srcs[i]);
+			get_floating_point_reg(&cinstr->srcs[i], disasm, line);
 		}
 	}
 }
 
-rinstr_t * cinstr_to_rinstrs (cinstr_t * cinstr, int &amount, string disasm){
-
+rinstr_t * cinstr_to_rinstrs (cinstr_t * cinstr, int &amount, std::string disasm, uint32_t line){
 
 	int operation;
 
@@ -408,6 +433,10 @@ rinstr_t * cinstr_to_rinstrs (cinstr_t * cinstr, int &amount, string disasm){
 
 	bool unhandled = false;
 
+	if (!is_floating_point_ins(cinstr->opcode)){
+		update_fp_reg(cinstr, disasm, line);
+	}
+
 	switch (cinstr->opcode){
 
 		/******************************************integer instructions****************************************************************/
@@ -416,7 +445,6 @@ rinstr_t * cinstr_to_rinstrs (cinstr_t * cinstr, int &amount, string disasm){
 	case OP_push:
 		// [esp - 4] (dst[1]) <- src[0]
 		if_bounds(2, 2){
-			update_fp_reg(cinstr, disasm);
 			rinstr = new rinstr_t[1];
 			amount = 1;
 			rinstr[0] = { op_assign, cinstr->dsts[1], 1, { cinstr->srcs[0] }, false };
@@ -426,7 +454,6 @@ rinstr_t * cinstr_to_rinstrs (cinstr_t * cinstr, int &amount, string disasm){
 	case OP_pop:
 		// dst[0] <- [esp] (src[1])
 		if_bounds(2, 2){
-			update_fp_reg(cinstr, disasm);
 			rinstr = new rinstr_t[1];
 			amount = 1;
 			rinstr[0] = { op_assign, cinstr->dsts[0], 1, { cinstr->srcs[1] }, false };
@@ -446,7 +473,6 @@ rinstr_t * cinstr_to_rinstrs (cinstr_t * cinstr, int &amount, string disasm){
 	case OP_cvttsd2si:
 		// dst[0] <- src[0]
 		if_bounds(1, 1){
-			update_fp_reg(cinstr, disasm);
 			rinstr = new rinstr_t[1];
 			amount = 1;
 			rinstr[0] = { op_assign, cinstr->dsts[0], 1, { cinstr->srcs[0] }, false };
@@ -458,13 +484,11 @@ rinstr_t * cinstr_to_rinstrs (cinstr_t * cinstr, int &amount, string disasm){
 		// 1st flavour -> 1 dst * 2 src
 		//dst[0] <- src[0] * src[1]
 		if_bounds(1, 2){
-			update_fp_reg(cinstr, disasm);
 			rinstr = new rinstr_t[1];
 			amount = 1;
 			rinstr[0] = { op_mul, cinstr->dsts[0], 2, { cinstr->srcs[0], cinstr->srcs[1] }, true };
 		}
 		elseif_bounds(2, 2){
-			update_fp_reg(cinstr, disasm);
 			// edx [dst0] : eax [dst1] <- eax [src1] * [src0] 
 			rinstr = new rinstr_t[3];
 			amount = 3;
@@ -487,7 +511,6 @@ rinstr_t * cinstr_to_rinstrs (cinstr_t * cinstr, int &amount, string disasm){
 	case OP_mul:
 
 		if_bounds(2, 2){
-			update_fp_reg(cinstr, disasm);
 			// edx [dst0] : eax [dst1] <- eax [src1] * [src0] 
 			rinstr = new rinstr_t[3];
 			amount = 3;
@@ -510,7 +533,6 @@ rinstr_t * cinstr_to_rinstrs (cinstr_t * cinstr, int &amount, string disasm){
 	case OP_idiv:
 		//dst - edx / dx , eax / ax , src - src[0], edx / dx , eax / ax
 		if_bounds(2, 3){
-			update_fp_reg(cinstr, disasm);
 			rinstr = new rinstr_t[3];
 			amount = 3;
 			/* create an operand for the virtual register */
@@ -531,7 +553,6 @@ rinstr_t * cinstr_to_rinstrs (cinstr_t * cinstr, int &amount, string disasm){
 	case OP_cdq:
 		// edx <- eax
 		if_bounds(1, 1){
-			update_fp_reg(cinstr, disasm);
 			rinstr = new rinstr_t[1];
 			amount = 1;
 			rinstr[0] = { op_signex, cinstr->dsts[0], 1, { cinstr->srcs[0] }, true };
@@ -543,7 +564,6 @@ rinstr_t * cinstr_to_rinstrs (cinstr_t * cinstr, int &amount, string disasm){
 	case OP_xchg:
 		//exchange the two registers
 		if_bounds(2, 2){
-			update_fp_reg(cinstr, disasm);
 			rinstr = new rinstr_t[3];
 			amount = 3;
 			operand_t virtual_reg = { REG_TYPE, cinstr->srcs[0].width, DR_REG_VIRTUAL_1 };
@@ -567,7 +587,6 @@ rinstr_t * cinstr_to_rinstrs (cinstr_t * cinstr, int &amount, string disasm){
 
 
 		if_bounds(1, 2){
-			update_fp_reg(cinstr, disasm);
 			rinstr = new rinstr_t[1];
 			amount = 1;
 
@@ -602,7 +621,6 @@ rinstr_t * cinstr_to_rinstrs (cinstr_t * cinstr, int &amount, string disasm){
 
 		// dst[0] <- src[1] (op) src[0]
 		if_bounds(1, 2){
-			update_fp_reg(cinstr, disasm);
 			rinstr = new rinstr_t[1];
 			amount = 1;
 			uint32_t operation;
@@ -621,7 +639,6 @@ rinstr_t * cinstr_to_rinstrs (cinstr_t * cinstr, int &amount, string disasm){
 
 	case OP_neg:
 		if_bounds(1, 1){
-			update_fp_reg(cinstr, disasm);
 			rinstr = new rinstr_t[1];
 			amount = 1;
 			rinstr[0] = { op_sub, cinstr->dsts[0], 1, { cinstr->srcs[0] }, false };
@@ -630,7 +647,6 @@ rinstr_t * cinstr_to_rinstrs (cinstr_t * cinstr, int &amount, string disasm){
 
 	case OP_dec:
 		if_bounds(1, 1){
-			update_fp_reg(cinstr, disasm);
 			rinstr = new rinstr_t[1];
 			amount = 1;
 			operand_t immediate = { IMM_INT_TYPE, cinstr->srcs[0].width, 1 };
@@ -640,7 +656,6 @@ rinstr_t * cinstr_to_rinstrs (cinstr_t * cinstr, int &amount, string disasm){
 
 	case OP_inc:
 		if_bounds(1, 1){
-			update_fp_reg(cinstr, disasm);
 			rinstr = new rinstr_t[1];
 			amount = 1;
 			operand_t immediate = { IMM_INT_TYPE, cinstr->srcs[0].width, 1 };
@@ -651,7 +666,6 @@ rinstr_t * cinstr_to_rinstrs (cinstr_t * cinstr, int &amount, string disasm){
 	case OP_sar:
 
 		if_bounds(1, 2){
-			update_fp_reg(cinstr, disasm);
 			rinstr = new rinstr_t[1];
 			amount = 1;
 			rinstr[0] = { op_rsh, cinstr->dsts[0], 2, { cinstr->srcs[1], cinstr->srcs[0] }, true };
@@ -662,7 +676,6 @@ rinstr_t * cinstr_to_rinstrs (cinstr_t * cinstr, int &amount, string disasm){
 	case OP_psrlq:
 
 		if_bounds(1, 2){
-			update_fp_reg(cinstr, disasm);
 			rinstr = new rinstr_t[1];
 			amount = 1;
 			rinstr[0] = { op_rsh, cinstr->dsts[0], 2, { cinstr->srcs[1], cinstr->srcs[0] }, false };
@@ -673,7 +686,6 @@ rinstr_t * cinstr_to_rinstrs (cinstr_t * cinstr, int &amount, string disasm){
 	case OP_psllq:
 
 		if_bounds(1, 2){
-			update_fp_reg(cinstr, disasm);
 			rinstr = new rinstr_t[1];
 			amount = 1;
 			rinstr[0] = { op_lsh, cinstr->dsts[0], 2, { cinstr->srcs[1], cinstr->srcs[0] }, false };
@@ -683,7 +695,6 @@ rinstr_t * cinstr_to_rinstrs (cinstr_t * cinstr, int &amount, string disasm){
 	case OP_not:
 
 		if_bounds(1, 1){
-			update_fp_reg(cinstr, disasm);
 			rinstr = new rinstr_t[1];
 			amount = 1;
 			rinstr[0] = { op_not, cinstr->dsts[0], 1, { cinstr->srcs[0] }, false };
@@ -694,7 +705,6 @@ rinstr_t * cinstr_to_rinstrs (cinstr_t * cinstr, int &amount, string disasm){
 
 		//[base, index, scale, disp]
 		if_bounds(1, 4){
-			update_fp_reg(cinstr, disasm);
 			if (cinstr->srcs[0].value == 0 && cinstr->srcs[0].type == REG_TYPE){
 				cinstr->srcs[0].type = IMM_INT_TYPE;
 				cinstr->srcs[0].width = 4;
@@ -729,7 +739,6 @@ rinstr_t * cinstr_to_rinstrs (cinstr_t * cinstr, int &amount, string disasm){
 	case OP_sbb:
 
 		if_bounds(1, 2){
-			update_fp_reg(cinstr, disasm);
 			bool cf = check_eflag_bit(Carry_Flag, cinstr->eflags);
 			if (cf){
 				rinstr = new rinstr_t[2];
@@ -754,6 +763,8 @@ rinstr_t * cinstr_to_rinstrs (cinstr_t * cinstr, int &amount, string disasm){
 
 		/* floating point instructions */
 
+		
+
 	
 	case OP_fld: //Push m32fp onto the FPU register stack.
 	case OP_fld1: //Push +1.0 onto the FPU register stack
@@ -763,9 +774,9 @@ rinstr_t * cinstr_to_rinstrs (cinstr_t * cinstr, int &amount, string disasm){
 		if_bounds(1, 1){
 			rinstr = new rinstr_t[1];
 			amount = 1;
-			update_fp_dest(cinstr);
-			update_tos(FP_PUSH,disasm);
-			update_fp_src(cinstr);
+			update_fp_dest(cinstr,disasm, line);
+			update_tos(FP_PUSH,disasm,line);
+			update_fp_src(cinstr, disasm, line);
 			rinstr[0] = { op_assign, cinstr->dsts[0] , 1, { cinstr->srcs[0] }, false };
 			
 		}
@@ -776,7 +787,7 @@ rinstr_t * cinstr_to_rinstrs (cinstr_t * cinstr, int &amount, string disasm){
 		if_bounds(1, 1){
 			rinstr = new rinstr_t[1];
 			amount = 1;
-			update_fp_reg(cinstr, disasm);
+			update_fp_reg(cinstr, disasm, line);
 			rinstr[0] = { op_assign, cinstr->dsts[0], 1, { cinstr->srcs[0] }, false }; 
 		}
 		else_bounds;
@@ -786,8 +797,8 @@ rinstr_t * cinstr_to_rinstrs (cinstr_t * cinstr, int &amount, string disasm){
 		if_bounds(1, 1){
 			rinstr = new rinstr_t[1];
 			amount = 1;
-			update_tos(FP_POP, disasm);
-			update_fp_reg(cinstr, disasm);
+			update_tos(FP_POP, disasm, line);
+			update_fp_reg(cinstr, disasm, line);
 			rinstr[0] = { op_assign, cinstr->dsts[0], 1, { cinstr->srcs[0] }, false };
 			
 		}
@@ -799,9 +810,9 @@ rinstr_t * cinstr_to_rinstrs (cinstr_t * cinstr, int &amount, string disasm){
 			rinstr = new rinstr_t[1];
 			amount = 1;
 			if (cinstr->opcode == OP_fmulp){
-				update_tos(FP_POP, disasm);
+				update_tos(FP_POP, disasm, line);
 			}
-			update_fp_reg(cinstr, disasm);
+			update_fp_reg(cinstr, disasm, line);
 			rinstr[0] = { op_mul, cinstr->dsts[0], 2, { cinstr->srcs[0], cinstr->srcs[1] }, true };
 			
 		}
@@ -815,7 +826,7 @@ rinstr_t * cinstr_to_rinstrs (cinstr_t * cinstr, int &amount, string disasm){
 			amount = 3;
 			operand_t virtual_reg = { REG_TYPE, cinstr->srcs[0].width, DR_REG_VIRTUAL_1 };
 			reg_to_mem_range(&virtual_reg);
-			update_fp_reg(cinstr, disasm);
+			update_fp_reg(cinstr, disasm, line);
 			ASSERT_MSG(((cinstr->dsts[0].value == cinstr->srcs[0].value) && (cinstr->dsts[1].value == cinstr->srcs[1].value)), ("op_fxch the dsts and srcs should match\n"));
 			//virtual <- src[0]
 			rinstr[0] = { op_assign, virtual_reg, 1, { cinstr->srcs[0] }, false };
@@ -837,9 +848,9 @@ rinstr_t * cinstr_to_rinstrs (cinstr_t * cinstr, int &amount, string disasm){
 			rinstr = new rinstr_t[1];
 			amount = 1;
 			if ((cinstr->opcode == OP_faddp) || (cinstr->opcode == OP_fsubp) || (cinstr->opcode == OP_fdivp)){
-				update_tos(FP_POP, disasm);
+				update_tos(FP_POP, disasm, line);
 			}
-			update_fp_reg(cinstr, disasm);
+			update_fp_reg(cinstr, disasm, line);
 			uint32_t operation;
 			switch (cinstr->opcode){
 			case OP_faddp:

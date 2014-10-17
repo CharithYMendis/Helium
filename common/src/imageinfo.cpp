@@ -97,6 +97,8 @@ image_t * populate_imageinfo(Gdiplus::Bitmap * image){
 	imageinfo->height = image->GetHeight();
 	imageinfo->image_array = get_image_buffer(image);
 
+	printf("height - %d, width - %d\n", imageinfo->height, imageinfo->width);
+
 	return imageinfo;
 
 }

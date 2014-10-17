@@ -302,7 +302,7 @@ void add_dependancy(Node * dst, Node * src,uint operation){
 }
 
 
-bool Expression_tree::update_frontier(rinstr_t * instr, uint32_t pc, uint32_t line){
+bool Expression_tree::update_frontier(rinstr_t * instr, uint32_t pc, string disasm, uint32_t line){
 
 	
 	//TODO: have precomputed nodes for immediate integers -> can we do it for floats as well? -> just need to point to them in future (space optimization)
@@ -425,10 +425,7 @@ bool Expression_tree::update_frontier(rinstr_t * instr, uint32_t pc, uint32_t li
 
 		DEBUG_PRINT(("src - %s\n", opnd_to_string(src->symbol).c_str()), 4);
 
-
-		
-		
-		/*if ( (instr->num_srcs == 1) && (instr->operation == op_assign) ){  //this is just an assign then remove the current node and place the new src node -> compiler didn't optimize for this?
+		if ( (instr->num_srcs == 1) && (instr->operation == op_assign) ){  //this is just an assign then remove the current node and place the new src node -> compiler didn't optimize for this?
 			
 			uint num_references = dst->prev.size();
 			
@@ -451,7 +448,7 @@ bool Expression_tree::update_frontier(rinstr_t * instr, uint32_t pc, uint32_t li
 			if (assign_opt)  delete dst;  //we have broken all linkages, so just delete it 
 
 
-		}*/
+		}
 
 		/* update the tree + backward references */
 

@@ -1,6 +1,8 @@
 #include "extract_memregions.h"
 #include "memregions.h"
 #include "common_defines.h"
+#include <iostream>
+#include "utilities.h"
 
 using namespace std;
 
@@ -20,8 +22,12 @@ mem_regions_t * locate_image_CN2(char * values, uint32_t size, uint64_t * start,
 
 	bool image_found = false;
 	int i;
+	uint32_t count = 0;
 
 	for (i = 0; i < size; i++){
+
+		print_progress(&count, 100000);
+		
 
 		bool success = true;
 		for (int j = 0; j < image->width; j++){

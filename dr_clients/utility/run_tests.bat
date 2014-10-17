@@ -34,6 +34,14 @@ if "%DR_PHASE%" == "profile_memtrace" (
 	call run_client %ARCH% %EXEC% %TEST_NAME% %DEBUG% "profile memtrace" %FILTER_FILE% %FILTER_MODE_STRING% %INSTRACE_MODE_STRING%	
 )
 
+
+if "%DR_PHASE%" == "memtrace" (
+
+	del %EXALGO_OUTPUT_FOLDER%\memtrace_%TEST_NAME%.exe_%IN_IMAGE%*	
+	call run_client %ARCH% %EXEC% %TEST_NAME% %DEBUG% "funcwrap memtrace" %FILTER_FILE% %FILTER_MODE_STRING% %INSTRACE_MODE_STRING%	
+)
+
+
 if "%DR_PHASE%" == "memdump" (
 
 	call run_client %ARCH% %EXEC% %TEST_NAME% %DEBUG% "memdump" %FILTER_FILE% %FILTER_MODE_STRING%

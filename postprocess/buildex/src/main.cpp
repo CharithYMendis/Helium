@@ -309,7 +309,7 @@
 	 vector<disasm_t *> disasm;
 	 if (debug){
 		 disasm = parse_debug_disasm(disasm_file);
-		 print_disasm(disasm);
+		 //print_disasm(disasm);
 	 }
 
 	 /* analyzing mem dumps for input and output image locations */

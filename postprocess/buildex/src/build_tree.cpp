@@ -7,6 +7,7 @@
 #include "build_tree.h"
 #include "defines.h"
 #include "expression_tree.h"
+#include "canonicalize.h"
 
 using namespace std;
 
@@ -26,9 +27,15 @@ void cinstr_convert_reg(cinstr_t * instr){
 }
 
 
-void print_vector(vector<pair<uint32_t,uint32_t> > lines){
+void print_vector(vector<pair<uint32_t,uint32_t> > lines, vector<disasm_t *> disasm){
 	for (int i = 0; i < lines.size(); i++){
-		cout << lines[i].first << " - " << lines[i].second << endl;
+		vector<string> disasm_string = get_disasm_string(disasm,lines[i].second);
+		
+		cout << lines[i].first << " - " << lines[i].second;
+		if (disasm_string.size()>0){
+			cout << " " << disasm_string[0];
+		}
+		cout << endl;
  	}
 }
 
@@ -73,10 +80,10 @@ void build_tree(uint64 destination, int start_trace, int end_trace, ifstream &fi
 
 	curpos++;
 	if (string_disasm.size()>0){
-		rinstr = cinstr_to_rinstrs(instr, no_rinstrs, string_disasm[0]);
+		rinstr = cinstr_to_rinstrs(instr, no_rinstrs, string_disasm[0], curpos);
 	}
 	else{
-		rinstr = cinstr_to_rinstrs(instr, no_rinstrs, "");
+		rinstr = cinstr_to_rinstrs(instr, no_rinstrs, "not captured\n", curpos);
 	}
 
 	
@@ -95,7 +102,12 @@ void build_tree(uint64 destination, int start_trace, int end_trace, ifstream &fi
 
 	//do the initial processing
 	for (int i = index; i >= 0; i--){
-		tree->update_frontier(&rinstr[i],instr->pc,curpos);
+		if (string_disasm.size() > 0){
+			tree->update_frontier(&rinstr[i], instr->pc, string_disasm[0],curpos);
+		}
+		else{
+			tree->update_frontier(&rinstr[i], instr->pc, "not captured\n", curpos);
+		}
 	}
 
 	vector<pair<uint32_t,uint32_t> > lines;
@@ -118,16 +130,21 @@ void build_tree(uint64 destination, int start_trace, int end_trace, ifstream &fi
 			}
 
 			if (string_disasm.size() > 0){
-				rinstr = cinstr_to_rinstrs(instr, no_rinstrs, string_disasm[0]);
+				rinstr = cinstr_to_rinstrs(instr, no_rinstrs, string_disasm[0], curpos);
 			}
 			else{
-				rinstr = cinstr_to_rinstrs(instr, no_rinstrs, "not captured\n");
+				rinstr = cinstr_to_rinstrs(instr, no_rinstrs, "not captured\n", curpos);
 			}
 			
 			if (debug_level >= 4){ print_rinstrs(rinstr, no_rinstrs); }
 			bool updated = false;
 			for (int i = no_rinstrs - 1; i >= 0; i--){
-				updated = tree->update_frontier(&rinstr[i],instr->pc,curpos);
+				if (string_disasm.size() > 0){
+					updated = tree->update_frontier(&rinstr[i], instr->pc,string_disasm[0], curpos);
+				}
+				else{
+					updated = tree->update_frontier(&rinstr[i], instr->pc, "not captured\n", curpos);
+				}
 				if(updated) lines.push_back(make_pair(curpos,instr->pc));
 			}
 		}
@@ -142,7 +159,7 @@ void build_tree(uint64 destination, int start_trace, int end_trace, ifstream &fi
 	}
 
 	DEBUG_PRINT(("build_tree(concrete) - done\n"), 2);
-	print_vector(lines);
+	print_vector(lines,disasm);
 
 
 }

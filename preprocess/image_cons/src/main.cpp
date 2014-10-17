@@ -119,8 +119,8 @@ void create_row_image(uint32_t width, uint32_t height, const char * name){
 	for (int k = 0; k < 3; k++){
 		for (int j = 0; j < height; j++){
 			for (int i = 0; i < width; i++){
-				uint32_t row = j;
-				buffer[i + (j + k * height) * width] = row % 255;
+				uint32_t row = j + 30;
+				buffer[i + (j + k * height) * width] = (uint8_t)row % 255;
 			}
 		}
 	}
