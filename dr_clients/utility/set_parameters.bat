@@ -41,6 +41,9 @@ if "%1" == "app_pc" (
 if "%1" == "none" (
 	set FILTER_MODE=6
 )
+if "%1" == "nudge" (
+	set FILTER_MODE=7
+)
 
 :: set instrace modes
 :: opndtrace, opcodetrace, disasmtrace, instrace

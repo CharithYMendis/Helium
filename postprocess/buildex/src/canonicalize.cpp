@@ -759,6 +759,33 @@ rinstr_t * cinstr_to_rinstrs (cinstr_t * cinstr, int &amount, std::string disasm
 		}
 		else_bounds;
 
+
+	case OP_setz:
+	case OP_sets:
+	case OP_setns:
+	case OP_setb:
+
+		if_bounds(1, 0){
+			rinstr = new rinstr_t[1];
+			amount = 1;
+			bool flag;
+			switch (cinstr->opcode){
+			case OP_setz: flag = check_eflag_bit(Zero_Flag, cinstr->eflags); break;
+			case OP_sets: flag = check_eflag_bit(Sign_Flag, cinstr->eflags); break;
+			case OP_setns: flag = !check_eflag_bit(Sign_Flag, cinstr->eflags); break;
+			case OP_setb: flag = check_eflag_bit(Carry_Flag, cinstr->eflags); break;
+			}
+			if (flag){
+				operand_t immediate = { IMM_INT_TYPE, cinstr->dsts[0].width, 1 };
+				rinstr[0] = { op_assign, cinstr->dsts[0], 1, { immediate }, true };
+			}
+			else{
+				operand_t immediate = { IMM_INT_TYPE, cinstr->dsts[0].width, 0 };
+				rinstr[0] = { op_assign, cinstr->dsts[0], 1, { immediate }, true };
+			}
+		}
+		else_bounds;
+
 		/***************************************************floating point instructions*********************************************************/
 
 		/* floating point instructions */

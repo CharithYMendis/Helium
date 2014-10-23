@@ -72,7 +72,7 @@ void build_tree(uint64 destination, int start_trace, int end_trace, ifstream &fi
 	cinstr_convert_reg(instr);
 
 	vector<string> string_disasm = get_disasm_string(disasm, instr->pc);
-	if (debug && debug_level >= 4){
+	if (debug && debug_level >= 2){
 		for (int i = 0; i < string_disasm.size(); i++){
 			cout << string_disasm[i] << endl;
 		}
@@ -159,7 +159,7 @@ void build_tree(uint64 destination, int start_trace, int end_trace, ifstream &fi
 	}
 
 	DEBUG_PRINT(("build_tree(concrete) - done\n"), 2);
-	print_vector(lines,disasm);
+	//print_vector(lines,disasm);
 
 
 }

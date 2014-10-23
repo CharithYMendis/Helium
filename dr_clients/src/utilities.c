@@ -120,6 +120,9 @@ bool filter_from_list(module_t * head, instr_t * instr, uint mode){
 	else if (mode == FILTER_FUNCTION){
 		return should_filter_func();
 	}
+	else if (mode == FILTER_NUDGE){
+		return nudge_instrument;
+	}
 
 	return true;
 

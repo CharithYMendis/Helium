@@ -50,6 +50,9 @@
 #define INSTR_BUF_SIZE (sizeof(instr_trace_t) * MAX_NUM_INSTR_TRACES)
 #define OUTPUT_BUF_SIZE (sizeof(output_t) * MAX_NUM_INSTR_TRACES)
 
+#define ALIGN_FORWARD(x, alignment) \
+    ((((ptr_uint_t)x) + ((alignment)-1)) & (~((alignment)-1)))
+
 /*************************** typedefs ******************************/
 /*instrace main structure*/
 typedef struct _instr_trace_t {
@@ -88,7 +91,6 @@ typedef struct {
 	/* thread stack limits */
 	uint stack_base;
 	uint deallocation_stack;
-	uint thread_id;
 
 
 } per_thread_t;
@@ -102,7 +104,6 @@ typedef struct _client_arg_t {
 	uint static_info_size;
 	uint instrace_mode;
 	char extra_info[MAX_STRING_LENGTH];
-
 
 } client_arg_t;
 
@@ -264,11 +265,11 @@ void instrace_thread_init(void *drcontext)
     data = dr_thread_alloc(drcontext, sizeof(per_thread_t));
     drmgr_set_tls_field(drcontext, tls_index, data);
     data->buf_base = dr_thread_alloc(drcontext, INSTR_BUF_SIZE);
+	memset(data->buf_base, 0, INSTR_BUF_SIZE);
     data->buf_ptr  = data->buf_base;
     /* set buf_end to be negative of address of buffer end for the lea later */
 	data->buf_end  = -(ptr_int_t)(data->buf_base + INSTR_BUF_SIZE);
     data->num_refs = 0;
-	data->thread_id = dr_get_thread_id(drcontext);
 
     /* We're going to dump our data to a per-thread file.
      * On Windows we need an absolute path so we place it in
@@ -406,18 +407,26 @@ instrace_bb_instrumentation(void *drcontext, void *tag, instrlist_t *bb,
       3. send the data appropriately to instrumentation function
 	*/
 	instr_t * instr_info;
-
+	module_data_t * md;
+	uint offset = 0;
+	per_thread_t * data;
+	
 
 	/* these are for the use of the caller - instrlist_first(bb) */
-	//if(filter_from_list(head,instr,client_arg->filter_mode) && should_filter_thread(dr_get_thread_id(drcontext))){
+	if(filter_from_list(head,instr,client_arg->filter_mode) && should_filter_thread(dr_get_thread_id(drcontext))){
 			//dr_printf("entering static instrumentation\n");
+			md = dr_lookup_module(instr_get_app_pc(instr));
+			offset = instr_get_app_pc(instr) - md->start;
+			data = drmgr_get_tls_field(drcontext, tls_index);
+			dr_free_module_data(md);
 			instr_info = static_info_instrumentation(drcontext, instr);
-			if(instr_info != NULL){ /* we may filter out the branch instructions */
-				/* can only be entered in the DISASSEMBLY_TRACE or INS_TRACE*/
+			if(instr_info != NULL){ 
+				//can only be entered in the DISASSEMBLY_TRACE or INS_TRACE
 				DR_ASSERT(client_arg->instrace_mode == INS_TRACE || client_arg->instrace_mode == DISASSEMBLY_TRACE);
 				dynamic_info_instrumentation(drcontext, bb, instr, instr_info);
 			}
-	//}
+			//instrlist_disassemble(drcontext, tag, bb, logfile);
+	}
 
 
 	return DR_EMIT_DEFAULT;
@@ -513,9 +522,6 @@ static void dynamic_info_instrumentation(void *drcontext, instrlist_t *ilist, in
     uint pc;
 	uint i;
 
-	instr_t * label_func;
-	instr_t * label_thread;
-
 	module_data_t * module_data;
 
 	if (client_arg->instrace_mode == DISASSEMBLY_TRACE){
@@ -524,72 +530,19 @@ static void dynamic_info_instrumentation(void *drcontext, instrlist_t *ilist, in
 	}
 
     data = drmgr_get_tls_field(drcontext, tls_index);
-	label_func = INSTR_CREATE_label(drcontext);
-	label_thread = INSTR_CREATE_label(drcontext);
-
-
-	/* just print out the before ilist */
-	//instrlist_disassemble(drcontext, instr_get_app_pc(instrlist_first(ilist)), ilist, logfile);
 
     /* Steal the register for memory reference address *
      * We can optimize away the unnecessary register save and restore
      * by analyzing the code and finding the register is dead.
      */
 
-	/* pre check code */
-
-	/*
-	reg1 = EBX
-	reg2 = ECX
-	reg3 = EAX
-	*/
-
-	
+    dr_save_reg(drcontext, ilist, where, reg1, SPILL_SLOT_2);
+    dr_save_reg(drcontext, ilist, where, reg2, SPILL_SLOT_3);
 	dr_save_reg(drcontext, ilist, where, reg3, SPILL_SLOT_4);
+	/* arithmetic flags are saved here for buf_ptr->eflags filling */
 	dr_save_arith_flags_to_xax(drcontext, ilist, where);
 
-	//cmp [is_within_func],0
-	opnd1 = OPND_CREATE_ABSMEM(&is_within_func, OPSZ_4);
-	opnd2 = OPND_CREATE_INTPTR(0);
-	instr = INSTR_CREATE_cmp(drcontext, opnd1, opnd2);
-	instrlist_meta_preinsert(ilist, where, instr);
-
-	//je label_func
-	opnd1 = opnd_create_instr(label_func);
-	instr = INSTR_CREATE_jcc(drcontext, OP_je, opnd1);
-	instrlist_meta_preinsert(ilist, where, instr);
-
-	dr_save_reg(drcontext, ilist, where, reg1, SPILL_SLOT_2);
-	dr_save_reg(drcontext, ilist, where, reg2, SPILL_SLOT_3);
 	
-	drmgr_insert_read_tls_field(drcontext, tls_index, ilist, where, reg2);
-
-	/* Load data->thread_id into reg2 */
-	opnd1 = opnd_create_reg(reg2);
-	opnd2 = OPND_CREATE_MEMPTR(reg2, offsetof(per_thread_t, thread_id));
-	instr = INSTR_CREATE_mov_ld(drcontext, opnd1, opnd2);
-	instrlist_meta_preinsert(ilist, where, instr);
-
-	//mov ebx, [thread_id_func]
-	opnd1 = opnd_create_reg(reg1);
-	opnd2 = OPND_CREATE_ABSMEM(&thread_id_func, OPSZ_4);
-	instr = INSTR_CREATE_mov_ld(drcontext, opnd1, opnd2);
-	instrlist_meta_preinsert(ilist, where, instr);
-
-	//cmp ebx,ecx
-	opnd1 = opnd_create_reg(reg2);
-	opnd2 = opnd_create_reg(reg1);
-	instr = INSTR_CREATE_cmp(drcontext, opnd1, opnd2);
-	instrlist_meta_preinsert(ilist,where,instr);
-
-	//jne label_thread
-	opnd1 = opnd_create_instr(label_thread);
-	instr = INSTR_CREATE_jcc(drcontext, OP_jne, opnd1);
-	instrlist_meta_preinsert(ilist,where,instr); 
-
-	/* end of precheck code */
-
-
 	drmgr_insert_read_tls_field(drcontext, tls_index, ilist, where, reg2);
 
     /* Load data->buf_ptr into reg2 */
@@ -681,9 +634,6 @@ static void dynamic_info_instrumentation(void *drcontext, instrlist_t *ilist, in
     instr = INSTR_CREATE_mov_ld(drcontext, opnd1, opnd2);
     instrlist_meta_preinsert(ilist, where, instr);
 
-	/* arithmetic flags are saved here for buf_ptr->eflags filling */
-	//dr_save_arith_flags_to_xax(drcontext, ilist, where);
-
 	/* load the eflags */
 	opnd1 = OPND_CREATE_MEMPTR(reg2, offsetof(instr_trace_t, eflags));
 	opnd2 = opnd_create_reg(reg3);
@@ -717,7 +667,7 @@ static void dynamic_info_instrumentation(void *drcontext, instrlist_t *ilist, in
     instr = INSTR_CREATE_lea(drcontext, opnd1, opnd2);
     instrlist_meta_preinsert(ilist, where, instr);
 
-    /* Update the data->buf_ptr */
+    ///* Update the data->buf_ptr */
     drmgr_insert_read_tls_field(drcontext, tls_index, ilist, where, reg1);
     opnd1 = OPND_CREATE_MEMPTR(reg1, offsetof(per_thread_t, buf_ptr));
     opnd2 = opnd_create_reg(reg2);
@@ -733,7 +683,8 @@ static void dynamic_info_instrumentation(void *drcontext, instrlist_t *ilist, in
     opnd2 = OPND_CREATE_MEMPTR(reg1, offsetof(per_thread_t, buf_end));
     instr = INSTR_CREATE_mov_ld(drcontext, opnd1, opnd2);
     instrlist_meta_preinsert(ilist, where, instr);
-    opnd1 = opnd_create_reg(reg2);
+    
+	opnd1 = opnd_create_reg(reg2);
     opnd2 = opnd_create_base_disp(reg1, reg2, 1, 0, OPSZ_lea);
     instr = INSTR_CREATE_lea(drcontext, opnd1, opnd2);
     instrlist_meta_preinsert(ilist, where, instr);
@@ -743,6 +694,7 @@ static void dynamic_info_instrumentation(void *drcontext, instrlist_t *ilist, in
     opnd1 = opnd_create_instr(call);
     instr = INSTR_CREATE_jecxz(drcontext, opnd1);
     instrlist_meta_preinsert(ilist, where, instr);
+	
 
     /* jump restore to skip clean call */
     restore = INSTR_CREATE_label(drcontext);
@@ -772,24 +724,10 @@ static void dynamic_info_instrumentation(void *drcontext, instrlist_t *ilist, in
     /* restore %reg */
     instrlist_meta_preinsert(ilist, where, restore);
 
-	instrlist_meta_preinsert(ilist, where, label_thread);
-
-	
-    dr_restore_reg(drcontext, ilist, where, reg1, SPILL_SLOT_2);
-	dr_restore_reg(drcontext, ilist, where, reg2, SPILL_SLOT_3);
-
-
-	instrlist_meta_preinsert(ilist, where, label_func);
-	
-	
 	dr_restore_arith_flags_from_xax(drcontext, ilist, where);
+    dr_restore_reg(drcontext, ilist, where, reg1, SPILL_SLOT_2);
+    dr_restore_reg(drcontext, ilist, where, reg2, SPILL_SLOT_3);
 	dr_restore_reg(drcontext, ilist, where, reg3, SPILL_SLOT_4);
-
-
-	/* just print out the before ilist */
-	//instrlist_disassemble(drcontext, instr_get_app_pc(instrlist_first(ilist)), ilist, logfile); 
-	//dr_abort();
-
 
 }
 
@@ -925,6 +863,10 @@ static void output_populator_printer(void * drcontext, opnd_t opnd, instr_t * in
 	uint width;
 	int i;
 
+	size_t fp_size;
+	byte * fp_buf;
+	byte * fp_buf_old;
+
 	per_thread_t * data = drmgr_get_tls_field(drcontext,tls_index);
 
 
@@ -955,6 +897,14 @@ static void output_populator_printer(void * drcontext, opnd_t opnd, instr_t * in
 		if(opnd_is_immed_float(opnd)){
 
 			width = opnd_size_in_bytes(opnd_get_size(opnd));
+
+			fp_size = proc_fpstate_save_size();
+			fp_buf_old = dr_global_alloc(fp_size + 16*2);
+			fp_buf = ALIGN_FORWARD(fp_buf_old, 16);
+			proc_save_fpstate(fp_buf);
+
+			//dr_messagebox("%x %x\n", fp_buf_old, fp_buf);
+
 			float_value = opnd_get_immed_float(opnd);
 
 #ifdef READABLE_TRACE
@@ -964,6 +914,9 @@ static void output_populator_printer(void * drcontext, opnd_t opnd, instr_t * in
 			output->width = width;
 			output->float_value = float_value;
 #endif
+
+			proc_restore_fpstate(fp_buf);
+			dr_global_free(fp_buf_old, fp_size + 16*2);
 
 		}
 		
@@ -1056,8 +1009,8 @@ static uint calculate_operands(instr_t * instr,uint dst_or_src){
 /* prints the trace and empties the instruction buffer */
 static void ins_trace(void *drcontext)
 {
-    per_thread_t *data;
-    int num_refs;
+	per_thread_t *data;
+	int num_refs;
 	instr_trace_t *instr_trace;
 	instr_t * instr;
 	int i;
@@ -1068,58 +1021,59 @@ static void ins_trace(void *drcontext)
 	output_t * output;
 #endif
 
-    data      = drmgr_get_tls_field(drcontext, tls_index);
-    instr_trace   = (instr_trace_t *)data->buf_base;
-    num_refs  = (int)((instr_trace_t *)data->buf_ptr - instr_trace);
+	data      = drmgr_get_tls_field(drcontext, tls_index);
+	instr_trace   = (instr_trace_t *)data->buf_base;
+	num_refs = (int)((instr_trace_t *)data->buf_ptr - instr_trace);
 
 	uint mem_type;
 	uint64 mem_addr;
 
 	opnd_t opnd;
 
-	
+
 #ifdef READABLE_TRACE
 	//TODO
-    for (i = 0; i < num_refs; i++) {
-		
+	for (i = 0; i < num_refs; i++) {
+
 		instr = instr_trace->static_info_instr;
-		instr_disassemble_to_buffer(drcontext,instr,disassembly,SHORT_STRING_LENGTH);
+		//instr_disassemble_to_buffer(drcontext, instr, disassembly, SHORT_STRING_LENGTH);
 
-		dr_fprintf(data->outfile,"%u",instr_get_opcode(instr));
+		dr_fprintf(data->outfile, "%u", instr_get_opcode(instr));
 
-		dr_fprintf(data->outfile,",%u",calculate_operands(instr,DST_TYPE));
-		for(j=0; j<instr_num_dsts(instr); j++){
+		dr_fprintf(data->outfile, ",%u", calculate_operands(instr, DST_TYPE));
+		for (j = 0; j < instr_num_dsts(instr); j++){
 			get_address(instr_trace, j, DST_TYPE, &mem_type, &mem_addr);
-			output_populator_printer(drcontext,instr_get_dst(instr,j),instr,mem_addr,mem_type,NULL);
+			output_populator_printer(drcontext, instr_get_dst(instr, j), instr, mem_addr, mem_type, NULL);
 		}
 
-		dr_fprintf(data->outfile,",%u",calculate_operands(instr,SRC_TYPE));
-		for(j=0; j<instr_num_srcs(instr); j++){
+		dr_fprintf(data->outfile, ",%u", calculate_operands(instr, SRC_TYPE));
+		for (j = 0; j < instr_num_srcs(instr); j++){
 			get_address(instr_trace, j, SRC_TYPE, &mem_type, &mem_addr);
 			opnd = instr_get_src(instr, j);
-			if (instr_get_opcode(instr) == OP_lea && opnd_is_base_disp(opnd)){
-				/* four operands here for [base + index * scale + disp] */
+			if (instr_get_opcode(instr) == OP_lea){
+				DR_ASSERT(opnd_is_base_disp(opnd));
+				// four operands here for [base + index * scale + disp] 
 				output_populator_printer(drcontext, opnd_create_reg(opnd_get_base(opnd)), instr, mem_addr, mem_type, NULL);
 				output_populator_printer(drcontext, opnd_create_reg(opnd_get_index(opnd)), instr, mem_addr, mem_type, NULL);
-				output_populator_printer(drcontext, opnd_create_immed_int(opnd_get_scale(opnd),OPSZ_PTR), instr, mem_addr, mem_type, NULL);
+				output_populator_printer(drcontext, opnd_create_immed_int(opnd_get_scale(opnd), OPSZ_PTR), instr, mem_addr, mem_type, NULL);
 				output_populator_printer(drcontext, opnd_create_immed_int(opnd_get_disp(opnd), OPSZ_PTR), instr, mem_addr, mem_type, NULL);
 			}
 			else{
-				output_populator_printer(drcontext, opnd, instr, mem_addr, mem_type, NULL);
+				output_populator_printer(drcontext, instr_get_src(instr,j), instr, mem_addr, mem_type, NULL);
 			}
 		}
 		//dr_printf("%u,%u\n", instr_trace->eflags, instr_trace->pc);
-		dr_fprintf(data->outfile,",%u,%u\n",instr_trace->eflags,instr_trace->pc);
-        ++instr_trace;
-    }
+		dr_fprintf(data->outfile, ",%u,%u\n", instr_trace->eflags, instr_trace->pc);
+		++instr_trace;
+	}
 #else
 
 	/* we need to fill up the output array here */
 
-	for(i = 0; i< num_refs; i++){
+	/*for(i = 0; i< num_refs; i++){
 		instr = instr_trace->static_info_instr;
 		output = &data->output_array[i];
-		
+
 		//opcode 
 		output->opcode = instr_get_opcode(instr);
 		output->num_dsts = 0;
@@ -1135,17 +1089,21 @@ static void ins_trace(void *drcontext)
 			output_populator_printer(drcontext,instr_get_src(instr,j),instr,get_address(instr_trace,j,SRC_TYPE),&output->srcs[output->num_srcs]);
 			output->num_srcs++;
 		}
-		
+
 		output->eflags = instr_trace->eflags;
 
 		++instr_trace;
 
 	}
 
-	dr_write_file(data->outfile,data->output_array,num_refs * sizeof(output_t));
+	dr_write_file(data->outfile,data->output_array,num_refs * sizeof(output_t));*/
 #endif
 
-	
+
+	/*for(i=0; i < INSTR_BUF_SIZE; i++){
+		data->buf_base[i] = 0;
+	}*/
+
     memset(data->buf_base, 0, INSTR_BUF_SIZE);
     data->num_refs += num_refs;
     data->buf_ptr   = data->buf_base;

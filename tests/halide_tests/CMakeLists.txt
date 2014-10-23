@@ -119,10 +119,50 @@ macro(build_app name)
 endmacro(build_app)
 
 
+macro(build_jit name)
 
-build_app(halide_blur)
+	if( CMAKE_SIZEOF_VOID_P EQUAL 8 )
+		file(MAKE_DIRECTORY "${CMAKE_SOURCE_DIR}/bin64")
+		set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/bin64")
+	else( CMAKE_SIZEOF_VOID_P EQUAL 8 )
+		file(MAKE_DIRECTORY "${CMAKE_SOURCE_DIR}/bin32")
+		set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/bin32")
+	endif( CMAKE_SIZEOF_VOID_P EQUAL 8 )
+	
+	#set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/output_tests_${TYPE})
+	
+	change_config()
+
+	halide_project(${name}_jit ${HALIDE} "${HALIDE_TEST_DIRECTORY}/${name}_jit.cpp" ${ARGN})
+
+endmacro(build_jit)
+
+#####################AOT compiled targets for testing features############################
+#the basic filters
+build_app(halide_blur_naive)
+build_app(halide_blur_hvscan)
 build_app(halide_rotate)
-build_app(halide_input_dep)
+build_app(halide_wrap)
+build_app(halide_scale)
+build_app(halide_snakes)   #not implemented
+
+#input dependent filters
+build_app(halide_threshold)
+build_app(halide_weights)  #not implemented
+
+#indirection
+build_app(halide_heq)
+build_app(halide_warp) #not implemented
+build_app(halide_bilateral)  
+
+#misc for testing things out
+build_app(halide_misc)
+
+####################JIT compiled for debugging and testing#################################
+build_jit(halide_heq)
+build_jit(halide_bilateral)
+build_jit(halide_warp) #not implemented
+build_jit(halide_misc)
 
 
 

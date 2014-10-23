@@ -19,6 +19,7 @@
 using namespace std;
 
 void print_cinstr(cinstr_t * instr);
+string * get_disasm_string_ref(vector<disasm_t *> &disasm, uint32_t app_pc);
 
 
 /* main file parsing functions */
@@ -84,6 +85,7 @@ cinstr_t * get_next_from_ascii_file(ifstream &file){
 			instr->srcs[index_op].width = atoi(tokens[i + 1].c_str());
 			if (instr->srcs[index_op].type == IMM_FLOAT_TYPE){
 				instr->srcs[index_op++].float_value = atof(tokens[i + 2].c_str());
+				//cout << tokens[i + 2] << endl;
 			}
 			else{
 #ifndef __GNUG__
@@ -128,6 +130,27 @@ vector<cinstr_t * > get_all_instructions(ifstream &file){
 	}
 
 	return instrs;
+
+}
+
+
+vector< pair<cinstr_t *, string *> > walk_file_and_get_instructions(ifstream &file, vector<disasm_t *> &disasm){
+
+	cinstr_t * instr;
+	string * dis_string;
+	vector< pair<cinstr_t *, string *> > instrs;
+
+	while (!file.eof()){
+		instr = get_next_from_ascii_file(file);
+		if (instr != NULL){
+			dis_string = get_disasm_string_ref(disasm, instr->pc);
+			instrs.push_back(make_pair(instr, dis_string));
+		}
+	}
+
+	return instrs;
+
+
 
 }
 
@@ -364,6 +387,21 @@ vector<disasm_t *> parse_debug_disasm(ifstream &file){
 
 	return disasm;
 
+
+}
+
+
+string * get_disasm_string_ref(vector<disasm_t *> &disasm, uint32_t app_pc){
+
+	for (int i = 0; i < disasm.size(); i++){
+		for (int j = 0; j < disasm[i]->pc_disasm.size(); j++){
+			if (disasm[i]->pc_disasm[j].first == app_pc){
+				return &disasm[i]->pc_disasm[j].second;
+			}
+		}
+	}
+
+	return NULL;
 
 }
 

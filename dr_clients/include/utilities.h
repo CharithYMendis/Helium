@@ -11,6 +11,8 @@ extern bool debug_mode;
 extern bool log_mode;
 extern file_t global_logfile;
 
+extern bool nudge_instrument;
+
 /* provides various filtering functions - all the filtering is done through runtime */
 bool filter_bb_level_from_list (module_t * head, instr_t * instr);
 bool filter_module_level_from_list (module_t * head, instr_t * instr);

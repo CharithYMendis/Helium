@@ -49,6 +49,7 @@
 
  vector<Node *> get_similar_trees(vector<mem_regions_t *> image_regions, uint32_t seed, uint32_t * stride, ifstream &instrace_file,
 	 vector<uint32_t> start_points, int32_t end_trace, vector<disasm_t *> disasm);
+ void cluster_and_get_conditionals(vector<mem_regions_t *> mem_regions, ifstream &file, vector<uint32_t> start_points, vector<disasm_t *> disasm, string print_string);
 
  void print_usage(){
 	 printf("usage - format -<name> <value>\n");
@@ -72,6 +73,7 @@
 #define BUILD_RANDOM		1
 #define BUILD_RANDOM_SET	2
 #define	BUILD_ALL			3
+#define CLUSTER_TREES		4
 
 
  /* stage to stop */
@@ -309,7 +311,7 @@
 	 vector<disasm_t *> disasm;
 	 if (debug){
 		 disasm = parse_debug_disasm(disasm_file);
-		 //print_disasm(disasm);
+		 print_disasm(disasm);
 	 }
 
 	 /* analyzing mem dumps for input and output image locations */
@@ -321,11 +323,14 @@
 	 vector<mem_info_t *> mem_info;
 	 vector<pc_mem_region_t *> pc_mem_info;
 	 create_mem_layout(instrace_file, mem_info);
-	 //create_mem_layout(instrace_file, pc_mem_info);
+	 create_mem_layout(instrace_file, pc_mem_info);
 	 link_mem_regions_greedy(mem_info, 0);
-	 //link_mem_regions(pc_mem_info, 1);
+	 link_mem_regions(pc_mem_info, 1);
 	 print_mem_layout(log_file, mem_info);
-	 //print_mem_layout(log_file, pc_mem_info);
+	 print_mem_layout(log_file, pc_mem_info);
+
+
+	 mem_info = extract_mem_regions(pc_mem_info);
 
 	 /* merge these two information - instrace mem info + mem dump info */
 	 vector<mem_regions_t *> total_mem_regions;
@@ -351,6 +356,16 @@
 			(ii) need to identify their iterative operation and represent it in some way (stop at intermediate points)
 	 
 	 */
+
+
+	 /* get all the instructions */
+	 instrace_file.clear();
+	 instrace_file.seekg(0, instrace_file.beg);
+
+	 vector<disasm_t * > disasm_strings = parse_debug_disasm(disasm_file);
+	 vector< pair<cinstr_t *, string *> > instrs_forward = walk_file_and_get_instructions(instrace_file, disasm_strings);
+	 vector< pair<cinstr_t *, string *> > instrs_backward = walk_file_and_get_instructions(instrace_file, disasm_strings);
+
 
 	 /* data structures that will be passed to the next stage */
 	 vector<Node *> conc_trees;
@@ -442,6 +457,9 @@
 		 
 
  	 }
+	 else if (tree_build == CLUSTER_TREES){
+		 cluster_and_get_conditionals(image_regions, instrace_file, start_points, disasm, output_folder + file_substr);
+	 }
 
 	 /*debug printing*/
 	 for (int i = 0; i < conc_trees.size(); i++){
@@ -523,6 +541,56 @@
 
 	 shutdown_image_subsystem(token);
 	 return 0;
+
+ }
+
+
+ void cluster_and_get_conditionals(vector<mem_regions_t *> mem_regions, ifstream &file, vector<uint32_t> start_points, vector<disasm_t *> disasm, string print_string){
+
+	 mem_regions_t * mem = get_random_output_region(mem_regions);
+
+	 vector<Expression_tree *> trees;
+
+	 for (uint64 i = mem->start; i < mem->end; i++){
+		 DEBUG_PRINT(("building tree for location %llx - %u\n", i, i - mem->start),2);
+		 trees.push_back(create_tree_for_dest(i, mem->bytes_per_pixel, file, start_points, FILE_BEGINNING, FILE_ENDING, disasm));
+	 }
+
+	 /* cluster based on the similarity */
+	 vector< vector<Expression_tree *> > clustered_trees;
+	 
+	 DEBUG_PRINT(("clustering trees\n"),2);
+	 while (!trees.empty()){
+		 
+		 vector<Expression_tree *> cluster;
+
+		 Expression_tree * current_lead = trees[0];
+		 cluster.push_back(current_lead);
+		 trees.erase(trees.begin());
+		 
+		 for (int i = 0; i < trees.size(); i++){
+			 if (are_conc_trees_similar(current_lead->get_head(), trees[i]->get_head())){
+				 cluster.push_back(trees[i]);
+				 trees.erase(trees.begin() + i--);
+			 }
+		 }
+		 
+		 clustered_trees.push_back(cluster);
+	 }
+
+	 /* cluster results */
+	 cout << "number of tree clusters : " << clustered_trees.size() << endl;
+
+	 for (int i = 0; i < clustered_trees.size(); i++){
+		 uint no_nodes = number_tree_nodes(clustered_trees[i][1]->get_head());
+		 DEBUG_PRINT(("printing to dot file...\n"), 2);
+		 ofstream conc_file(print_string + "_conctree_" + to_string(i) + ".dot", ofstream::out);
+		 print_to_dotfile(conc_file, clustered_trees[i][1]->get_head(), no_nodes, 0);
+	 }
+
+
+	 /* get the divergence points */
+
 
  }
 

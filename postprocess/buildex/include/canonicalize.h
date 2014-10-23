@@ -42,7 +42,6 @@ enum {
 
  typedef output_t cinstr_t;
  
- 
  typedef struct _rinstr_t{
  
 	int operation;

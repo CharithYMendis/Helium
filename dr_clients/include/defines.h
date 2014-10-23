@@ -11,6 +11,7 @@
 #define FILTER_FUNCTION		4
 #define FILTER_NEG_MODULE	5
 #define FILTER_NONE			6
+#define FILTER_NUDGE		7
 
 typedef unsigned char uchar;
 

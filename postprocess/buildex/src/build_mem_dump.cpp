@@ -138,7 +138,7 @@ vector<mem_regions_t *> merge_instrace_and_dump_regions(vector<mem_regions_t *> 
 				if ((mem_info[j]->direction & MEM_OUTPUT) == MEM_OUTPUT){ cout << "image output" << endl;  mem_regions[i]->type |= IMAGE_OUTPUT; }
 
 				/* debug information about the merging */
-				if (debug && debug_level >= 4){
+				if (debug && debug_level >= 2){
 					cout << "mem region:" << endl;
 					cout << "start : " << hex << mem_regions[i]->start << " end : " << mem_regions[i]->end << endl;
 					cout << dec << "strides : ";
@@ -151,7 +151,7 @@ vector<mem_regions_t *> merge_instrace_and_dump_regions(vector<mem_regions_t *> 
 
 
 				/* ok if the memory region is completely contained in the region constructed by meminfo */
-				if ( (mem_regions[i]->start > mem_info[j]->start) && (mem_regions[i]->end < mem_info[j]->end) ){
+				if ( (mem_regions[i]->start >= mem_info[j]->start) && (mem_regions[i]->end <= mem_info[j]->end) ){
 				
 					/* how much to the left of start is the meminfo spread? */
 					uint64_t start = mem_regions[i]->start;

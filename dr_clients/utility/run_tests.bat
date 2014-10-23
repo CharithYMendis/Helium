@@ -8,7 +8,7 @@ if "%1"=="help" (
 	echo 	{debug_on_off} - 1,0
 	echo 	{phase} - phase of running dr clients "profile memtrace" "profile" "opndtrace" "opcodetrace" "disasmtrace" "instrace" "memdump" "ins_distrace" "funcreplace" "instrace_memdump"
 	echo 	{filter_file} - the filter file name {only filename with ext}
-	echo 	{filter_mode} - module, bb, range, func, neg_module, app_pc, none
+	echo 	{filter_mode} - module, bb, range, func, neg_module, app_pc, none, nudge
 	echo 	{input_image} - only the filename {with ext}
 	echo 	{output_image} - only the filename {with ext}
 	exit /b

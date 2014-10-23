@@ -70,7 +70,16 @@ file_t global_logfile;
 static char global_logfilename[MAX_STRING_LENGTH];
 static char exec[MAX_STRING_LENGTH];
 
+bool nudge_instrument = false;
 
+
+void nudge_event(void * drcontext, uint64 argument){
+
+	nudge_instrument = argument;
+	//dr_messagebox("nudged - %d\n", argument);
+	//dr_unlink_flush_region(0, ~((ptr_uint_t)0));
+
+}
 
 DR_EXPORT void
 dr_init(client_id_t id)
@@ -91,13 +100,15 @@ dr_init(client_id_t id)
 		DEBUG_PRINT("\"%s - %s\"\n", arguments[i].name, arguments[i].arguments);
 	}
 
+	dr_register_nudge_event(nudge_event, id);
+
 	/*if (log_mode){
 		populate_conv_filename(global_logfilename, logdir, "global", NULL);
 		global_logfile = dr_open_file(global_logfilename, DR_FILE_WRITE_OVERWRITE);
 		DR_ASSERT(global_logfile != INVALID_FILE);
 	}*/
 
-
+	//dr_messagebox("client id - %d\n", id);
 	DEBUG_PRINT("%s is starting\n", dr_get_application_name());
 	/* if you are using it only for photoshop do no instrument other exes */
 	if (strcmp(exec, "photoshop") == 0){
@@ -142,6 +153,8 @@ dr_init(client_id_t id)
 		}
 	}
 
+	
+
 	dr_register_exit_event(process_exit_routine_call);
 		
 }
@@ -169,6 +182,9 @@ static void process_exit_routine_call(void){
 
 	
 }
+
+
+
 
 void process_global_arguments(){
 

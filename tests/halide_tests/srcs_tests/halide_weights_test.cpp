@@ -7,16 +7,17 @@
 #include "image_manipulation.h"
 
 extern "C" {
-#include "halide_rotate_gen.h"
+#include "halide_weights_gen.h"
 }
+
+uint8_t scale = 2;
 
 Image<uint8_t> halide_function(Image<uint8_t> in) {
 
-	Image<uint8_t> out(in.height(), in.width());
+	Image<uint8_t> out(in.width(), in.height());
 
 	// Call it once to initialize the halide runtime stuff
-	halide_rotate_gen(in, out);
-
+	halide_weights_gen(in, out);
 
 	return out;
 }

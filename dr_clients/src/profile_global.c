@@ -500,7 +500,7 @@ bbinfo_bb_instrumentation(void *drcontext, void *tag, instrlist_t *bb,
 		int i = 0;
 
 
-		DR_ASSERT(instr_ok_to_mangle(instr_current));
+		//DR_ASSERT(instr_ok_to_mangle(instr_current));
 
 		/* get the first non meta instruction */
 		for (instr = instrlist_first(bb); instr != NULL; instr = instr_get_next(instr)){
@@ -587,6 +587,19 @@ bbinfo_bb_instrumentation(void *drcontext, void *tag, instrlist_t *bb,
 		}
 		else if (client_arg->filter_mode == FILTER_FUNCTION){
 			if (filter_from_list(filter_head, first, client_arg->filter_mode)){
+				if (bbinfo == NULL){
+					bbinfo = md_add_bb_to_module(info_head, module_data->full_path, offset, MAX_BBS_PER_MODULE, true);
+				}
+			}
+			else{
+				dr_free_module_data(module_data);
+				dr_global_free(module_name, sizeof(char)*MAX_STRING_LENGTH);
+				return DR_EMIT_DEFAULT;
+			}
+		}
+		else if (client_arg->filter_mode == FILTER_NUDGE){
+			if (filter_from_list(filter_head, first, client_arg->filter_mode)){
+				//dr_printf("profile came- %s %d\n", module_data->full_path, offset);
 				if (bbinfo == NULL){
 					bbinfo = md_add_bb_to_module(info_head, module_data->full_path, offset, MAX_BBS_PER_MODULE, true);
 				}

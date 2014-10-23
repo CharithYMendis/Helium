@@ -23,6 +23,7 @@ cinstr_t * get_next_from_bin_file(ifstream &file);
 
 vector<cinstr_t * > get_all_instructions(ifstream &file);
 void walk_instructions(ifstream &file);
+vector< pair<cinstr_t *, string *> > walk_file_and_get_instructions(ifstream &file, vector<disasm_t *> &disasm);
 
 void go_forward_line(ifstream &file);
 bool go_backward_line(ifstream &file);

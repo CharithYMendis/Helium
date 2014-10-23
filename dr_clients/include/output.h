@@ -26,6 +26,7 @@ typedef struct _operand_t {
 	};
 } operand_t;
 
+
 typedef struct _output_t {
 
 	uint opcode;

@@ -484,7 +484,7 @@ bool random_dest_select(vector<mem_info_t *> &mem_info, uint64_t * dest, uint32_
 
 void print_mem_layout(ostream &file, vector<mem_info_t *> &mem_info){
 
-	DEBUG_PRINT(("print_mem_layout(mem_info) \n"), 2);
+	DEBUG_PRINT(("print_mem_layout(mem_info) \n"), 4);
 
 	for (int i = 0; i < mem_info.size(); i++){
 		mem_info_t * info = mem_info[i];
@@ -514,7 +514,7 @@ void print_mem_layout(ostream &file, vector<mem_info_t *> &mem_info){
 
 	}
 
-	DEBUG_PRINT(("print_mem_layout(mem_info) - done\n"), 2);
+	DEBUG_PRINT(("print_mem_layout(mem_info) - done\n"), 4);
 }
 
 bool compare_mem_regions(mem_info_t * first, mem_info_t * second){
@@ -529,7 +529,7 @@ bool compare_mem_regions(mem_info_t * first, mem_info_t * second){
 
 bool link_mem_regions_greedy(vector<mem_info_t *> &mem, uint32_t app_pc){
 	
-	DEBUG_PRINT(("link_mem_regions_greedy...\n"), 2);
+	DEBUG_PRINT(("link_mem_regions_greedy...\n"), 4);
 
 	sort(mem.begin(), mem.end(), compare_mem_regions);
 
@@ -577,7 +577,7 @@ bool link_mem_regions_greedy(vector<mem_info_t *> &mem, uint32_t app_pc){
 		}
 	}
 
-	DEBUG_PRINT(("link_mem_regions_greedy - done\n"), 2);
+	DEBUG_PRINT(("link_mem_regions_greedy - done\n"), 4);
 
 	return ret;
 }

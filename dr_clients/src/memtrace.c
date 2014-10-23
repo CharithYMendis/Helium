@@ -287,7 +287,7 @@ memtrace_bb_instrumentation(void *drcontext, void *tag, instrlist_t *bb,
 	instr_t * first = NULL;
 	instr_t * current;
  
-	DR_ASSERT(instr_ok_to_mangle(instr));
+	//DR_ASSERT(instr_ok_to_mangle(instr));
 
 	if (instr_ok_to_mangle(instr)){
 		/* FIXME - need to generalize the filtering library */
