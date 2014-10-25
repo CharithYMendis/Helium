@@ -7,6 +7,60 @@ using namespace std;
 
 /* extracting information from the mem regions */
 
+
+vector<uint64_t> get_nbd_of_random_points(vector<mem_regions_t *> image_regions, uint32_t seed, uint32_t * stride){
+
+	/*ok we need find a set of random locations */
+	mem_regions_t * random_mem_region = get_random_output_region(image_regions);
+	uint64_t mem_location = get_random_mem_location(random_mem_region, seed);
+	DEBUG_PRINT(("random mem location we got - %llx\n", mem_location), 1);
+	*stride = random_mem_region->bytes_per_pixel;
+
+	vector<uint64_t> nbd_locations;
+	vector<int> base = get_mem_position(random_mem_region, mem_location);
+	nbd_locations.push_back(mem_location);
+
+	cout << "base : " << endl;
+	for (int j = 0; j < base.size(); j++){
+		cout << base[j] << ",";
+	}
+	cout << endl;
+
+	//get a nbd of locations - diagonally choose pixels
+	int boundary = (int)ceil((double)(random_mem_region->dimensions + 2) / 2.0);
+	DEBUG_PRINT(("boundary : %d\n", boundary), 1);
+	int count = 0;
+	for (int i = -boundary; i <= boundary; i++){
+
+		if (i == 0) continue;
+		vector<int> offset;
+		uint32_t affected = count % random_mem_region->dimensions;
+		for (int j = 0; j < base.size(); j++){
+			if (j == affected) offset.push_back(i);
+			else offset.push_back(0);
+		}
+
+		cout << "offset" << endl;
+		for (int j = 0; j < offset.size(); j++){
+			cout << offset[j] << ",";
+		}
+		cout << endl;
+
+		bool success;
+		mem_location = get_mem_location(base, offset, random_mem_region, &success);
+		cout << hex << "dest - " << mem_location << dec << endl;
+		ASSERT_MSG(success, ("ERROR: memory location out of bounds\n"));
+
+		nbd_locations.push_back(mem_location);
+		count++;
+	}
+
+	return nbd_locations;
+
+
+}
+
+
 mem_regions_t * get_mem_region(uint64_t value, vector<mem_regions_t *> &mem_regions){
 
 	for (int i = 0; i < mem_regions.size(); i++){

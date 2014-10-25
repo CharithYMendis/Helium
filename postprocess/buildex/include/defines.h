@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "common_defines.h"
+#include "..\..\dr_clients\include\output.h"
 
 
 enum {
@@ -1436,6 +1437,7 @@ enum {
 	EFLAGS_DF = 0x00000400, /**< The bit in the eflags register of DF (Direction Flag). */
 	EFLAGS_OF = 0x00000800, /**< The bit in the eflags register of OF (Overflow Flag). */
 };
+
 
 
 #endif

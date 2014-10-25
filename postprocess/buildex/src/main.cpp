@@ -12,6 +12,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
+#include  "..\..\..\dr_clients\include\output.h"
 #include "expression_tree.h"
 #include "node.h"
 #include "canonicalize.h"
@@ -42,15 +43,8 @@
  ofstream log_file;
 
  void													test_linear_solver();
- Expression_tree *										create_tree_for_dest(uint64_t dest, uint32_t stride, ifstream &instrace_file, vector<uint32_t> start_points, int32_t start_trace, int32_t end_trace, vector<disasm_t *> disasm);
- vector< pair<uint32_t, Expression_tree * > >			create_trees_for_all(mem_regions_t * region, ifstream &instrace_file, vector<uint32_t> start_points, int32_t end_trace, vector<disasm_t *> disasm);
- vector< vector< pair<uint32_t, Node *> > >				categorize_trees(vector<pair < uint32_t, Node *> > trees);
- vector<uint64_t>										get_nbd_of_random_points(vector<mem_regions_t *> image_regions, uint32_t seed, uint32_t * stride);
-
- vector<Node *> get_similar_trees(vector<mem_regions_t *> image_regions, uint32_t seed, uint32_t * stride, ifstream &instrace_file,
-	 vector<uint32_t> start_points, int32_t end_trace, vector<disasm_t *> disasm);
- void cluster_and_get_conditionals(vector<mem_regions_t *> mem_regions, ifstream &file, vector<uint32_t> start_points, vector<disasm_t *> disasm, string print_string);
-
+ vec_cinstr filter_instr_trace(uint32_t start_pc, uint32_t end_pc, vec_cinstr &unfiltered_instrs);
+ 
  void print_usage(){
 	 printf("usage - format -<name> <value>\n");
 	 printf("\t exec - the executable which DR analyzed (without exe) \n");
@@ -72,8 +66,8 @@
  /* tree build modes */
 #define BUILD_RANDOM		1
 #define BUILD_RANDOM_SET	2
-#define	BUILD_ALL			3
-#define CLUSTER_TREES		4
+#define	BUILD_SIMILAR		3
+#define BUILD_CLUSTERS		4
 
 
  /* stage to stop */
@@ -98,6 +92,7 @@
 	 int32_t end_trace = FILE_ENDING;
 	 int32_t thread_id = -1;
 	 uint32_t start_pc = 0;
+	 uint32_t end_pc = 0;
 	 uint32_t seed = 10;
 	 uint32_t tree_build = BUILD_RANDOM;
 	 uint32_t mode = TREE_BUILD_STAGE;
@@ -146,7 +141,7 @@
 		 else if (args[i]->name.compare("-stride") == 0){
 			 stride = atoi(args[i]->value.c_str());
 		 }
-		 else if (args[i]->name.compare("-pc") == 0){
+		 else if (args[i]->name.compare("-start_pc") == 0){
 			 start_pc = atoi(args[i]->value.c_str());
 		 }
 		 else if (args[i]->name.compare("-seed") == 0){
@@ -157,6 +152,9 @@
 		 }
 		 else if (args[i]->name.compare("-mode") == 0){
 			 mode = atoi(args[i]->value.c_str());
+		 }
+		 else if (args[i]->name.compare("-end_pc") == 0){
+			 end_pc = atoi(args[i]->value.c_str());
 		 }
 		 else{
 			 ASSERT_MSG(false, ("ERROR: unknown option\n"));
@@ -358,34 +356,63 @@
 	 */
 
 
-	 /* get all the instructions */
+	 /* get all the instructions and preprocess */
 	 instrace_file.clear();
 	 instrace_file.seekg(0, instrace_file.beg);
 
 	 vector<disasm_t * > disasm_strings = parse_debug_disasm(disasm_file);
-	 vector< pair<cinstr_t *, string *> > instrs_forward = walk_file_and_get_instructions(instrace_file, disasm_strings);
-	 vector< pair<cinstr_t *, string *> > instrs_backward = walk_file_and_get_instructions(instrace_file, disasm_strings);
+	 vec_cinstr instrs_forward_unfiltered = walk_file_and_get_instructions(instrace_file, disasm_strings);
+	 /* need to filter unwanted instrs from the file we got */
+	 vec_cinstr instrs_forward = filter_instr_trace(start_pc, end_pc, instrs_forward_unfiltered);
+	
+	 
+	 /* make a copy for the backwards analysis */
+	 vec_cinstr instrs_backward;
+	 for (int i = instrs_forward.size() - 1; i >= 0; i--){
+		 cinstr_t * new_cinstr = new cinstr_t(*instrs_forward[i].first);
+		 pair<cinstr_t *, string *> instr_string = make_pair(new_cinstr, instrs_forward[i].second);
+		 instrs_backward.push_back(instr_string);
+	 }
+
+
+	 DEBUG_PRINT(("number of dynamic instructions : %d\n", instrs_backward.size()), 2);
+
+	
+	 /*preprocessing*/
+	 update_regs_to_mem_range(instrs_backward);
+	 update_regs_to_mem_range(instrs_forward);
+
+	 update_floating_point_regs(instrs_backward, BACKWARD_ANALYSIS, disasm, start_pc);
+	 DEBUG_PRINT(("updated backward instr's floating point regs\n"), 2);
+	 update_floating_point_regs(instrs_forward, FORWARD_ANALYSIS, disasm, start_pc);
+	 DEBUG_PRINT(("updated forward instr's floating point regs\n"), 2);
+
+	 /*for (int i = 0; i < instrs_backward.size(); i++){
+		 ASSERT_MSG((instrs_backward[i] != instrs_forward[i]), ("ERROR: cannot be equal\n"));
+		 cinstr_t * first = instrs_backward[i].first;
+		 cinstr_t * second = instrs_forward[i].first;
+		 ASSERT_MSG((first != second), ("ERROR: cannot be equal cinstr\n"));
+		 ASSERT_MSG((first->srcs != second->srcs), ("ERROR: cannot be equal cinstr srcs\n"));
+		 ASSERT_MSG((first->dsts != second->dsts), ("ERROR: cannot be equal cinstr dsts\n"));
+	 }*/
+
 
 
 	 /* data structures that will be passed to the next stage */
-	 vector<Node *> conc_trees;
-
-	 instrace_file.clear();
-	 instrace_file.seekg(0, instrace_file.beg);
+	 vector<Expression_tree *> conc_trees;
 
 	 /* capture the function start points if the end trace is not given specifically */
 	 vector<uint32_t> start_points;
+	 vector<uint32_t> start_points_forward;
 	 if (end_trace == FILE_ENDING){
-		 start_points = get_instrace_startpoints(instrace_file, start_pc);
+		 start_points = get_instrace_startpoints(instrs_backward, start_pc);
+		 start_points_forward = get_instrace_startpoints(instrs_forward, start_pc);
 		 DEBUG_PRINT(("no of funcs captured - %d\n start points : \n", start_points.size()), 1);
 		 for (int i = 0; i < start_points.size(); i++){
 			 DEBUG_PRINT(("%d-", start_points[i]), 1);
 		 }
 		 DEBUG_PRINT(("\n"), 1);
 	 }
-
-	 instrace_file.clear();
-	 instrace_file.seekg(0, instrace_file.beg);
 
 
 	 if (tree_build == BUILD_RANDOM){
@@ -403,10 +430,11 @@
 		 }
 		 DEBUG_PRINT(("func pc entry - %x\n", start_pc), 1);
 
-		 Node * node = create_tree_for_dest(dest, stride, instrace_file, start_points, start_trace, end_trace, disasm)->get_head();
-		 if (node != NULL){
-			 conc_trees.push_back(node);
-		 }
+		 //Node * node = create_tree_for_dest(dest, stride, instrace_file, start_points, start_trace, end_trace, disasm)->get_head();
+		 Expression_tree * tree = new Expression_tree();
+		 build_tree(dest, stride, start_points, start_trace, end_trace, tree, instrs_backward, disasm);
+		 conc_trees.push_back(tree);
+		
 	 }
 	 else if (tree_build == BUILD_RANDOM_SET){
 
@@ -415,62 +443,36 @@
 
 		 /* ok now build trees for the set of locations */
 		 for (int i = 0; i < nbd_locations.size(); i++){
-			 Node * node = create_tree_for_dest(nbd_locations[i], stride, instrace_file, start_points, FILE_BEGINNING, end_trace, disasm)->get_head();
-			 if (node != NULL){
-				 conc_trees.push_back(node);
-			 }
+
+			 Expression_tree * tree = new Expression_tree();
+			 build_tree(nbd_locations[i], stride, start_points, FILE_BEGINNING, end_trace, tree, instrs_backward, disasm);
+			 conc_trees.push_back(tree);
+			 
 		 }
 
 		 /* checking similarity of the trees and if not repeat?? */
-		 uint32_t count = 0;
-		 vector< pair<uint32_t, Node*> > numbered_trees;
-		 for (int i = 0; i < conc_trees.size(); i++){
-			 numbered_trees.push_back(make_pair(count++, conc_trees[i]));
-		 }
-		 vector< vector< pair<uint32_t, Node *> > > cat_trees = categorize_trees(numbered_trees);
+		 
+		 vector< vector< Expression_tree * > > cat_trees = categorize_trees(conc_trees);
 
 	 }
-	 else if (tree_build == BUILD_ALL){
-		 /*mem_regions_t * random_mem_region = get_random_output_region(image_regions);		
-		 vector< pair<uint32_t, Expression_tree *> > numbered_trees = create_trees_for_all(random_mem_region, instrace_file, start_points, end_trace, disasm);
-		 
-		 vector<pair<uint32_t, Node *> > nodes_vector;
-
-		 for (int i = 0; i < numbered_trees.size(); i++){
-			 nodes_vector.push_back(make_pair(numbered_trees[i].first, numbered_trees[i].second->get_head()));
-		 }
-
-		 vector< vector< pair<uint32_t, Node *> > > cat_trees = categorize_trees(nodes_vector);
-
-		 cout << cat_trees.size() << endl;
-		 for (int i = 0; i < cat_trees.size(); i++){
-			 cout << "{";
-			 for (int j = 0; j < cat_trees[j].size(); j++){
-				 cout << cat_trees[i][j].first << ",";
-			 }
-			 cout << "}" <<  endl;
-
-		 }*/
-
-		 conc_trees = get_similar_trees(image_regions, seed, &stride, instrace_file, start_points, end_trace, disasm);
-
-		 
-
+	 else if (tree_build == BUILD_SIMILAR){
+		 conc_trees = get_similar_trees(image_regions, seed, &stride, instrs_backward, start_points, end_trace, disasm);
  	 }
-	 else if (tree_build == CLUSTER_TREES){
-		 cluster_and_get_conditionals(image_regions, instrace_file, start_points, disasm, output_folder + file_substr);
+	 else if (tree_build == BUILD_CLUSTERS){
+		 vector< vector< Expression_tree *> > clustered_trees = cluster_trees(image_regions, start_points, instrs_backward, disasm, output_folder + file_substr);
 	 }
 
 	 /*debug printing*/
 	 for (int i = 0; i < conc_trees.size(); i++){
+
 		 //DEBUG_PRINT(("printing out the expression\n"), 2);
 		 //ofstream expression_file(output_folder + file_substr + "_expression_" + to_string(i) + ".txt", ofstream::out);
 		 //print_node_tree(conc_trees[i], expression_file);
 		 //cout << get_simplify_string(conc_trees[i]) << endl;
-		 uint no_nodes = number_tree_nodes(conc_trees[i]);
+		 uint no_nodes = number_tree_nodes(conc_trees[i]->get_head());
 		 DEBUG_PRINT(("printing to dot file...\n"), 2);
 		 ofstream conc_file(output_folder + file_substr + "_conctree_" + to_string(i) + ".dot", ofstream::out);
-		 print_to_dotfile(conc_file, conc_trees[i], no_nodes, 0);
+		 print_to_dotfile(conc_file, conc_trees[i]->get_head(), no_nodes, 0);
 		
 	 }
 
@@ -484,7 +486,7 @@
 	 vector<Abs_node *> abs_nodes;
 	 for (int i = 0; i < conc_trees.size(); i++){
 		 Abs_tree  * abs_tree = new Abs_tree();
-		 abs_tree->build_abs_tree(NULL, conc_trees[i], total_mem_regions);
+		 abs_tree->build_abs_tree(NULL, conc_trees[i]->get_head(), total_mem_regions);
 		 abs_nodes.push_back(abs_tree->head);
 	 }
 
@@ -545,307 +547,34 @@
  }
 
 
- void cluster_and_get_conditionals(vector<mem_regions_t *> mem_regions, ifstream &file, vector<uint32_t> start_points, vector<disasm_t *> disasm, string print_string){
+ vec_cinstr filter_instr_trace(uint32_t start_pc, uint32_t end_pc, vec_cinstr &unfiltered_instrs){
 
-	 mem_regions_t * mem = get_random_output_region(mem_regions);
 
-	 vector<Expression_tree *> trees;
+	 vec_cinstr instrs;
+	 bool start = false;
 
-	 for (uint64 i = mem->start; i < mem->end; i++){
-		 DEBUG_PRINT(("building tree for location %llx - %u\n", i, i - mem->start),2);
-		 trees.push_back(create_tree_for_dest(i, mem->bytes_per_pixel, file, start_points, FILE_BEGINNING, FILE_ENDING, disasm));
-	 }
-
-	 /* cluster based on the similarity */
-	 vector< vector<Expression_tree *> > clustered_trees;
-	 
-	 DEBUG_PRINT(("clustering trees\n"),2);
-	 while (!trees.empty()){
-		 
-		 vector<Expression_tree *> cluster;
-
-		 Expression_tree * current_lead = trees[0];
-		 cluster.push_back(current_lead);
-		 trees.erase(trees.begin());
-		 
-		 for (int i = 0; i < trees.size(); i++){
-			 if (are_conc_trees_similar(current_lead->get_head(), trees[i]->get_head())){
-				 cluster.push_back(trees[i]);
-				 trees.erase(trees.begin() + i--);
-			 }
+	 for (int i = 0; i < unfiltered_instrs.size(); i++){
+		 if (unfiltered_instrs[i].first->pc == start_pc){
+			 start = true;
 		 }
-		 
-		 clustered_trees.push_back(cluster);
+		 if (start) instrs.push_back(unfiltered_instrs[i]);
+		 if (unfiltered_instrs[i].first->pc == end_pc){
+			 start = false;
+		 }
 	 }
 
-	 /* cluster results */
-	 cout << "number of tree clusters : " << clustered_trees.size() << endl;
-
-	 for (int i = 0; i < clustered_trees.size(); i++){
-		 uint no_nodes = number_tree_nodes(clustered_trees[i][1]->get_head());
-		 DEBUG_PRINT(("printing to dot file...\n"), 2);
-		 ofstream conc_file(print_string + "_conctree_" + to_string(i) + ".dot", ofstream::out);
-		 print_to_dotfile(conc_file, clustered_trees[i][1]->get_head(), no_nodes, 0);
-	 }
-
-
-	 /* get the divergence points */
+	 return instrs;
 
 
  }
 
 
- Expression_tree * create_tree_for_dest(uint64_t dest, uint32_t stride, ifstream &instrace_file, vector<uint32_t> start_points,
-	 int32_t start_trace, int32_t end_trace, vector<disasm_t *> disasm){
-
-	 DEBUG_PRINT(("building tree for %llx...\n", dest), 2);
-
-	 instrace_file.clear();
-	 instrace_file.seekg(0, instrace_file.beg);
-
-	 if (start_trace == FILE_BEGINNING){
-		 start_trace = go_to_line_dest(instrace_file, dest, stride);
-	 }
-
-	 instrace_file.clear();
-	 instrace_file.seekg(0, instrace_file.beg);
-
-	 if (start_trace == 0) return NULL;
-
-	 Expression_tree * conc_tree = new Expression_tree();
-
-	 if (end_trace == FILE_ENDING){
-		 for (int i = 0; i < start_points.size(); i++){
-			 if (start_trace <= start_points[i]){
-				 end_trace = start_points[i];
-				 break;
-			 }
-		 }
-	 }
-
-	 build_tree(dest, start_trace, end_trace, instrace_file, conc_tree, disasm);
-	 //order_tree(conc_tree->get_head());
-
-	 instrace_file.clear();
-	 instrace_file.seekg(0, instrace_file.beg);
-
-	 return conc_tree;
-
- }
-
- vector< pair<uint32_t, Expression_tree * > > create_trees_for_all(mem_regions_t * region, ifstream &instrace_file, vector<uint32_t> start_points,
-	 int32_t end_trace, vector<disasm_t *> disasm){
-
-	 uint64_t start = region->start;
-	 uint64_t end = region->end;
-
-	 vector< pair<uint32_t, Expression_tree * > > trees;
-
-	 uint32_t count = 0;
-	 for (uint64_t i = start; i < end; i++){
-		 DEBUG_PRINT(("tree no - %d\n", count), 2);
-		 Expression_tree * tree = create_tree_for_dest(i, region->bytes_per_pixel, instrace_file, start_points, FILE_BEGINNING, end_trace, disasm);
-		 print_node_tree(tree->get_head(), cout);
-		 cout << endl;
-		 if (tree != NULL){
-			 trees.push_back(make_pair(count++, tree));
-		 }
-	 }
-
-	 return trees;
- }
-
- vector< vector< pair<uint32_t, Node *> > > categorize_trees(vector<pair < uint32_t, Node *> > trees){
-
-	 vector< vector< pair<uint32_t, Node *> > > categorized_trees;
-
-	 while (!trees.empty()){
-		 vector< pair<uint32_t, Node *> > similar_trees;
-		 Node * first = trees[0].second;
-		 similar_trees.push_back(trees[0]);
-		 trees.erase(trees.begin());
-		 for (int i = 0; i < trees.size(); i++){
-			 if (are_conc_trees_similar(first, trees[i].second)){
-				 similar_trees.push_back(trees[i]);
-				 trees.erase(trees.begin() + i--);
-			 }
-		 }
-		 categorized_trees.push_back(similar_trees);
-	 }
-
-	 return categorized_trees;
-
- }
-
- vector<uint64_t> get_nbd_of_random_points(vector<mem_regions_t *> image_regions,uint32_t seed, uint32_t * stride){
-
-	 /*ok we need find a set of random locations */
-	 mem_regions_t * random_mem_region = get_random_output_region(image_regions);
-	 uint64_t mem_location = get_random_mem_location(random_mem_region, seed);
-	 DEBUG_PRINT(("random mem location we got - %llx\n", mem_location), 1);
-	 *stride = random_mem_region->bytes_per_pixel;
-
-	 vector<uint64_t> nbd_locations;
-	 vector<int> base = get_mem_position(random_mem_region, mem_location);
-	 nbd_locations.push_back(mem_location);
-
-	 cout << "base : " << endl;
-	 for (int j = 0; j < base.size(); j++){
-		 cout << base[j] << ",";
-	 }
-	 cout << endl;
-
-	 //get a nbd of locations - diagonally choose pixels
-	 int boundary = (int)ceil((double)(random_mem_region->dimensions + 2) / 2.0);
-	 DEBUG_PRINT(("boundary : %d\n", boundary), 1);
-	 int count = 0;
-	 for (int i = -boundary; i <= boundary; i++){
-
-		 if (i == 0) continue;
-		 vector<int> offset;
-		 uint affected = count % random_mem_region->dimensions;
-		 for (int j = 0; j < base.size(); j++){
-			 if (j == affected) offset.push_back(i);
-			 else offset.push_back(0);
-		 }
-
-		 cout << "offset" << endl;
-		 for (int j = 0; j < offset.size(); j++){
-			 cout << offset[j] << ",";
-		 }
-		 cout << endl;
-
-		 bool success;
-		 mem_location = get_mem_location(base, offset, random_mem_region, &success);
-		 cout << hex << "dest - " << mem_location << dec << endl;
-		 ASSERT_MSG(success, ("ERROR: memory location out of bounds\n"));
-
-		 nbd_locations.push_back(mem_location);
-		 count++;
-	 }
-
-	 return nbd_locations;
 
 
- }
 
- vector<Node *> get_similar_trees(vector<mem_regions_t *> image_regions, uint32_t seed, uint32_t * stride, ifstream &instrace_file,
-	 vector<uint32_t> start_points, int32_t end_trace, vector<disasm_t *> disasm){
-
-	 vector<Node *> nodes;
-
-	 /*ok we need find a set of random locations */
-	 mem_regions_t * random_mem_region = get_random_output_region(image_regions);
-	 uint64_t mem_location = get_random_mem_location(random_mem_region,seed);
-	 DEBUG_PRINT(("random mem location we got - %llx\n", mem_location), 1);
-	 *stride = random_mem_region->bytes_per_pixel;
-
-	 vector<uint64_t> nbd_locations;
-	 vector<int> base = get_mem_position(random_mem_region, mem_location);
-	 nbd_locations.push_back(mem_location);
-
-	 cout << "base : " << endl;
-	 for (int j = 0; j < base.size(); j++){
-		 cout << base[j] << ",";
-	 }
-	 cout << endl;
-
-	 /* build the expression tree for this node */
-	 Expression_tree * main_tree = create_tree_for_dest(mem_location, random_mem_region->bytes_per_pixel, 
-		 instrace_file, start_points, FILE_BEGINNING, end_trace, disasm);
-	 nodes.push_back(main_tree->get_head());
-
-	 uint32_t nodes_needed = random_mem_region->dimensions + 2;
-	 int32_t sign = 1;
-	 int i = 0;
-
-	 vector<uint32_t> dims;
-	 for (int i = 0; i < random_mem_region->dimensions; i++){
-		 dims.push_back(0);
-	 }
-
-	 while(true) {
-		 
-		 vector<int> offset;
-		 uint32_t affected_dim = i % random_mem_region->dimensions;
-		 i++;
-
-		 if (nodes.size() >= nodes_needed) break;
-
-		 bool cont = false;
-		 for (int j = 0; j < affected_dim; j++){
-			 if (dims[j] < dims[affected_dim]){
-				 cont = true;
-				 break;
-			 }
-		 }
-
-		 for (int j = 0; j < dims.size(); j++){
-			 cout << dims[j] << ",";
-		 }
-		 cout << endl;
-
-		 if (cont){
-			 continue;
-		 }
+ 
 
 
-		 uint32_t next_value = 0;
-
-		 while (true){
-			 vector<int32_t> offset;
-			 for (int j = 0; j < base.size(); j++){
-				 if (j == affected_dim) { offset.push_back(sign); }
-				 else { offset.push_back(next_value++); }
-			 }
-
-			 cout << "searching for tree: " << nodes.size() + 1 << endl;
-			 for (int j = 0; j < base.size(); j++){
-				 cout << dec << (base[j] + offset[j]) << ",";
-			 }
-			 cout << endl;
-
-			 bool success;
-			 mem_location = get_mem_location(base, offset, random_mem_region, &success);
-
-			 if (success){
-				 Expression_tree * created_tree = create_tree_for_dest(mem_location, random_mem_region->bytes_per_pixel, instrace_file,
-					 start_points, FILE_BEGINNING, end_trace, disasm);
-				 order_tree(created_tree->get_head());
-
-				 print_node_tree(created_tree->get_head(), cout);
-				 cout << endl;
-				 print_node_tree(main_tree->get_head(), cout);
-				 cout << endl;
-
-				 if (are_conc_trees_similar(main_tree->get_head(), created_tree->get_head())){
-					 nodes.push_back(created_tree->get_head());
-					 dims[affected_dim]++;
-					 sign = -1 * sign * (int)ceil((i + 1) / (double)random_mem_region->dimensions);
-					 cout << ceil((i + 1) / (double)random_mem_region->dimensions) << endl;
-					 cout << sign << endl;
-					 cout << i << endl;
-					 break;
-				 }
-				 else{
-					 delete created_tree;
-				 }
-			 }
-			 else{
-				 sign = -1 * sign * (int)ceil((i + 1) / (double)random_mem_region->dimensions);
-				 cout << sign << endl;
-				 break;
-			 }
-
-		 }
-
-		 
-	 }
-
-	 return nodes;
-
-
- }
 
 
 

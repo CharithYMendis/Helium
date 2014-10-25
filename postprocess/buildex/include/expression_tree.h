@@ -36,6 +36,7 @@ class Expression_tree {
 
 
 	public:
+		int number;
 		Expression_tree();
 		~Expression_tree();
 		

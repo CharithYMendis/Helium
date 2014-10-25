@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <iostream>
 #include <string>
+#include "fileparser.h"
 
 using namespace std;
 
@@ -119,7 +120,7 @@ static void assert_opnds(int opcode,int needed_src, int needed_dst, int actual_s
 
 bool check_eflag_bit(eflag_bits flag_type, uint32_t reg_val){
 
-	return (reg_val & (1 << flag_type) == (1 << flag_type));
+	return ((reg_val & (1 << flag_type)) == (1 << flag_type));
 
 }
 
@@ -338,15 +339,27 @@ void get_floating_point_reg(operand_t  * opnd, string disasm, uint32_t line){
 	reg_to_mem_range(opnd);
 }
 
-void update_tos(uint32_t type, string disasm, uint32_t line){
+void update_tos(uint32_t type, string disasm, uint32_t line, uint32_t direction){
 	
-	if (type == FP_PUSH){
-		ASSERT_MSG(tos >= DR_REG_ST0, ("ERROR: floating point stack overflow\n"));
-		tos--;
+	if (direction == BACKWARD_ANALYSIS){
+		if (type == FP_PUSH){
+			ASSERT_MSG(tos >= DR_REG_ST0, ("ERROR: floating point stack overflow\n"));
+			tos--;
+		}
+		else if (type == FP_POP){
+			ASSERT_MSG(tos < DR_REG_ST15, ("ERROR: floating point stack underflow\n"));
+			tos++;
+		}
 	}
-	else if (type == FP_POP){
-		ASSERT_MSG(tos < DR_REG_ST15, ("ERROR: floating point stack underflow\n"));
-		tos++;
+	else if (direction == FORWARD_ANALYSIS){
+		if (type == FP_POP){
+			ASSERT_MSG(tos >= DR_REG_ST0, ("ERROR: floating point stack overflow\n"));
+			tos--;
+		}
+		else if (type == FP_PUSH){
+			ASSERT_MSG(tos < DR_REG_ST15, ("ERROR: floating point stack underflow\n"));
+			tos++;
+		}
 	}
 
 	//cout << line << " " << disasm <<  " - tos : " << tos - DR_REG_ST8 << endl;
@@ -362,6 +375,47 @@ bool is_floating_point_reg(operand_t * opnd){
 		(reg >= DR_REG_ST0) &&
 		(reg <= DR_REG_ST7)
 		);
+}
+
+bool is_conditional_jump_ins(uint32_t opcode){
+
+
+	switch (opcode){
+	case OP_jmp:
+	case OP_jmp_short:
+	case OP_jnl:
+	case OP_jnl_short:
+	case OP_jl:
+	case OP_jnle:
+	case OP_jnle_short:
+	case OP_cmp:
+	case OP_ret:
+	case OP_call:
+	case OP_jnz:
+	case OP_jnz_short:
+	case OP_jz:
+	case OP_test:
+	case OP_jnb_short:
+	case OP_jb_short:
+	case OP_jz_short:
+	case OP_jl_short:
+	case OP_jns_short:
+	case OP_js_short:
+	case OP_jnbe_short:
+	case OP_jle_short:
+	case OP_jle:
+	case OP_jbe_short:
+	case OP_call_ind:
+	case OP_jns:
+	case OP_jb:
+	case OP_jnb:
+	case OP_js:
+	case OP_jmp_ind:
+		return true;
+	default:
+		return false;
+	}
+
 }
 
 bool is_floating_point_ins(uint32_t opcode){
@@ -421,6 +475,120 @@ void update_fp_src(cinstr_t * cinstr, string disasm, uint32_t line){
 	}
 }
 
+
+void update_regs_to_mem_range(vec_cinstr &instrs){
+	
+	for (int i = 0; i < instrs.size(); i++){
+
+		cinstr_t * instr = instrs[i].first;
+		for (int i = 0; i < instr->num_srcs; i++){
+			if ((instr->srcs[i].type == REG_TYPE) && (instr->srcs[i].value > DR_REG_ST7)) instr->srcs[i].value += 8;
+			reg_to_mem_range(&instr->srcs[i]);
+		}
+
+		for (int i = 0; i < instr->num_dsts; i++){
+			if (instr->dsts[i].type == REG_TYPE && (instr->dsts[i].value > DR_REG_ST7)) instr->dsts[i].value += 8;
+			reg_to_mem_range(&instr->dsts[i]);
+		}
+	}
+	
+}
+
+
+void update_floating_point_regs(vec_cinstr &instrs, uint32_t direction, vector<disasm_t *> disasm_vec, uint32_t pc){
+
+	tos = DR_REG_ST8;
+	
+
+	for (int i = 0; i < instrs.size(); i++){
+
+		cinstr_t * cinstr = instrs[i].first;
+		bool unhandled = false;
+		vector<string> vector = get_disasm_string(disasm_vec, cinstr->pc);
+		//cout << vector[0] << endl;
+		string disasm;
+		if (vector.size() > 0) disasm = vector[0];
+		else disasm = "not captured\n";
+		uint32_t line = i + 1;
+
+		/* reset for start of the function */
+		if (cinstr->pc == pc){
+			tos = DR_REG_ST8;
+		}
+
+		if (!is_floating_point_ins(cinstr->opcode)){
+			update_fp_reg(cinstr, disasm, i+1);
+		}
+		else{
+			switch (cinstr->opcode){
+			case OP_fld: //Push m32fp onto the FPU register stack.
+			case OP_fld1: //Push +1.0 onto the FPU register stack
+			case OP_fild: //Push m32int onto the FPU register stack.
+			case OP_fldz: //Push +0.0 onto the FPU register stack.
+				if (direction == FORWARD_ANALYSIS){
+					update_fp_src(cinstr, disasm, line);
+					update_tos(FP_PUSH, disasm, line, direction);
+					update_fp_dest(cinstr, disasm, line);
+				}
+				else if (direction == BACKWARD_ANALYSIS){
+					update_fp_dest(cinstr, disasm, line);
+					update_tos(FP_PUSH, disasm, line, direction);
+					update_fp_src(cinstr, disasm, line);
+				}
+				break;
+			case OP_fst:
+				update_fp_reg(cinstr, disasm, line);
+				break;
+			case OP_fstp:  //Copy ST(0) to m32fp and pop register stack.
+			case OP_fistp:  //Store ST(0) in m32int and pop register stack. 
+				if (direction == FORWARD_ANALYSIS){
+					update_fp_reg(cinstr, disasm, line);
+					update_tos(FP_POP, disasm, line, direction);
+				}
+				else if (direction == BACKWARD_ANALYSIS){
+					update_tos(FP_POP, disasm, line, direction);
+					update_fp_reg(cinstr, disasm, line);
+				}
+				break;
+			case OP_fmul: //Multiply ST(0) by m32fp and store result in ST(0).
+			case OP_fmulp:  //Multiply ST(i) by ST(0), store result in ST(i), and pop the register stack.
+				if (cinstr->opcode == OP_fmulp && direction == BACKWARD_ANALYSIS){
+					update_tos(FP_POP, disasm, line, direction);
+				}
+				update_fp_reg(cinstr, disasm, line);
+				if (cinstr->opcode == OP_fmulp && direction == FORWARD_ANALYSIS){
+					update_tos(FP_POP, disasm, line, direction);
+				}
+				break;
+			case OP_fxch:
+				update_fp_reg(cinstr, disasm, line);
+			case OP_faddp:  //Add ST(0) to ST(i), store result in ST(i), and pop the register stack
+			case OP_fadd:   //Add m32fp to ST(0) and store result in ST(0).
+			case OP_fsubp:  //Subtract ST(0) from ST(1), store result in ST(1), and pop register stack.
+			case OP_fsub:   //Subtract m32fp from ST(0) and store result in ST(0).
+			case OP_fdivp:  //Divide ST(1) by ST(0), store result in ST(1), and pop the register stack.
+			case OP_fdiv:   //Divide ST(0) by m32fp and store result in ST(0).
+				if (((cinstr->opcode == OP_faddp) || (cinstr->opcode == OP_fsubp) || (cinstr->opcode == OP_fdivp)) && (direction == BACKWARD_ANALYSIS)){
+					update_tos(FP_POP, disasm, line, direction);
+				}
+				update_fp_reg(cinstr, disasm, line);
+				if (((cinstr->opcode == OP_faddp) || (cinstr->opcode == OP_fsubp) || (cinstr->opcode == OP_fdivp)) && (direction == FORWARD_ANALYSIS)){
+					update_tos(FP_POP, disasm, line, direction);
+				}
+				break;
+			default:
+				unhandled = true;
+			}
+			ASSERT_MSG((!unhandled), ("ERROR: opcode %s(%d) with %d dests and %d srcs (app_pc - %d) not handled in canonicalization\n", dr_operation_to_string(cinstr->opcode).c_str(), cinstr->opcode,
+				cinstr->num_dsts, cinstr->num_srcs, cinstr->pc));
+		}
+
+	}
+
+
+}
+
+/* this is a pure function without side effects for cinstr - check to make sure */
 rinstr_t * cinstr_to_rinstrs (cinstr_t * cinstr, int &amount, std::string disasm, uint32_t line){
 
 	int operation;
@@ -433,9 +601,6 @@ rinstr_t * cinstr_to_rinstrs (cinstr_t * cinstr, int &amount, std::string disasm
 
 	bool unhandled = false;
 
-	if (!is_floating_point_ins(cinstr->opcode)){
-		update_fp_reg(cinstr, disasm, line);
-	}
 
 	switch (cinstr->opcode){
 
@@ -790,9 +955,6 @@ rinstr_t * cinstr_to_rinstrs (cinstr_t * cinstr, int &amount, std::string disasm
 
 		/* floating point instructions */
 
-		
-
-	
 	case OP_fld: //Push m32fp onto the FPU register stack.
 	case OP_fld1: //Push +1.0 onto the FPU register stack
 	case OP_fild: //Push m32int onto the FPU register stack.
@@ -801,33 +963,20 @@ rinstr_t * cinstr_to_rinstrs (cinstr_t * cinstr, int &amount, std::string disasm
 		if_bounds(1, 1){
 			rinstr = new rinstr_t[1];
 			amount = 1;
-			update_fp_dest(cinstr,disasm, line);
-			update_tos(FP_PUSH,disasm,line);
-			update_fp_src(cinstr, disasm, line);
-			rinstr[0] = { op_assign, cinstr->dsts[0] , 1, { cinstr->srcs[0] }, false };
-			
+			rinstr[0] = { op_assign, cinstr->dsts[0], 1, { cinstr->srcs[0] }, false };
+
 		}
 		else_bounds;
 
 
-	case OP_fst: //Copy ST(0) to m32fp.
-		if_bounds(1, 1){
-			rinstr = new rinstr_t[1];
-			amount = 1;
-			update_fp_reg(cinstr, disasm, line);
-			rinstr[0] = { op_assign, cinstr->dsts[0], 1, { cinstr->srcs[0] }, false }; 
-		}
-		else_bounds;
-
+	case OP_fst:
 	case OP_fstp:  //Copy ST(0) to m32fp and pop register stack.
 	case OP_fistp:  //Store ST(0) in m32int and pop register stack.
 		if_bounds(1, 1){
 			rinstr = new rinstr_t[1];
 			amount = 1;
-			update_tos(FP_POP, disasm, line);
-			update_fp_reg(cinstr, disasm, line);
 			rinstr[0] = { op_assign, cinstr->dsts[0], 1, { cinstr->srcs[0] }, false };
-			
+
 		}
 		else_bounds;
 
@@ -836,16 +985,12 @@ rinstr_t * cinstr_to_rinstrs (cinstr_t * cinstr, int &amount, std::string disasm
 		if_bounds(1, 2){
 			rinstr = new rinstr_t[1];
 			amount = 1;
-			if (cinstr->opcode == OP_fmulp){
-				update_tos(FP_POP, disasm, line);
-			}
-			update_fp_reg(cinstr, disasm, line);
 			rinstr[0] = { op_mul, cinstr->dsts[0], 2, { cinstr->srcs[0], cinstr->srcs[1] }, true };
-			
+
 		}
 		else_bounds;
 
-	//Exchange the contents of ST(0) and ST(i).
+		//Exchange the contents of ST(0) and ST(i).
 	case OP_fxch:
 		//exchange the two registers
 		if_bounds(2, 2){
@@ -853,7 +998,6 @@ rinstr_t * cinstr_to_rinstrs (cinstr_t * cinstr, int &amount, std::string disasm
 			amount = 3;
 			operand_t virtual_reg = { REG_TYPE, cinstr->srcs[0].width, DR_REG_VIRTUAL_1 };
 			reg_to_mem_range(&virtual_reg);
-			update_fp_reg(cinstr, disasm, line);
 			ASSERT_MSG(((cinstr->dsts[0].value == cinstr->srcs[0].value) && (cinstr->dsts[1].value == cinstr->srcs[1].value)), ("op_fxch the dsts and srcs should match\n"));
 			//virtual <- src[0]
 			rinstr[0] = { op_assign, virtual_reg, 1, { cinstr->srcs[0] }, false };
@@ -874,10 +1018,6 @@ rinstr_t * cinstr_to_rinstrs (cinstr_t * cinstr, int &amount, std::string disasm
 		if_bounds(1, 2){
 			rinstr = new rinstr_t[1];
 			amount = 1;
-			if ((cinstr->opcode == OP_faddp) || (cinstr->opcode == OP_fsubp) || (cinstr->opcode == OP_fdivp)){
-				update_tos(FP_POP, disasm, line);
-			}
-			update_fp_reg(cinstr, disasm, line);
 			uint32_t operation;
 			switch (cinstr->opcode){
 			case OP_faddp:
@@ -892,10 +1032,10 @@ rinstr_t * cinstr_to_rinstrs (cinstr_t * cinstr, int &amount, std::string disasm
 			}
 			rinstr[0] = { operation, cinstr->dsts[0], 2, { cinstr->srcs[1], cinstr->srcs[0] }, false };  /* changed for SUB (src1, src0) from the reverse: please verify */
 
-			
 
 		}
 		else_bounds;
+	
 
 		/******************************************************control flow instructions**************************************************************************************************/
 

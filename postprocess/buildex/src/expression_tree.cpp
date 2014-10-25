@@ -21,6 +21,7 @@ Expression_tree::Expression_tree(){
 		frontier[i].bucket = new Node * [SIZE_PER_FRONTIER];
 		frontier[i].amount = 0;
  	}
+	number = 0;
 
 }
 

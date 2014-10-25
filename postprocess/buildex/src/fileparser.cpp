@@ -134,7 +134,7 @@ vector<cinstr_t * > get_all_instructions(ifstream &file){
 }
 
 
-vector< pair<cinstr_t *, string *> > walk_file_and_get_instructions(ifstream &file, vector<disasm_t *> &disasm){
+vec_cinstr walk_file_and_get_instructions(ifstream &file, vector<disasm_t *> &disasm){
 
 	cinstr_t * instr;
 	string * dis_string;

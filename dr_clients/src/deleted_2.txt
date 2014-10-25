@@ -1,0 +1,103 @@
+case OP_fld: //Push m32fp onto the FPU register stack.
+	case OP_fld1: //Push +1.0 onto the FPU register stack
+	case OP_fild: //Push m32int onto the FPU register stack.
+	case OP_fldz: //Push +0.0 onto the FPU register stack.
+		// dst[0] <- src[0]
+		if_bounds(1, 1){
+			rinstr = new rinstr_t[1];
+			amount = 1;
+			update_fp_dest(cinstr,disasm, line);
+			update_tos(FP_PUSH,disasm,line);
+			update_fp_src(cinstr, disasm, line);
+			rinstr[0] = { op_assign, cinstr->dsts[0] , 1, { cinstr->srcs[0] }, false };
+			
+		}
+		else_bounds;
+
+
+	case OP_fst: //Copy ST(0) to m32fp.
+		if_bounds(1, 1){
+			rinstr = new rinstr_t[1];
+			amount = 1;
+			update_fp_reg(cinstr, disasm, line);
+			rinstr[0] = { op_assign, cinstr->dsts[0], 1, { cinstr->srcs[0] }, false }; 
+		}
+		else_bounds;
+
+	case OP_fstp:  //Copy ST(0) to m32fp and pop register stack.
+	case OP_fistp:  //Store ST(0) in m32int and pop register stack.
+		if_bounds(1, 1){
+			rinstr = new rinstr_t[1];
+			amount = 1;
+			update_tos(FP_POP, disasm, line);
+			update_fp_reg(cinstr, disasm, line);
+			rinstr[0] = { op_assign, cinstr->dsts[0], 1, { cinstr->srcs[0] }, false };
+			
+		}
+		else_bounds;
+
+	case OP_fmul: //Multiply ST(0) by m32fp and store result in ST(0).
+	case OP_fmulp:  //Multiply ST(i) by ST(0), store result in ST(i), and pop the register stack.
+		if_bounds(1, 2){
+			rinstr = new rinstr_t[1];
+			amount = 1;
+			if (cinstr->opcode == OP_fmulp){
+				update_tos(FP_POP, disasm, line);
+			}
+			update_fp_reg(cinstr, disasm, line);
+			rinstr[0] = { op_mul, cinstr->dsts[0], 2, { cinstr->srcs[0], cinstr->srcs[1] }, true };
+			
+		}
+		else_bounds;
+
+	//Exchange the contents of ST(0) and ST(i).
+	case OP_fxch:
+		//exchange the two registers
+		if_bounds(2, 2){
+			rinstr = new rinstr_t[3];
+			amount = 3;
+			operand_t virtual_reg = { REG_TYPE, cinstr->srcs[0].width, DR_REG_VIRTUAL_1 };
+			reg_to_mem_range(&virtual_reg);
+			update_fp_reg(cinstr, disasm, line);
+			ASSERT_MSG(((cinstr->dsts[0].value == cinstr->srcs[0].value) && (cinstr->dsts[1].value == cinstr->srcs[1].value)), ("op_fxch the dsts and srcs should match\n"));
+			//virtual <- src[0]
+			rinstr[0] = { op_assign, virtual_reg, 1, { cinstr->srcs[0] }, false };
+			//dst[0] <- src[1]
+			rinstr[1] = { op_assign, cinstr->dsts[0], 1, { cinstr->srcs[1] }, false };
+			//dst[1] <- virtual 
+			rinstr[2] = { op_assign, cinstr->dsts[1], 1, { virtual_reg }, false };
+		}
+		else_bounds;
+
+	case OP_faddp:  //Add ST(0) to ST(i), store result in ST(i), and pop the register stack
+	case OP_fadd:   //Add m32fp to ST(0) and store result in ST(0).
+	case OP_fsubp:  //Subtract ST(0) from ST(1), store result in ST(1), and pop register stack.
+	case OP_fsub:   //Subtract m32fp from ST(0) and store result in ST(0).
+	case OP_fdivp:  //Divide ST(1) by ST(0), store result in ST(1), and pop the register stack.
+	case OP_fdiv:   //Divide ST(0) by m32fp and store result in ST(0).
+		// dst[0] <- src[1] (op) src[0]
+		if_bounds(1, 2){
+			rinstr = new rinstr_t[1];
+			amount = 1;
+			if ((cinstr->opcode == OP_faddp) || (cinstr->opcode == OP_fsubp) || (cinstr->opcode == OP_fdivp)){
+				update_tos(FP_POP, disasm, line);
+			}
+			update_fp_reg(cinstr, disasm, line);
+			uint32_t operation;
+			switch (cinstr->opcode){
+			case OP_faddp:
+			case OP_fadd:
+				operation = op_add; break;
+			case OP_fsubp:
+			case OP_fsub:
+				operation = op_sub; break;
+			case OP_fdiv:
+			case OP_fdivp:
+				operation = op_div; break;
+			}
+			rinstr[0] = { operation, cinstr->dsts[0], 2, { cinstr->srcs[1], cinstr->srcs[0] }, false };  /* changed for SUB (src1, src0) from the reverse: please verify */
+
+			
+
+		}
+		else_bounds;

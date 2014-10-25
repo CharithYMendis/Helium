@@ -8,8 +8,14 @@
 #include <string>
 #include <iostream>
 #include <stdint.h>
+#include <vector>
+
+using namespace std;
 
 #define MAX_SIZE_OF_REG 32
+
+#define FORWARD_ANALYSIS    1
+#define BACKWARD_ANALYSIS   2
 
 //canonicalized operations
 enum {
@@ -41,6 +47,8 @@ enum {
 
 
  typedef output_t cinstr_t;
+
+ typedef std::vector< std::pair<cinstr_t *, std::string * > >  vec_cinstr;
  
  typedef struct _rinstr_t{
  
@@ -53,6 +61,15 @@ enum {
  
  } rinstr_t;
 
+ typedef struct _disasm_t{
+
+	 uint32_t module_no;
+	 std::vector<pair<uint32_t, string> > pc_disasm;
+
+ } disasm_t;
+
+void update_floating_point_regs(vec_cinstr  &instrs, uint32_t direction, std::vector<disasm_t *> disasm_vec, uint32_t pc);
+void update_regs_to_mem_range(vec_cinstr  &instrs);
  
  //functions
  rinstr_t * cinstr_to_rinstrs (cinstr_t * cinstr, int &amount, std::string disasm, uint32_t line);

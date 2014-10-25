@@ -2,28 +2,22 @@
 #define _FILE_PARSER_H
 
 #include <iostream>
+#include <utility>
 #include <fstream>
 #include "canonicalize.h"
 #include <stdint.h>
 #include <vector>
+#include <string>
+
 
 using namespace std;
-
-typedef struct _disasm_t{
-
-	uint32_t module_no;
-	std::vector<pair<uint32_t, string> > pc_disasm;
-	//std::vector<uint32_t> app_pc;
-	//std::vector<std::string> disasm;
-
-} disasm_t;
 
 cinstr_t * get_next_from_ascii_file(ifstream &file);
 cinstr_t * get_next_from_bin_file(ifstream &file);
 
 vector<cinstr_t * > get_all_instructions(ifstream &file);
 void walk_instructions(ifstream &file);
-vector< pair<cinstr_t *, string *> > walk_file_and_get_instructions(ifstream &file, vector<disasm_t *> &disasm);
+vec_cinstr walk_file_and_get_instructions(ifstream &file, vector<disasm_t *> &disasm);
 
 void go_forward_line(ifstream &file);
 bool go_backward_line(ifstream &file);
