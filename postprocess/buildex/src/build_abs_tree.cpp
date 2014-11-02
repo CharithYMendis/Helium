@@ -201,8 +201,8 @@ void Comp_Abs_tree::abstract_buffer_indexes(Comp_Abs_node * head, Comp_Abs_node 
 			A.push_back(coeff);
 		}
 
-		/*cout << "A" << endl;
-		printout_matrices(A);*/
+		cout << "A" << endl;
+		printout_matrices(A);
 
 
 		for (int dim = 0; dim < first->mem_info.dimensions; dim++){
@@ -211,13 +211,13 @@ void Comp_Abs_tree::abstract_buffer_indexes(Comp_Abs_node * head, Comp_Abs_node 
 			for (int i = 0; i < node->nodes.size(); i++){
 				b.push_back((double)node->nodes[i]->mem_info.pos[dim]);
 			}
-			/*cout << "b" << endl;
-			printout_vector(b);*/
+			cout << "b" << endl;
+			printout_vector(b);
 
 			vector<double> results = solve_linear_eq(A, b);
 
-			/*cout << "results" << endl;
-			printout_vector(results);*/
+			cout << "results" << endl;
+			printout_vector(results);
 
 			//ASSERT_MSG((results.size() == (first->mem_info.dimensions + 1)), ("ERROR: the result vector is inconsistent\n"));
 			for (int i = 0; i < results.size(); i++){

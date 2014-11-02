@@ -181,6 +181,12 @@ uint64_t get_random_mem_location(mem_regions_t *  region, uint32_t seed){
 	return mem_location;
 }
 
+bool is_within_mem_region(mem_regions_t* mem, uint64_t value){
+
+	return (value >= mem->start) && (value <= mem->end);
+
+}
+
 
 
 /* printing functions - debug */

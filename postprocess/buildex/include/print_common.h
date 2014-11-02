@@ -17,5 +17,6 @@ string operation_to_string(uint operation);
 string opnd_to_string(operand_t * opnd);
 string dr_operation_to_string(uint operation);
 string abs_node_to_string(Abs_node* node);
+string dr_logical_to_string(uint32_t opcode);
 
 #endif

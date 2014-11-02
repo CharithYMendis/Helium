@@ -55,6 +55,8 @@ std::vector<int> get_mem_position(mem_regions_t * mem_region, uint64_t mem_value
 mem_regions_t* get_random_output_region(std::vector<mem_regions_t *> regions);
 uint64_t get_random_mem_location(mem_regions_t * region, uint32_t seed);
 
+bool is_within_mem_region(mem_regions_t* mem, uint64_t value);
+
 /* prints out the identified mem regions */
 void print_mem_regions(std::vector<mem_regions_t *> regions);
 

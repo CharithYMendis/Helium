@@ -20,6 +20,7 @@
 #include "fileparser.h"
 #include "defines.h"
 #include "tree_transformations.h"
+#include "forward_analysis.h"
 
 #include "build_tree.h"
 #include "build_mem_instrace.h"
@@ -309,12 +310,13 @@
 	 vector<disasm_t *> disasm;
 	 if (debug){
 		 disasm = parse_debug_disasm(disasm_file);
-		 print_disasm(disasm);
+		 //print_disasm(disasm);
 	 }
 
 	 /* analyzing mem dumps for input and output image locations */
 	 DEBUG_PRINT(("analyzing mem dumps\n"), 1);
-	 vector<mem_regions_t *> regions = get_image_regions_from_dump(memdump_files, in_image_filename, out_image_filename);
+	 vector<mem_regions_t *> regions;
+	 regions = get_image_regions_from_dump(memdump_files, in_image_filename, out_image_filename);
 	 DEBUG_PRINT(("analyzing instrace file - %s\n", instrace_filename.c_str()), 1);
 
 	 /* independently create the memory layout from the instrace */
@@ -324,18 +326,20 @@
 	 create_mem_layout(instrace_file, pc_mem_info);
 	 link_mem_regions_greedy(mem_info, 0);
 	 link_mem_regions(pc_mem_info, 1);
-	 print_mem_layout(log_file, mem_info);
+	 //print_mem_layout(log_file, mem_info);
 	 print_mem_layout(log_file, pc_mem_info);
 
 
 	 mem_info = extract_mem_regions(pc_mem_info);
 
+	 print_mem_layout(log_file, mem_info);
+
 	 /* merge these two information - instrace mem info + mem dump info */
 	 vector<mem_regions_t *> total_mem_regions;
 	 vector<mem_regions_t *> image_regions = merge_instrace_and_dump_regions(total_mem_regions, mem_info, regions);
 
-	 print_mem_regions(total_mem_regions);
-
+	 //print_mem_regions(total_mem_regions);
+	 
 	 if (mode == MEM_INFO_STAGE){
 		 exit(0);
 	 }
@@ -387,6 +391,8 @@
 	 update_floating_point_regs(instrs_forward, FORWARD_ANALYSIS, disasm, start_pc);
 	 DEBUG_PRINT(("updated forward instr's floating point regs\n"), 2);
 
+
+	 /*******************************************done preprocessing instruction trace***********************************************************************/
 	 /*for (int i = 0; i < instrs_backward.size(); i++){
 		 ASSERT_MSG((instrs_backward[i] != instrs_forward[i]), ("ERROR: cannot be equal\n"));
 		 cinstr_t * first = instrs_backward[i].first;
@@ -395,6 +401,62 @@
 		 ASSERT_MSG((first->srcs != second->srcs), ("ERROR: cannot be equal cinstr srcs\n"));
 		 ASSERT_MSG((first->dsts != second->dsts), ("ERROR: cannot be equal cinstr dsts\n"));
 	 }*/
+
+
+
+	 mem_regions_t * input_mem_region = (image_regions[0]->type == IMAGE_INPUT ? image_regions[0] : image_regions[1]);
+	 mem_regions_t * output_mem_region = (image_regions[0]->type == IMAGE_INPUT ? image_regions[1] : image_regions[0]);
+
+
+	 vector<uint32_t> app_pc = find_dependant_statements(instrs_forward, input_mem_region, disasm);
+
+	 cout << "dependant statements" << endl;
+	 for (int i = 0; i < app_pc.size(); i++){
+
+		 vector<string> disasm_string = get_disasm_string(disasm, app_pc[i]);
+		 cout << app_pc[i] << " " << disasm_string[0] <<  endl;
+	 }
+
+	 vector<jump_info_t * > cond_app_pc = find_depedant_conditionals(app_pc, instrs_forward, disasm);
+
+	 cout << "dependant conditionals" << endl;
+	 for (int i = 0; i < cond_app_pc.size(); i++){
+
+		 vector<string> dis_jmp_string = get_disasm_string(disasm, cond_app_pc[i]->jump_pc);
+		 vector<string> dis_cond_string = get_disasm_string(disasm, cond_app_pc[i]->cond_pc);
+
+		 cout << i + 1 << " - conditional " << endl;
+		 cout << "jump ";
+		 cout << cond_app_pc[i]->jump_pc << " " << dis_jmp_string[0] << endl;
+		 cout << "cond_pc ";
+		 cout << cond_app_pc[i]->cond_pc << " " << dis_cond_string[0] << endl;
+		 cout << "target_pc ";
+		 cout << cond_app_pc[i]->target_pc << endl;
+		 cout << "fall_pc ";
+		 cout << cond_app_pc[i]->fall_pc << endl;
+		 cout << "merge_pc ";
+		 cout << cond_app_pc[i]->merge_pc << endl;
+
+	 }
+
+	 vector<instr_info_t *> instr_info = populate_conditional_instructions(disasm, cond_app_pc);
+
+
+	 cout << "populated cond. instrs" << endl;
+	 for (int i = 0; i < instr_info.size(); i++){
+		 instr_info_t * info = instr_info[i];
+		 if (info->conditions.size() > 0){
+			 cout << info->pc << " " << info->disasm << endl;
+			 //conditionals
+			 for (int j = 0; j < info->conditions.size(); j++){
+				 cout << info->conditions[j].first->cond_pc << " " << info->conditions[j].second << endl;
+			 }
+		 }
+	 }
+
+
+
+	 //exit(0);
 
 
 
@@ -417,8 +479,9 @@
 
 	 if (tree_build == BUILD_RANDOM){
 
+
+		 mem_regions_t * random_mem_region = get_random_output_region(image_regions);
 		 if (start_trace == FILE_BEGINNING){
-			 mem_regions_t * random_mem_region = get_random_output_region(image_regions);
 			 uint64 mem_location = get_random_mem_location(random_mem_region, seed);
 			 DEBUG_PRINT(("random mem location we got - %llx\n", mem_location), 1);
 			 dest = mem_location;
@@ -432,8 +495,18 @@
 
 		 //Node * node = create_tree_for_dest(dest, stride, instrace_file, start_points, start_trace, end_trace, disasm)->get_head();
 		 Expression_tree * tree = new Expression_tree();
-		 build_tree(dest, stride, start_points, start_trace, end_trace, tree, instrs_backward, disasm);
+		 build_tree(dest, stride, start_points, start_trace, end_trace, tree, instrs_backward, disasm,instr_info);
+		 tree->print_conditionals();
+		 create_trees_for_conditionals(tree, instrs_backward, start_points, disasm, instr_info);
+		 for (int i = 0; i < tree->conditionals.size(); i++){
+			 for (int j = 0; j < tree->conditionals[i]->trees.size(); j++){
+				 conc_trees.push_back(tree->conditionals[i]->trees[j]);
+			 }
+		 }
 		 conc_trees.push_back(tree);
+
+
+
 		
 	 }
 	 else if (tree_build == BUILD_RANDOM_SET){
@@ -445,7 +518,7 @@
 		 for (int i = 0; i < nbd_locations.size(); i++){
 
 			 Expression_tree * tree = new Expression_tree();
-			 build_tree(nbd_locations[i], stride, start_points, FILE_BEGINNING, end_trace, tree, instrs_backward, disasm);
+			 build_tree(nbd_locations[i], stride, start_points, FILE_BEGINNING, end_trace, tree, instrs_backward, disasm, instr_info);
 			 conc_trees.push_back(tree);
 			 
 		 }
@@ -456,10 +529,15 @@
 
 	 }
 	 else if (tree_build == BUILD_SIMILAR){
-		 conc_trees = get_similar_trees(image_regions, seed, &stride, instrs_backward, start_points, end_trace, disasm);
+		 conc_trees = get_similar_trees(image_regions, seed, &stride, instrs_backward, start_points, end_trace, disasm, instr_info);
  	 }
 	 else if (tree_build == BUILD_CLUSTERS){
-		 vector< vector< Expression_tree *> > clustered_trees = cluster_trees(image_regions, start_points, instrs_backward, disasm, output_folder + file_substr);
+		 vector< vector< Expression_tree *> > clustered_trees = cluster_trees(image_regions, start_points, instrs_backward, disasm, output_folder + file_substr, instr_info);
+		 build_abs_trees(clustered_trees, output_folder + file_substr,4,total_mem_regions);
+
+
+		 /* build abs_trees for a sub section of each cluster  + their conditionals */
+
 	 }
 
 	 /*debug printing*/

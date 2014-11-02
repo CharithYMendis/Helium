@@ -48,6 +48,32 @@ enum eflag_bits {
 
 };
 
+enum lahf_bits {
+
+	/*Sign_lahf,
+	Zero_lahf,
+	Reserved_3,
+	Auxiliary_lahf,
+	Reserved_5,
+	Parity_lahf,
+	Reserved_7,
+	Carry_lahf*/
+
+	Carry_lahf,
+	Reserved_7_lahf,
+	Parity_lahf,
+	Reserved_5_lahf,
+	Auxiliary_lahf,
+	Reserved_3_lahf,
+	Zero_lahf,
+	Sign_lahf,
+	Overflow_lahf
+	
+
+};
+
+
+#define SET_FLAG(flag,member) flag |= (1 << member)
 
 #define assign_value(start,opnd)  \
 	opnd->value = (start) * MAX_SIZE_OF_REG - opnd->width; \
@@ -121,6 +147,22 @@ static void assert_opnds(int opcode,int needed_src, int needed_dst, int actual_s
 bool check_eflag_bit(eflag_bits flag_type, uint32_t reg_val){
 
 	return ((reg_val & (1 << flag_type)) == (1 << flag_type));
+
+}
+
+bool check_lahf_bit(lahf_bits flag_type, uint32_t reg_val){
+
+	uint32_t ah = (reg_val >> 8) & 0xFF;
+	uint32_t al = reg_val & 0xFF;
+
+	//cout << hex << ah << " " << al << endl;
+
+	if (flag_type == Overflow_lahf){
+		return al == 1;
+	}
+	else{
+		return ((ah & (1 << flag_type)) == (1 << flag_type));
+	}
 
 }
 
@@ -367,20 +409,52 @@ void update_tos(uint32_t type, string disasm, uint32_t line, uint32_t direction)
 
 }
 
-bool is_floating_point_reg(operand_t * opnd){
-
-	int reg = mem_range_to_reg(opnd);
-	return (
-		(opnd->type == REG_TYPE) &&
-		(reg >= DR_REG_ST0) &&
-		(reg <= DR_REG_ST7)
-		);
-}
-
-bool is_conditional_jump_ins(uint32_t opcode){
-
+bool is_instr_handled(uint32_t opcode){
 
 	switch (opcode){
+	case OP_push_imm:
+	case OP_push:
+	case OP_pop:
+	case OP_mov_st:
+	case OP_mov_ld:
+	case OP_mov_imm:
+	case OP_movzx:
+	case OP_movsx:
+	case OP_movq:
+	case OP_movd:
+	case OP_movapd:
+	case OP_movdqa:
+	case OP_cvttsd2si:
+	case OP_imul:
+	case OP_mul:
+	case OP_idiv:
+	case OP_cdq:
+	case OP_xchg:
+	case OP_xor:
+	case OP_sub:
+	case OP_pxor:
+	case OP_psubd:
+	case OP_add:
+	case OP_and:
+	case OP_or:
+	case OP_andpd:
+	case OP_neg:
+	case OP_dec:
+	case OP_inc:
+	case OP_sar:
+	case OP_shr:
+	case OP_shl:
+	case OP_psllq:
+	case OP_psrlq:
+	case OP_not:
+	case OP_lea:
+	case OP_sbb:
+	case OP_setz:
+	case OP_sets:
+	case OP_setns:
+	case OP_setb:
+	case OP_cmp:
+	case OP_test:
 	case OP_jmp:
 	case OP_jmp_short:
 	case OP_jnl:
@@ -388,13 +462,9 @@ bool is_conditional_jump_ins(uint32_t opcode){
 	case OP_jl:
 	case OP_jnle:
 	case OP_jnle_short:
-	case OP_cmp:
-	case OP_ret:
-	case OP_call:
 	case OP_jnz:
 	case OP_jnz_short:
 	case OP_jz:
-	case OP_test:
 	case OP_jnb_short:
 	case OP_jb_short:
 	case OP_jz_short:
@@ -405,12 +475,266 @@ bool is_conditional_jump_ins(uint32_t opcode){
 	case OP_jle_short:
 	case OP_jle:
 	case OP_jbe_short:
-	case OP_call_ind:
 	case OP_jns:
 	case OP_jb:
 	case OP_jnb:
 	case OP_js:
 	case OP_jmp_ind:
+	case OP_call:
+	case OP_ret:
+	case OP_call_ind:
+	case OP_enter:
+	case OP_leave:
+	case OP_fldcw:
+	case OP_fnstcw:
+	case OP_stmxcsr:
+	case OP_nop:
+		return true;
+	default:
+		return false;
+	}
+
+}
+
+/* this returns the flag mask register */
+uint32_t is_eflags_affected(uint32_t opcode){
+
+	uint32_t flags = 0;
+	
+	switch (opcode){
+	case OP_imul:
+	case OP_mul:
+		//CF and OF
+		SET_FLAG(flags, Carry_Flag);
+		SET_FLAG(flags, Overflow_Flag); break;
+
+
+    // all 6 flags
+	case OP_sub:
+	case OP_add:
+	case OP_neg:
+	case OP_sbb:
+	case OP_cmp:
+		//Op_cmp - CF, OF, SF, ZF, AF, and PF
+		//Op_neg - CF 0 if opnd 0, OF, SF, ZF, AF, and PF
+		//OF, SF, ZF, AF, CF, and PF
+		SET_FLAG(flags, Overflow_Flag);
+		SET_FLAG(flags, Sign_Flag);
+		SET_FLAG(flags, Zero_Flag);
+		SET_FLAG(flags, Carry_Flag);
+		SET_FLAG(flags, Parity_Flag);
+		SET_FLAG(flags, Auxiliary_Carry_Flag); break;
+	
+	// without AF
+	case OP_test:
+		//OF and CF flags are set to 0. The SF, ZF, and PF 
+	case OP_sar:
+	case OP_shr:
+	case OP_shl:
+		//OF, CF, SF, ZF, and PF (AF is generally undefined) - there are conditions for OF, CF as well but we will disregard them for now
+	case OP_xor:
+	case OP_and:
+	case OP_or:
+		//OF,CF cleared, SF, ZF, PF
+		SET_FLAG(flags, Overflow_Flag);
+		SET_FLAG(flags, Sign_Flag);
+		SET_FLAG(flags, Zero_Flag);
+		SET_FLAG(flags, Carry_Flag);
+		SET_FLAG(flags, Parity_Flag); break;
+	
+	// without CF
+	case OP_dec:
+	case OP_inc:
+		//OF, SF, ZF, AF, and PF
+		SET_FLAG(flags, Overflow_Flag);
+		SET_FLAG(flags, Sign_Flag);
+		SET_FLAG(flags, Zero_Flag);
+		SET_FLAG(flags, Parity_Flag);
+		SET_FLAG(flags, Auxiliary_Carry_Flag); break;
+	
+	}
+
+	return flags;
+
+}
+
+bool is_branch_taken(uint32_t opcode, uint32_t flags){
+
+	bool cf = check_lahf_bit(Carry_lahf, flags);
+	bool zf = check_lahf_bit(Zero_lahf, flags);
+	bool of = check_lahf_bit(Overflow_lahf, flags);
+	bool af = check_lahf_bit(Auxiliary_lahf, flags);
+	bool pf = check_lahf_bit(Parity_lahf, flags);
+	bool sf = check_lahf_bit(Sign_lahf, flags);
+
+	
+
+	bool unhandled = false;
+	//cout << "opcode " << opcode << endl;
+
+	switch (opcode){
+	
+	case OP_jnl:
+	case OP_jnl_short:
+		//Jump short if not less(SF = OF)
+		return of == sf;
+	
+	case OP_jl:
+	case OP_jl_short:
+		return of != sf;
+
+	case OP_jnle:
+	case OP_jnle_short:
+		//Jump short if not less or equal (ZF=0 and SF=OF)
+		return (of == sf) && !zf;
+
+	case OP_jnz:
+	case OP_jnz_short:
+		return !zf;
+
+	case OP_jz:
+	case OP_jz_short:
+		//ZF value
+		return zf;
+
+	case OP_jb:
+	case OP_jb_short:
+		return cf;
+
+	case OP_jnb:
+	case OP_jnb_short:
+		//CF value
+		return !cf;
+
+	case OP_jns:
+	case OP_jns_short:
+		return !sf;
+	case OP_js:
+	case OP_js_short:
+		//SF value
+		return sf;
+
+	case OP_jbe_short:
+		//Jump short if below or equal (CF=1 or ZF=1)
+		return cf || zf;
+	
+	case OP_jle:
+	case OP_jle_short:
+		//Jump near if less or equal (ZF=1 or SF~=OF)
+		return zf || (sf != of);
+	case OP_jnbe_short:
+		//Jump short if not below or equal (CF=0 and ZF=0)
+		//cout << "jnbe " << cf << " " << zf << endl;
+		return !cf && !zf;
+
+	default:
+		unhandled = true;
+	}
+
+
+
+	ASSERT_MSG((!unhandled), ("ERROR: opcode %d not handled in canonicalization\n", opcode));
+
+
+}
+
+bool is_jmp_conditional_affected(uint32_t opcode, uint32_t flags){
+
+	bool cf = check_eflag_bit(Carry_Flag,flags);
+	bool zf = check_eflag_bit(Zero_Flag, flags);
+	bool of = check_eflag_bit(Overflow_Flag, flags);
+	bool af = check_eflag_bit(Auxiliary_Carry_Flag, flags);
+	bool pf = check_eflag_bit(Parity_Flag, flags);
+	bool sf = check_eflag_bit(Sign_Flag, flags);
+
+	bool unhandled = false;
+
+	switch (opcode){
+	case OP_jnl:
+	case OP_jnl_short:
+	case OP_jl:
+	case OP_jl_short:
+		//Jump short if not less(SF = OF)
+		return of && sf;
+	case OP_jnle:
+	case OP_jnle_short:
+		//Jump short if not less or equal (ZF=0 and SF=OF)
+		return of && sf && zf;
+	case OP_jnz:
+	case OP_jnz_short:
+	case OP_jz:
+	case OP_jz_short:
+		//ZF value
+		return zf;
+	case OP_jb:
+	case OP_jb_short:
+	case OP_jnb:
+	case OP_jnb_short:
+		//CF value
+		return cf;
+	case OP_jns:
+	case OP_jns_short:
+	case OP_js:
+	case OP_js_short:
+		//SF value
+		return sf;
+	case OP_jbe_short:
+		//Jump short if below or equal (CF=1 or ZF=1)
+		return cf || zf;
+	case OP_jle:
+	case OP_jle_short:
+		//Jump near if less or equal (ZF=1 or SF~=OF)
+		return zf || (sf && of);
+	case OP_jnbe_short:
+		//Jump short if not below or equal (CF=0 and ZF=0)
+		return cf && zf;
+	default:
+		unhandled = true;
+	}
+
+	ASSERT_MSG((!unhandled), ("ERROR: opcode %d not handled in canonicalization\n", opcode));
+
+}
+
+bool is_floating_point_reg(operand_t * opnd){
+
+	int reg = mem_range_to_reg(opnd);
+	return (
+		(opnd->type == REG_TYPE) &&
+		(reg >= DR_REG_ST0) &&
+		(reg <= DR_REG_ST7)
+		);
+}
+
+
+bool is_conditional_jump_ins(uint32_t opcode){
+
+
+	switch (opcode){
+	
+	case OP_jnl:
+	case OP_jnl_short:
+	case OP_jl:
+	case OP_jnle:
+	case OP_jnle_short:
+	case OP_jnz:
+	case OP_jnz_short:
+	case OP_jz:
+	case OP_jnb_short:
+	case OP_jb_short:
+	case OP_jz_short:
+	case OP_jl_short:
+	case OP_jns_short:
+	case OP_js_short:
+	case OP_jnbe_short:
+	case OP_jle_short:
+	case OP_jle:
+	case OP_jbe_short:
+	case OP_jns:
+	case OP_jb:
+	case OP_jnb:
+	case OP_js:
+
 		return true;
 	default:
 		return false;
@@ -585,6 +909,45 @@ void update_floating_point_regs(vec_cinstr &instrs, uint32_t direction, vector<d
 
 	}
 
+
+}
+
+//this gets true dependancies + instructions affecting eflags
+rinstr_t * cinstr_to_rinstrs_eflags(cinstr_t * cinstr, int &amount, std::string disasm, uint32_t line){
+
+	//get already handled instructions which pose true dependencies - this will decide whether an instruction is not handled at all
+	rinstr_t * rinstr = cinstr_to_rinstrs(cinstr, amount, disasm, line);
+	
+	bool unhandled = false;
+	//check for non-true dependancies; but ins which affect eflags
+
+	if (rinstr == NULL){
+		switch (cinstr->opcode){
+		case OP_cmp:
+			if_bounds(0, 2){
+				rinstr = new rinstr_t[1];
+				amount = 1;
+				operand_t virtual_reg = { REG_TYPE, cinstr->srcs[0].width, DR_REG_VIRTUAL_1 };
+				reg_to_mem_range(&virtual_reg);
+				rinstr[0] = { op_sub, virtual_reg, 2, { cinstr->srcs[0], cinstr->srcs[1] }, true };
+			}
+			else_bounds;
+		case OP_test:
+			if_bounds(0, 2){
+				rinstr = new rinstr_t[1];
+				amount = 1;
+				operand_t virtual_reg = { REG_TYPE, cinstr->srcs[0].width, DR_REG_VIRTUAL_1 };
+				reg_to_mem_range(&virtual_reg);
+				rinstr[0] = { op_and, virtual_reg, 2, { cinstr->srcs[0], cinstr->srcs[1] }, true };
+			}
+			else_bounds;
+		}
+
+		ASSERT_MSG((!unhandled), ("ERROR: opcode %s(%d) with %d dests and %d srcs (app_pc - %d) not handled in canonicalization\n", dr_operation_to_string(cinstr->opcode).c_str(), cinstr->opcode,
+			cinstr->num_dsts, cinstr->num_srcs, cinstr->pc));
+	}
+
+	return rinstr;
 
 }
 
@@ -904,7 +1267,7 @@ rinstr_t * cinstr_to_rinstrs (cinstr_t * cinstr, int &amount, std::string disasm
 	case OP_sbb:
 
 		if_bounds(1, 2){
-			bool cf = check_eflag_bit(Carry_Flag, cinstr->eflags);
+			bool cf = check_lahf_bit(Carry_lahf, cinstr->eflags);
 			if (cf){
 				rinstr = new rinstr_t[2];
 				amount = 2;
@@ -935,10 +1298,10 @@ rinstr_t * cinstr_to_rinstrs (cinstr_t * cinstr, int &amount, std::string disasm
 			amount = 1;
 			bool flag;
 			switch (cinstr->opcode){
-			case OP_setz: flag = check_eflag_bit(Zero_Flag, cinstr->eflags); break;
-			case OP_sets: flag = check_eflag_bit(Sign_Flag, cinstr->eflags); break;
-			case OP_setns: flag = !check_eflag_bit(Sign_Flag, cinstr->eflags); break;
-			case OP_setb: flag = check_eflag_bit(Carry_Flag, cinstr->eflags); break;
+			case OP_setz: flag = check_lahf_bit(Zero_lahf, cinstr->eflags); break;
+			case OP_sets: flag = check_lahf_bit(Sign_lahf, cinstr->eflags); break;
+			case OP_setns: flag = !check_lahf_bit(Sign_lahf, cinstr->eflags); break;
+			case OP_setb: flag = check_lahf_bit(Carry_lahf, cinstr->eflags); break;
 			}
 			if (flag){
 				operand_t immediate = { IMM_INT_TYPE, cinstr->dsts[0].width, 1 };
@@ -1047,13 +1410,9 @@ rinstr_t * cinstr_to_rinstrs (cinstr_t * cinstr, int &amount, std::string disasm
 	case OP_jl:
 	case OP_jnle:
 	case OP_jnle_short:
-	case OP_cmp:
-	case OP_ret:
-	case OP_call:
 	case OP_jnz:
 	case OP_jnz_short:
 	case OP_jz:
-	case OP_test:
 	case OP_jnb_short:
 	case OP_jb_short:
 	case OP_jz_short:
@@ -1064,12 +1423,18 @@ rinstr_t * cinstr_to_rinstrs (cinstr_t * cinstr, int &amount, std::string disasm
 	case OP_jle_short:
 	case OP_jle:
 	case OP_jbe_short:
-	case OP_call_ind:
 	case OP_jns:
 	case OP_jb:
 	case OP_jnb:
 	case OP_js:
 	case OP_jmp_ind:
+
+	case OP_cmp:
+	case OP_test:
+
+	case OP_call:
+	case OP_ret:
+	case OP_call_ind:
 
 		/* need to check these as they change esp and ebp ; for now just disregard */
 	case OP_enter:

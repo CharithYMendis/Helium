@@ -62,6 +62,7 @@ src/print_halide.cpp
 src/print_dot.cpp
 
 src/sympy.cpp
+src/forward_analysis.cpp
 
 ../../common/src/imageinfo.cpp
 ../../common/src/meminfo.cpp

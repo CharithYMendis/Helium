@@ -27,7 +27,7 @@ Node::Node(operand_t * symbol){
 	this->pc = 0;
 }
 
-Node::Node(uint type, uint value, uint width, float float_value){
+Node::Node(uint type, uint64 value, uint width, float float_value){
 
 	operand_t * sym = new operand_t;
 	sym->type = type;

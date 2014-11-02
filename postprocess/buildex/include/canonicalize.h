@@ -72,10 +72,18 @@ void update_floating_point_regs(vec_cinstr  &instrs, uint32_t direction, std::ve
 void update_regs_to_mem_range(vec_cinstr  &instrs);
  
  //functions
- rinstr_t * cinstr_to_rinstrs (cinstr_t * cinstr, int &amount, std::string disasm, uint32_t line);
+rinstr_t * cinstr_to_rinstrs_eflags(cinstr_t * cinstr, int &amount, std::string disasm, uint32_t line);
+rinstr_t * cinstr_to_rinstrs (cinstr_t * cinstr, int &amount, std::string disasm, uint32_t line);
  void reg_to_mem_range(operand_t * opnd);
  int mem_range_to_reg(operand_t * opnd);
  void print_rinstrs(rinstr_t * rinstr, int amount);
+
+
+ //some functions for instruction analysis
+ bool is_conditional_jump_ins(uint32_t opcode);
+ uint32_t is_eflags_affected(uint32_t opcode);
+ bool is_jmp_conditional_affected(uint32_t opcode, uint32_t flags);
+ bool is_branch_taken(uint32_t opcode, uint32_t flags);
 
  
  #endif

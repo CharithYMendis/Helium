@@ -10,6 +10,7 @@
 #include "canonicalize.h"
 #include "memregions.h"
 #include "print_dot.h"
+#include "forward_analysis.h"
 
 using namespace std;
 
@@ -40,6 +41,52 @@ void print_vector(vector<pair<uint32_t,uint32_t> > lines, vector<disasm_t *> dis
 		}
 		cout << endl;
  	}
+}
+
+void create_trees_for_conditionals(Expression_tree * tree, vec_cinstr &instrs, 
+	vector<uint32_t> start_points, vector<disasm_t *> disasm, vector<instr_info_t *> instr_info){
+
+	for (int i = 0; i < tree->conditionals.size(); i++){
+
+		jump_info_t * info = tree->conditionals[i]->jumps;
+		uint32_t line = tree->conditionals[i]->line;
+		
+		cinstr_t * instr = instrs[line].first;
+		if (instr->opcode == OP_cmp){
+
+			for (int j = 0; j < instr->num_srcs; j++){
+				//now build the trees
+				
+				if (instr->srcs[j].type != IMM_INT_TYPE && instr->srcs[j].type != IMM_FLOAT_TYPE){
+					
+					uint32_t dst_line = 0;
+					for (int k = line; k < instrs.size(); k++){
+						cinstr_t * temp = instrs[k].first;
+						bool found = false;
+						for (int m = 0; m < temp->num_dsts; m++){
+							if (temp->dsts[m].type == instr->srcs[j].type && temp->dsts[m].value == instr->srcs[j].value){
+								dst_line = k;
+								found = true;
+								break;
+							}
+						}
+						if (found) break;
+					}
+					ASSERT_MSG((dst_line != 0), ("ERROR: couldn't find the conditional destination\n"));
+
+					Expression_tree * tree_cond = new Expression_tree();
+					build_tree(instr->srcs[j].value, instr->srcs[j].width, start_points, dst_line + 1, FILE_ENDING, tree_cond, instrs, disasm, instr_info);
+					tree->conditionals[i]->trees.push_back(tree_cond);
+
+				}
+
+
+			}
+
+		}
+
+	}
+
 }
 
 
@@ -137,8 +184,72 @@ pair<int32_t, int32_t> get_start_and_end_points(vector<uint32_t> start_points,ui
 
 }
 
+uint32_t find_next_output_memlocation(vec_cinstr &instrs, uint32_t line,  mem_regions_t * mem){
 
-void build_tree(uint64 destination, uint32_t stride, vector<uint32_t> start_points, int start_trace, int end_trace, Expression_tree * tree, vec_cinstr &instrs, vector<disasm_t *> disasm){
+	for (int i = line + 1; i < instrs.size(); i++){
+		cinstr_t * instr = instrs[i].first;
+		for (int j = 0; j < instr->num_dsts; j++){
+			if ((instr->dsts[j].type == MEM_HEAP_TYPE) && is_within_mem_region(mem, instr->dsts[j].value)){
+				return i;
+			}
+		}
+	}
+
+	return instrs.size();
+
+}
+
+void update_jump_conditionals(Expression_tree * tree, vec_cinstr &instrs, uint32_t pos, vector<instr_info_t *> &instr_info){
+
+	cinstr_t * instr = instrs[pos].first;
+	instr_info_t * instr_affected = get_instruction_info(instr_info, instr->pc);
+	ASSERT_MSG((instr_affected != NULL), ("ERROR: the instruction could not be found\n"));
+
+	DEBUG_PRINT(("checking for conditionals attached - instr %d\n", instr->pc), 2);
+
+	for (int i = 0; i < instr_affected->conditions.size(); i++){
+		jump_info_t * jump_info = instr_affected->conditions[i].first;
+		bool taken = instr_affected->conditions[i].second;
+		//get the line number for this jump info
+		uint32_t line = 0;
+		cout << instr_affected->disasm << endl;
+		cout << jump_info->cond_pc << endl;
+		for (int j = pos + 1; j < instrs.size() ; j++){
+			cinstr_t * instr_j = instrs[j].first;
+			if (instr_j->pc == jump_info->cond_pc){
+				line = j; 
+				break;
+			}
+		}
+
+		ASSERT_MSG((line != 0), ("ERROR: couldn't find the conditional instruction\n"));
+
+
+		bool is_there = false;
+		for (int j = 0; j < tree->conditionals.size(); j++){
+			if ( (jump_info == tree->conditionals[i]->jumps) && 
+				(line == tree->conditionals[i]->line) && (taken == tree->conditionals[i]->taken)){
+				is_there = true;
+				break;
+			}
+		}
+
+		if (!is_there){
+			Expression_tree::conditional_t * condition = new Expression_tree::conditional_t;
+			condition->jumps = jump_info;
+			condition->line = line;
+			condition->taken = taken;
+			tree->conditionals.push_back(condition);
+		}
+
+	}
+
+
+}
+
+
+void build_tree(uint64 destination, uint32_t stride, vector<uint32_t> start_points, int start_trace, int end_trace, Expression_tree * tree,
+	vec_cinstr &instrs, vector<disasm_t *> disasm, vector<instr_info_t *> &instr_info){
 
 	DEBUG_PRINT(("build_tree(concrete)....\n"), 2);
 
@@ -146,12 +257,13 @@ void build_tree(uint64 destination, uint32_t stride, vector<uint32_t> start_poin
 
 	pair<int32_t, int32_t> points = get_start_and_end_points(start_points, destination, stride, start_trace, end_trace, instrs); 
 
+	
 	cout << points.first << " " << points.second << endl;
 
 	start_trace = points.first;
 	end_trace = points.second;
 
-
+	
 	if (end_trace != FILE_ENDING){
 		ASSERT_MSG((end_trace >= start_trace), ("ERROR: trace end should be greater than the trace start\n"));
 	}
@@ -199,8 +311,6 @@ void build_tree(uint64 destination, uint32_t stride, vector<uint32_t> start_poin
 		rinstr = cinstr_to_rinstrs(instr, no_rinstrs, "not captured\n", curpos);
 	}
 	
-
-
 
 	if (debug_level >= 4){ print_rinstrs(rinstr, no_rinstrs); }
 
@@ -253,6 +363,7 @@ void build_tree(uint64 destination, uint32_t stride, vector<uint32_t> start_poin
 
 			if (debug_level >= 4){ print_rinstrs(rinstr, no_rinstrs); }
 			bool updated = false;
+			bool affected = false;
 			for (int i = no_rinstrs - 1; i >= 0; i--){
 				if (instrs[curpos].second != NULL){
 					updated = tree->update_frontier(&rinstr[i], instr->pc, *instrs[curpos].second, curpos);
@@ -260,8 +371,26 @@ void build_tree(uint64 destination, uint32_t stride, vector<uint32_t> start_poin
 				else{
 					updated = tree->update_frontier(&rinstr[i], instr->pc, "not captured\n", curpos);
 				}
-				if (updated) lines.push_back(make_pair(curpos, instr->pc));
+
+				if (updated){
+					affected = true;
+					lines.push_back(make_pair(curpos, instr->pc));
+				}
 			}
+
+			/*if (curpos < next_output_line){
+				vector<jump_info_t *> table = lookup_inverse_table(jump_table, instr->pc);
+				if (table.size() > 0){ //ok we got a input dependent conditional
+					cout << "input target : " << instr->pc << endl;
+				}
+			}*/
+
+			if (affected){  /* that is this instr affects the frontier */
+
+				update_jump_conditionals(tree, instrs, curpos, instr_info);
+
+			}
+
 		}
 
 		delete[] rinstr;
@@ -430,7 +559,8 @@ bool are_conc_trees_similar(Node * first, Node * second){
 
 }
 
-vector< vector <Expression_tree *> > cluster_trees(vector<mem_regions_t *> mem_regions,vector<uint32_t> start_points,vec_cinstr &instrs, vector<disasm_t *> disasm, string output_folder){
+vector< vector <Expression_tree *> > cluster_trees(vector<mem_regions_t *> mem_regions,vector<uint32_t> start_points,vec_cinstr &instrs, vector<disasm_t *> disasm, 
+	string output_folder, vector<instr_info_t *> &instr_info){
 
 	mem_regions_t * mem = get_random_output_region(mem_regions);
 
@@ -440,7 +570,8 @@ vector< vector <Expression_tree *> > cluster_trees(vector<mem_regions_t *> mem_r
 		DEBUG_PRINT(("building tree for location %llx - %u\n", i, i - mem->start), 2); 
 		Expression_tree * tree = new Expression_tree();
 		tree->number = i - mem->start;
-		build_tree(i, mem->bytes_per_pixel, start_points, FILE_BEGINNING, FILE_ENDING, tree, instrs, disasm);
+		build_tree(i, mem->bytes_per_pixel, start_points, FILE_BEGINNING, FILE_ENDING, tree, instrs, disasm, instr_info);
+		create_trees_for_conditionals(tree, instrs, start_points, disasm, instr_info);
 		trees.push_back(tree);
 	}
 
@@ -456,6 +587,7 @@ vector< vector <Expression_tree *> > cluster_trees(vector<mem_regions_t *> mem_r
 		ofstream conc_file(output_folder + "_conctree_" + to_string(i) + ".dot", ofstream::out);
 		print_to_dotfile(conc_file, clustered_trees[i][1]->get_head(), no_nodes, 0);
 	}*/
+
 
 
 	/* get the divergence points */
@@ -488,7 +620,7 @@ vector< vector<Expression_tree *> >  categorize_trees(vector<Expression_tree * >
 }
 
 vector<Expression_tree *> get_similar_trees(vector<mem_regions_t *> image_regions, uint32_t seed, uint32_t * stride, vec_cinstr &instrs,
-	vector<uint32_t> start_points, int32_t end_trace, vector<disasm_t *> disasm){
+	vector<uint32_t> start_points, int32_t end_trace, vector<disasm_t *> disasm, vector<instr_info_t *> &instr_info){
 
 	vector<Expression_tree *> nodes;
 
@@ -510,7 +642,7 @@ vector<Expression_tree *> get_similar_trees(vector<mem_regions_t *> image_region
 
 	/* build the expression tree for this node */
 	Expression_tree * main_tree = new Expression_tree();
-	build_tree(mem_location, random_mem_region->bytes_per_pixel, start_points, FILE_BEGINNING,end_trace,main_tree,instrs,disasm);
+	build_tree(mem_location, random_mem_region->bytes_per_pixel, start_points, FILE_BEGINNING,end_trace,main_tree,instrs,disasm,instr_info);
 	nodes.push_back(main_tree);
 
 	uint32_t nodes_needed = random_mem_region->dimensions + 2;
@@ -568,7 +700,7 @@ vector<Expression_tree *> get_similar_trees(vector<mem_regions_t *> image_region
 
 			if (success){
 				Expression_tree * created_tree = new Expression_tree();
-				build_tree(mem_location, random_mem_region->bytes_per_pixel, start_points, FILE_BEGINNING, end_trace, created_tree, instrs, disasm);
+				build_tree(mem_location, random_mem_region->bytes_per_pixel, start_points, FILE_BEGINNING, end_trace, created_tree, instrs, disasm, instr_info);
 			
 				print_node_tree(created_tree->get_head(), cout);
 				cout << endl;
@@ -600,6 +732,131 @@ vector<Expression_tree *> get_similar_trees(vector<mem_regions_t *> image_region
 	}
 
 	return nodes;
+
+
+}
+
+Abs_node * abstract_the_trees(vector<Expression_tree *> cluster, uint32_t no_trees, vector<mem_regions_t *> total_regions){
+
+	/* build the abs trees for the main computational tree and abstract it */
+	vector<Abs_node *> abs_nodes;
+
+	for (int j = 0; j < no_trees; j++){
+		Abs_tree  * abs_tree = new Abs_tree();
+		abs_tree->build_abs_tree(NULL, cluster[j]->get_head(), total_regions);
+		abs_nodes.push_back(abs_tree->head);
+	}
+
+	bool similar = Abs_tree::are_abs_trees_similar(abs_nodes);
+	if (similar){
+
+		DEBUG_PRINT(("the trees are similar, now getting the algebric filter....\n"), 1);
+		Comp_Abs_tree * comp_tree = new Comp_Abs_tree();
+		comp_tree->build_compound_tree(comp_tree->head, abs_nodes);
+		Comp_Abs_tree::abstract_buffer_indexes(comp_tree->head);
+		Abs_node * final_tree = comp_tree->compound_to_abs_tree();
+		return final_tree;
+	}
+	else{
+		DEBUG_PRINT(("the trees are not similar; please check\n"), 1);
+		return NULL;
+	}
+
+
+}
+
+//magic number 30 remove and put a dependant conditional 
+
+vector<vector<Abs_node *> > get_conditional_trees(vector<Expression_tree *> clusters, uint32_t no_trees, vector<mem_regions_t * > total_regions){
+
+	vector<vector<Abs_node *> > cond_abs_trees;
+	uint32_t number_conditionals = clusters[0]->conditionals.size();
+
+	for (int i = 1; i < no_trees; i++){
+		Expression_tree * tree = clusters[i];
+		ASSERT_MSG((tree->conditionals.size() == number_conditionals), ("ERROR: number of conditionals in similar trees different\n"));
+		for (int j = 0; j < tree->conditionals.size(); j++){
+			ASSERT_MSG((tree->conditionals[j]->trees.size() == clusters[0]->conditionals[j]->trees.size()), 
+				("ERROR: different amount of trees per conditional\n"));
+		}
+	}
+
+	for (int i = 0; i < clusters[0]->conditionals.size(); i++){
+		vector<Abs_node *> per_cond_nodes;
+		for (int j = 0; j < clusters[0]->conditionals[i]->trees.size(); j++){
+			vector<Expression_tree *> trees;
+			for (int k = 0; k < 30 * no_trees; k += 30){
+
+				Node * head = clusters[k]->conditionals[i]->trees[j]->get_head();
+				/* add the computational tree head */
+				Node * new_head = new Node(clusters[k]->get_head()->symbol->type, 
+					clusters[k]->get_head()->symbol->value, 
+					clusters[k]->get_head()->symbol->width,0.0);
+				new_head->srcs.push_back(head);
+				head->prev.push_back(new_head);
+				head->pos.push_back(0);
+				clusters[k]->conditionals[i]->trees[j]->head = new_head;
+
+				trees.push_back(clusters[k]->conditionals[i]->trees[j]);
+			}
+
+			/* need to insert the head node */
+			
+
+
+			Abs_node * node = abstract_the_trees(trees, no_trees, total_regions);
+			node->jump = clusters[0]->conditionals[j]->jumps;
+			per_cond_nodes.push_back(node);
+		}
+		cond_abs_trees.push_back(per_cond_nodes);
+	}
+
+	return cond_abs_trees;
+
+
+	
+
+
+}
+
+/* need to do this */
+vector<uint32_t> get_random_indexes(){
+
+}
+
+
+void build_abs_trees(vector<vector< Expression_tree *> > clusters, string folder, uint32_t no_trees, vector<mem_regions_t *> total_regions){
+
+	/* sanity print */
+	for (int i = 0; i < clusters.size(); i++){
+		Expression_tree * tree = clusters[i][0];
+		uint32_t nodes = number_tree_nodes(tree->get_head());
+		ofstream conc_file(folder + "_conc_comp_" + to_string(i) + ".dot", ofstream::out);
+		print_to_dotfile(conc_file, tree->get_head(), nodes, 0);
+		for (int j = 0; j < tree->conditionals.size(); j++){
+			for (int k = 0; k < tree->conditionals[j]->trees.size(); k++){
+				Expression_tree * cond_tree = tree->conditionals[j]->trees[k];
+				uint32_t nodes = number_tree_nodes(cond_tree->get_head());
+				ofstream conc_file(folder + "_conc_cond_" + to_string(i) + " " + to_string(j) + " " + to_string(k) + ".dot", ofstream::out);
+				print_to_dotfile(conc_file, cond_tree->get_head(), nodes, 0);
+			}
+		}
+	}
+
+
+	/* for each cluster */
+	for (int i = 0; i < clusters.size(); i++){
+
+		/* get the abstract tree for the computational path */
+		Abs_node * comp_node = abstract_the_trees(clusters[i], no_trees, total_regions);
+
+		/* now get the conditional trees */
+		vector<vector<Abs_node *> > cond_nodes = get_conditional_trees(clusters[i], no_trees, total_regions);
+		
+		/* computational_tree +  set of conditional_trees */
+	}
+
+	/*output would be vector< pair<computational_tree, vector<conditional_trees>>>*/
 
 
 }

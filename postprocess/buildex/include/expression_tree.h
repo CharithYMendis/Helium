@@ -6,6 +6,7 @@
 #include "canonicalize.h"
 #include  "..\..\..\dr_clients\include\output.h"
 #include <fstream>
+#include "forward_analysis.h"
 
 #define MAX_FRONTIERS		1000
 #define SIZE_PER_FRONTIER	10
@@ -22,43 +23,62 @@ struct frontier_t {
 } ;
 
 
+
+
 //this class has builds up the expression
 class Expression_tree {
 
 	private:
-		Node * head;
+		
 		frontier_t * frontier;  //this is actually a hash list keeping pointers to the Nodes already allocated
 
 		/* memoization structures for partial mem and reg writes and reads */
 		vector<uint> mem_in_frontier;
 
 		/* opt: can have nodes for immediates? */
+		
 
 
 	public:
+		Node * head;
+		typedef struct _conditional_t {
+
+			jump_info_t * jumps;
+			uint32_t line; /* this is the cond_pc location */
+			vector<Expression_tree *> trees; /* we need to have two expressions for a single conditional */
+			bool taken;
+
+		} conditional_t;
+
+		vector<conditional_t *> conditionals;
+
+
 		int number;
 		Expression_tree();
 		~Expression_tree();
 		
 		bool update_frontier(rinstr_t * instr, uint32_t pc, std::string disasm, uint32_t line);
+		bool update_dependancy_forward(rinstr_t * instr, uint32_t pc, std::string disasm, uint32_t line);
 		Node * get_head();
 		
+		int generate_hash(operand_t * opnd);
+		Node * search_node(operand_t * opnd);
+		void add_to_frontier(int hash, Node * node);
+		Node * create_or_get_node(operand_t * opnd);
+		void remove_from_frontier(operand_t * opnd);
 
-private:
+		void get_full_overlap_nodes(vector<Node *> &nodes, operand_t * opnd);
+		void split_partial_overlaps(vector < pair <Node *, vector<Node *> > > &nodes, operand_t * opnd, uint hash);
+		void get_partial_overlap_nodes(vector<pair<Node *, vector<Node *> > > &nodes, operand_t * opnd);
 
-	int generate_hash(operand_t * opnd);
-	Node * search_node(operand_t * opnd);
-	Node * create_or_get_node(operand_t * opnd);
-	void remove_from_frontier(operand_t * opnd);
-	void add_to_frontier(int hash, Node * node);
 
-	void get_full_overlap_nodes(vector<Node *> &nodes, operand_t * opnd);
-	void split_partial_overlaps(vector < pair <Node *, vector<Node *> > > &nodes, operand_t * opnd, uint hash);
-	void get_partial_overlap_nodes(vector<pair<Node *, vector<Node *> > > &nodes, operand_t * opnd);
 
-	void print_tree_internal(Node * node, std::ostream &file);
+		void print_tree_internal(Node * node, std::ostream &file);
+
+		void print_conditionals();
 
 };
+
 
 
 

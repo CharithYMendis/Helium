@@ -87,6 +87,8 @@ public:
 	/*node number*/
 	uint order_num;
 
+	/*conditional or not*/
+	jump_info_t * jump;
 
 	Abs_node();
 

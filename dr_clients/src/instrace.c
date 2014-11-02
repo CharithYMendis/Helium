@@ -720,6 +720,8 @@ static void dynamic_info_instrumentation(void *drcontext, instrlist_t *ilist, in
     dr_restore_reg(drcontext, ilist, where, reg2, SPILL_SLOT_3);
 	dr_restore_reg(drcontext, ilist, where, reg3, SPILL_SLOT_4);
 
+	//instrlist_disassemble(drcontext, instr_get_app_pc(instrlist_first(ilist)), ilist, logfile);
+
 }
 
 /*****************************end instrumentation functions************************/
@@ -1022,7 +1024,7 @@ static void ins_trace(void *drcontext)
 #ifdef READABLE_TRACE
 	//TODO
     for (i = 0; i < num_refs; i++) {
-		
+
 		instr = instr_trace->static_info_instr;
 		instr_disassemble_to_buffer(drcontext,instr,disassembly,SHORT_STRING_LENGTH);
 
@@ -1049,7 +1051,6 @@ static void ins_trace(void *drcontext)
 				output_populator_printer(drcontext, opnd, instr, mem_addr, mem_type, NULL);
 			}
 		}
-		//dr_printf("%u,%u\n", instr_trace->eflags, instr_trace->pc);
 		dr_fprintf(data->outfile,",%u,%u\n",instr_trace->eflags,instr_trace->pc);
         ++instr_trace;
     }

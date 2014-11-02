@@ -131,7 +131,7 @@ void Expression_tree::add_to_frontier(int hash, Node * node){
 
 	ASSERT_MSG(((node->symbol->type != IMM_INT_TYPE) && (node->symbol->type != IMM_FLOAT_TYPE)), ("ERROR: immediate types cannot be in the frontier\n"));
 
-	ASSERT_MSG((frontier[hash].amount <= SIZE_PER_FRONTIER),("ERROR: bucket size is full\n"));
+	ASSERT_MSG((frontier[hash].amount < SIZE_PER_FRONTIER),("ERROR: bucket size is full\n"));
 	frontier[hash].bucket[frontier[hash].amount++] = node;
 
 	/*if this a memory operand we should memoize it*/
@@ -490,4 +490,54 @@ bool Expression_tree::update_frontier(rinstr_t * instr, uint32_t pc, string disa
 
 Node* Expression_tree::get_head(){
 	return head;
+}
+
+bool Expression_tree::update_dependancy_forward(rinstr_t * instr, uint32_t pc, std::string disasm, uint32_t line){
+
+	for (int i = 0; i < instr->num_srcs; i++){
+		
+		/* check if this source is there, full o/l'ed, partial o/l'ed */
+
+		if (instr->srcs[i].type == IMM_FLOAT_TYPE || instr->srcs[i].type == IMM_INT_TYPE) continue;
+
+
+		Node * src_node = search_node(&instr->srcs[i]);
+		
+
+		vector<Node *> full_overlaps;
+		vector<pair<Node *, vector<Node *> > > partial_overlaps;
+
+		get_full_overlap_nodes(full_overlaps, &instr->srcs[i]);
+		get_partial_overlap_nodes(partial_overlaps, &instr->srcs[i]);
+
+
+
+		if ( (src_node != NULL) || (full_overlaps.size() > 0) || (partial_overlaps.size() > 0) ){
+			Node * dst_node = search_node(&instr->dst);
+			if (dst_node == NULL){
+				add_to_frontier(generate_hash(&instr->dst), new Node(&instr->dst));
+			}
+			return true;
+		}
+		
+	}
+
+	/*if no src is found, we should remove the dst, if it is already there*/
+	Node * dst_node = search_node(&instr->dst);
+	if (dst_node != NULL) remove_from_frontier(&instr->dst);
+
+
+	return false;
+
+}
+
+
+void Expression_tree::print_conditionals(){
+
+	cout << "printing conditionals" << endl;
+	cout << conditionals.size() << endl;
+	for (int i = 0; i < conditionals.size(); i++){
+		cout << conditionals[i]->jumps->cond_pc << " " << conditionals[i]->line <<  endl;
+	}
+
 }

@@ -14,6 +14,7 @@
 using namespace std;
  
  class Node{
+
 	public:
 
 		/* the main identification material for the node */
@@ -23,6 +24,7 @@ using namespace std;
 		/* to accommodate for partial registers we will use the upper 32 bits of the value field in operand_t
 		   it will signify the start point of the register
 		*/
+		vector< pair<bool, Node *> > conditional_nodes;
 
 		/*keep the backward references - use a container that can grow */
 		vector<Node *> prev;
@@ -44,11 +46,15 @@ using namespace std;
 	public:
 		
 		Node(operand_t * symbol);
-		Node(uint type, uint value, uint width, float float_value);
+		Node(uint type, uint64 value, uint width, float float_value);
 		Node();
 		~Node();
 	
-
 };
+
+
+
+
+
 
 #endif
