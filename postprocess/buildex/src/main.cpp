@@ -35,7 +35,7 @@
 #include "meminfo.h"
 #include "imageinfo.h"
 
-#include "sympy.h"
+//#include "sympy.h"
 
  using namespace std;
 
@@ -367,8 +367,8 @@
 	 vector<disasm_t * > disasm_strings = parse_debug_disasm(disasm_file);
 	 vec_cinstr instrs_forward_unfiltered = walk_file_and_get_instructions(instrace_file, disasm_strings);
 	 /* need to filter unwanted instrs from the file we got */
-	 vec_cinstr instrs_forward = filter_instr_trace(start_pc, end_pc, instrs_forward_unfiltered);
-	
+	 //vec_cinstr instrs_forward = filter_instr_trace(start_pc, end_pc, instrs_forward_unfiltered);
+	 vec_cinstr instrs_forward = instrs_forward_unfiltered;
 	 
 	 /* make a copy for the backwards analysis */
 	 vec_cinstr instrs_backward;
@@ -439,7 +439,8 @@
 
 	 }
 
-	 vector<instr_info_t *> instr_info = populate_conditional_instructions(disasm, cond_app_pc);
+	 vector<instr_info_t *> instr_info;
+	 instr_info = populate_conditional_instructions(disasm, cond_app_pc);
 
 
 	 cout << "populated cond. instrs" << endl;
@@ -499,9 +500,8 @@
 		 tree->print_conditionals();
 		 create_trees_for_conditionals(tree, instrs_backward, start_points, disasm, instr_info);
 		 for (int i = 0; i < tree->conditionals.size(); i++){
-			 for (int j = 0; j < tree->conditionals[i]->trees.size(); j++){
-				 conc_trees.push_back(tree->conditionals[i]->trees[j]);
-			 }
+			 conc_trees.push_back(tree->conditionals[i]->tree);
+
 		 }
 		 conc_trees.push_back(tree);
 
@@ -533,7 +533,7 @@
  	 }
 	 else if (tree_build == BUILD_CLUSTERS){
 		 vector< vector< Expression_tree *> > clustered_trees = cluster_trees(image_regions, start_points, instrs_backward, disasm, output_folder + file_substr, instr_info);
-		 build_abs_trees(clustered_trees, output_folder + file_substr,4,total_mem_regions);
+		 build_abs_trees(clustered_trees, output_folder + file_substr,4,total_mem_regions, 30);
 
 
 		 /* build abs_trees for a sub section of each cluster  + their conditionals */
@@ -543,10 +543,10 @@
 	 /*debug printing*/
 	 for (int i = 0; i < conc_trees.size(); i++){
 
-		 //DEBUG_PRINT(("printing out the expression\n"), 2);
-		 //ofstream expression_file(output_folder + file_substr + "_expression_" + to_string(i) + ".txt", ofstream::out);
-		 //print_node_tree(conc_trees[i], expression_file);
-		 //cout << get_simplify_string(conc_trees[i]) << endl;
+		 DEBUG_PRINT(("printing out the expression\n"), 2);
+		 ofstream expression_file(output_folder + file_substr + "_expression_" + to_string(i) + ".txt", ofstream::out);
+		 //print_node_tree(conc_trees[i]->get_head(), expression_file);
+		 //cout << get_simplify_string(conc_trees[i]->get_head()) << endl;
 		 uint no_nodes = number_tree_nodes(conc_trees[i]->get_head());
 		 DEBUG_PRINT(("printing to dot file...\n"), 2);
 		 ofstream conc_file(output_folder + file_substr + "_conctree_" + to_string(i) + ".dot", ofstream::out);

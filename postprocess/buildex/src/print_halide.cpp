@@ -3,6 +3,7 @@
 #include "build_abs_tree.h"
 #include <string>
 #include <stack>
+#include <algorithm>
 
 string get_abs_node_string(Abs_node * node);
 
@@ -183,7 +184,6 @@ string get_cast_string(uint32_t width, uint32_t sign){
 	return ret;
 }
 
-/* main print functions for the halide module */
 void Halide_program::print_abs_tree_in_halide(Abs_node* node, Abs_node * head, ostream &out){
 
 
@@ -206,11 +206,11 @@ void Halide_program::print_abs_tree_in_halide(Abs_node* node, Abs_node * head, o
 		else if (node->operation == op_split_l){
 			out << " ( ";
 			print_abs_tree_in_halide(node->srcs[0], head, out);
-			out << " ) & " <<  to_string((node->srcs[0]->width / 2) * 8);
+			out << " ) & " << to_string((node->srcs[0]->width / 2) * 8);
 		}
 		else if (node->srcs.size() == 1){
 			out << " " << get_abs_node_string(node) << " ";
-			print_abs_tree_in_halide(node->srcs[0],head,out);
+			print_abs_tree_in_halide(node->srcs[0], head, out);
 		}
 		else{
 
@@ -231,7 +231,7 @@ void Halide_program::print_abs_tree_in_halide(Abs_node* node, Abs_node * head, o
 			out << ")";
 		}
 	}
-	else if(node->type == SUBTREE_BOUNDARY){
+	else if (node->type == SUBTREE_BOUNDARY){
 		return;
 	}
 	else {
@@ -248,9 +248,132 @@ void Halide_program::print_abs_tree_in_halide(Abs_node* node, Abs_node * head, o
 		}
 
 	}
-	
+
 
 }
+
+string Halide_program::get_full_overlap_string(Abs_node * node, Abs_node * head){
+
+	string ret = "";
+	Abs_node * overlap = node->srcs[0];
+
+	uint overlap_end = overlap->range + overlap->width;
+	uint node_end = node->range + node->width;
+
+	//if (overlap_end == node_end){
+	ret += " ( ";
+	get_abs_tree_string(overlap, head);
+	ret += " ) & " + to_string((uint32_t(~0) >> (32 - node->width * 8)));
+	//}
+	/*else{
+	out << " ( ( ";
+	print_abs_tree_in_halide(overlap, head, out);
+	out << " >> " << (overlap_end - node_end) * 8  << " ) ";
+	out << " ) & " << (node->width * 8);
+	}*/
+
+	return ret;
+
+}
+
+string Halide_program::get_partial_overlap_string(Abs_node * node, Abs_node * head){
+
+	string ret = "";
+
+	for (int i = 0; i < node->srcs.size(); i++)
+	{
+		Abs_node * overlap = node->srcs[i];
+
+		uint overlap_end = overlap->range + overlap->width;
+		uint node_end = node->range + node->width;
+
+		ret += "(";
+		get_abs_tree_string(overlap, head);
+		ret += " << " + to_string((node_end - overlap_end) * 8);
+		ret += ")";
+
+		if (i != node->srcs.size() - 1){
+			ret += " | ";
+		}
+	}
+
+	return ret;
+
+
+}
+
+string Halide_program::get_abs_tree_string(Abs_node * node, Abs_node * head){
+
+	string ret = "";
+
+	if (node->type == OPERATION_ONLY){
+		if (node->operation == op_full_overlap){
+			ret += " ( ";
+			ret += get_full_overlap_string(node, head);
+			ret += " ) ";
+		}
+		else if (node->operation == op_partial_overlap){
+			ret += " ( ";
+			ret += get_partial_overlap_string(node, head);
+			ret += " ) ";
+		}
+		else if (node->operation == op_split_h){
+			ret += " ( ";
+			ret += get_abs_tree_string(node->srcs[0], head);
+			ret += " ) >> ( " + to_string(node->srcs[0]->width * 8 / 2) + ")";
+		}
+		else if (node->operation == op_split_l){
+			ret += " ( ";
+			ret += get_abs_tree_string(node->srcs[0], head);
+			ret +=  " ) & " + to_string((node->srcs[0]->width / 2) * 8);
+		}
+		else if (node->srcs.size() == 1){
+			ret += " " + get_abs_node_string(node) + " ";
+			ret += get_abs_tree_string(node->srcs[0], head);
+		}
+		else{
+
+			ret += "(";
+			for (int i = 0; i < node->srcs.size(); i++){
+
+				if (node->srcs[i]->width < node->width){
+					ret += get_cast_string(node->width, false) + "(";
+				}
+				ret += get_abs_tree_string(node->srcs[i], head);
+				if (node->srcs[i]->width < node->width){
+					ret += ")";
+				}
+				if (i != node->srcs.size() - 1){
+					ret += " " + get_abs_node_string(node) + " ";
+				}
+			}
+			ret += ")";
+		}
+	}
+	else if (node->type == SUBTREE_BOUNDARY){
+		return ret;
+	}
+	else {
+		ret += " " + get_abs_node_string(node) + " ";
+		/* head node is special and this should be printed out in a special manner */
+		if (node == head){
+			if (node->operation != op_assign){  /* the node contains some other operation */
+				ret += " = ";
+			}
+			uint ori_type = node->type;
+			node->type = OPERATION_ONLY;
+			get_abs_tree_string(node, head);
+			node->type = ori_type;
+		}
+
+	}
+
+	return ret;
+
+}
+
+/* main print functions for the halide module */
+
 
 void Halide_program::print_function(function* func, ostream &out){
 
@@ -299,6 +422,11 @@ void Halide_program::print_function(function* func, ostream &out){
 
 /* the public and direct helper methods of Halide program  */
 
+
+Halide_program::Halide_program(){
+
+}
+
 Halide_program::Halide_program(Abs_node * head){
 	this->head = head;
 }
@@ -336,6 +464,8 @@ bool is_function_recursive(vector<Abs_node *> &stack, Abs_node* node){
 	return false;
 }
 
+
+
 Halide_program::function * Halide_program::check_function(mem_regions_t * mem){
 
 	for (int i = 0; i < funcs.size(); i++){
@@ -348,6 +478,137 @@ Halide_program::function * Halide_program::check_function(mem_regions_t * mem){
 	return NULL;
 
 }
+
+void Halide_program::find_recursive_funcs(){
+
+}
+
+void Halide_program::register_funcs(Abs_node * comp_node, vector<Abs_node *> cond_nodes){
+
+	Halide_program::function * func = check_function(comp_node->mem_info.associated_mem);
+	if (func == NULL){
+		func = new Halide_program::function();
+		funcs.push_back(func);
+	}
+	func->nodes.push_back(comp_node);
+	func->conditional_nodes.push_back(cond_nodes);
+	
+}
+
+void Halide_program::register_inputs(Abs_node * node){
+
+	if ((node->type == INPUT_NODE)){
+		Halide_program::function * func = check_function(node->mem_info.associated_mem);
+		if (func == NULL){
+			func = new Halide_program::function();
+			inputs.push_back(func);
+		}
+	}
+	for (int i = 0; i < node->srcs.size(); i++){
+		register_inputs(node->srcs[i]);
+	}
+}
+
+
+string Halide_program::get_conditional_string(vector< Abs_node *> conditions){
+
+	string ret = "";
+
+	for (int i = 0; i < conditions.size(); i++){
+		ASSERT_MSG((conditions[i]->srcs.size() == 1), ("ERROR: expected single source\n"));
+		ret += get_abs_tree_string(conditions[i]->srcs[0], conditions[i]);
+		if (i != conditions.size() - 1){
+			ret += " && ";
+		}
+	}
+
+	return ret;
+
+
+}
+
+void get_output_func_string(){
+
+}
+
+
+
+
+void Halide_program::print_halide_v2(ostream &out){
+
+	DEBUG_PRINT(("printing halide....\n"), 1);
+
+	/*print the Halide header*/
+	out << get_halide_header() << endl;
+
+	vector<Halide_program::function *> outputs;
+
+	/* print the vars declarations - get a random func and then print out the vars for the dimension of it */
+	vector<string> vars = get_vars(funcs[0]->nodes[0]->mem_info.dimensions);
+	for (int i = 0; i < vars.size(); i++){
+		out << "Var " << vars[i] << ";" << endl;
+	}
+
+	/* print the input parameters */
+	vector<uint> params;
+	vector<string> param_strings;
+
+	print_input_params(head, out, params, param_strings);
+
+
+	/* these are only declarartions */
+	/*print the function declarations*/
+	for (int i = funcs.size() - 1; i >= 0; i--){
+		Abs_node * node = funcs[i]->nodes[0];
+		if ((node->type == OUTPUT_NODE) || (node->type == INTERMEDIATE_NODE)){
+			out << get_function_string(funcs[i]) << endl;
+			DEBUG_PRINT(("function node - %s\n", node->mem_info.associated_mem->name.c_str()), 1);
+		}
+	}
+
+	/* print the input declarations */
+	for (int i = 0; i < inputs.size(); i++){
+		Abs_node * node = inputs[i]->nodes[0];
+		DEBUG_PRINT(("input param node - %s\n", node->mem_info.associated_mem->name.c_str()), 1);
+		out << get_input_definition_string(node) << endl;
+		param_strings.push_back(node->mem_info.associated_mem->name);
+	}
+
+	
+	vector<vector<string> > Expression_declarations;
+	vector<vector<string> > Expression_definitions;
+
+
+	/*print the actual function definitions - assumes the abs_nodes are stored based on the number of conditional statements*/
+	for (int i = funcs.size() - 1; i >= 0; i--){
+		function * func = funcs[i];
+
+		/* print out the function start and say expression e */
+		for (int j = 0; j < func->nodes.size(); j++){
+			
+			Abs_node * tree_node = func->nodes[j];
+			vector<Abs_node *>  conditionals = func->conditional_nodes[j];
+
+			
+
+		}
+	
+	}
+
+	/*output to file the functions*/
+	for (int i = 0; i < outputs.size(); i++){
+		out << get_output_to_file_string(outputs[i]->nodes[0], "halide_out", i, param_strings) << endl;
+	}
+
+	/*print the halide footer*/
+	out << get_halide_footer() << endl;
+
+
+}
+
+
+
+
 
 void Halide_program::seperate_to_Funcs(Abs_node * node, vector<Abs_node *> &stack){
 

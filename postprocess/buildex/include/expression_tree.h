@@ -9,7 +9,7 @@
 #include "forward_analysis.h"
 
 #define MAX_FRONTIERS		1000
-#define SIZE_PER_FRONTIER	10
+#define SIZE_PER_FRONTIER	100
 #define MEM_OFFSET			200
 #define MEM_REGION			(MAX_FRONTIERS - MEM_OFFSET)
 #define REG_REGION			MEM_OFFSET
@@ -44,8 +44,9 @@ class Expression_tree {
 		typedef struct _conditional_t {
 
 			jump_info_t * jumps;
-			uint32_t line; /* this is the cond_pc location */
-			vector<Expression_tree *> trees; /* we need to have two expressions for a single conditional */
+			uint32_t line_cond; /* this is the cond_pc location */
+			uint32_t line_jump;
+			Expression_tree * tree; /* we need to have two expressions for a single conditional */
 			bool taken;
 
 		} conditional_t;

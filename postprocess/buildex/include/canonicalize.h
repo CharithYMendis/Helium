@@ -43,6 +43,17 @@ enum {
 	op_partial_overlap,
 	op_full_overlap,
 
+	/* logical operations */
+	op_ge,
+	op_gt,
+	op_le,
+	op_lt,
+	op_eq,
+	op_neq,
+
+
+	op_unknown
+
 };
 
 
@@ -84,6 +95,7 @@ rinstr_t * cinstr_to_rinstrs (cinstr_t * cinstr, int &amount, std::string disasm
  uint32_t is_eflags_affected(uint32_t opcode);
  bool is_jmp_conditional_affected(uint32_t opcode, uint32_t flags);
  bool is_branch_taken(uint32_t opcode, uint32_t flags);
+ uint32_t dr_logical_to_operation(uint32_t opcode);
 
  
  #endif

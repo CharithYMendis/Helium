@@ -14,6 +14,7 @@ typedef struct _jump_info_t {
 	uint32_t cond_pc;
 	uint32_t merge_pc;
 	uint32_t trueFalse[2];
+	string operation;
 
 } jump_info_t;
 

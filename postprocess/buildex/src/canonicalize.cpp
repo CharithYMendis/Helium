@@ -768,6 +768,73 @@ bool is_floating_point_ins(uint32_t opcode){
 
 }
 
+uint32_t dr_logical_to_operation(uint32_t opcode){
+
+	switch (opcode){
+
+	case OP_jnl:
+	case OP_jnl_short:
+		//Jump short if not less(SF = OF)
+		return op_ge;
+
+	case OP_jl:
+	case OP_jl_short:
+		return op_lt;
+
+	case OP_jnle:
+	case OP_jnle_short:
+		//Jump short if not less or equal (ZF=0 and SF=OF)
+		return op_gt;
+
+	case OP_jnz:
+	case OP_jnz_short:
+		return op_neq;
+
+	case OP_jz:
+	case OP_jz_short:
+		//ZF value
+		return op_eq;
+
+	case OP_jb:
+	case OP_jb_short:
+		return op_lt;
+
+	case OP_jnb:
+	case OP_jnb_short:
+		//CF value
+		return op_ge;
+
+		/* check these */
+	case OP_jns:
+	case OP_jns_short:
+		return op_ge;
+	case OP_js:
+	case OP_js_short:
+		//SF value
+		return op_lt;
+
+	case OP_jbe_short:
+		//Jump short if below or equal (CF=1 or ZF=1)
+		return op_le;
+
+	case OP_jle:
+	case OP_jle_short:
+		//Jump near if less or equal (ZF=1 or SF~=OF)
+		return op_lt;
+	case OP_jnbe_short:
+		//Jump short if not below or equal (CF=0 and ZF=0)
+		//cout << "jnbe " << cf << " " << zf << endl;
+		return op_gt;
+	case OP_sbb:
+		return op_lt;
+
+	}
+
+	return op_unknown;
+
+
+}
+
 void update_fp_reg(cinstr_t * cinstr, string disasm, uint32_t line){
 
 	for (int i = 0; i < cinstr->num_dsts; i++){

@@ -16,7 +16,7 @@ class Halide_program {
 	/* need to model the Halide constructs that we are using */
 
 public:
-
+	
 	/* RDoms are not supported as of yet */
 
 	/* only pure parameters entering the function */
@@ -29,22 +29,30 @@ public:
 	/* input, output and intermediate states that can be modelled as a Halide function*/
 	struct function {
 		vector<Abs_node *> nodes; 
+		vector<vector<Abs_node *> > conditional_nodes;
+		uint32_t variations;
 		bool recursive;
 	};
 
 	Abs_node * head;
 	vector<function *> funcs;
+	vector<function *> inputs;
 
 public:
 
 	/* methods to manipulate and fill the Halide program */
+	Halide_program();
 	Halide_program(Abs_node * head);
 	void get_input_params(Abs_node * node);
 	void seperate_to_Funcs(Abs_node * node, vector<Abs_node *> &stack);
 	void print_halide(ostream &out);
 	void print_seperated_funcs();
 	
-
+	void print_halide_v2(ostream &out);
+	void register_funcs(Abs_node * comp_node, vector<Abs_node *> cond_nodes);
+	void register_inputs(Abs_node * node);
+	void find_recursive_funcs();
+	
 
 private:
 
@@ -52,11 +60,16 @@ private:
 	void print_function(function* func, ostream &out);
 	void print_input_params(Abs_node * node, ostream &out, vector<uint> &values, vector<string> &inputs);
 
+	/* straight away print Halide */
 	void print_abs_tree_in_halide(Abs_node* node, Abs_node* head, ostream &out);
 	void print_full_overlap_string(Abs_node * node, Abs_node* head, ostream &out);
 	void print_partial_overlap_string(Abs_node * node, Abs_node* head, ostream &out);
 
-	
+	/* get strings to print */
+	string get_conditional_string(vector< Abs_node *> conditions);
+	string get_abs_tree_string(Abs_node * node, Abs_node * head);
+	string get_full_overlap_string(Abs_node * node, Abs_node * head);
+	string get_partial_overlap_string(Abs_node * node, Abs_node * head);
 	
 
 

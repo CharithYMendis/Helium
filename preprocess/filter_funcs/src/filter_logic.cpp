@@ -139,6 +139,31 @@ void filter_mem_regions(vector<pc_mem_region_t *> &pc_mems, image_t * in_image, 
 
 }
 
+void filter_mem_regions_total(vector<mem_info_t *> &mems, uint32_t total, uint32_t min_threshold){
+
+	/* use a conservative guess to filter out unnecessary memory regions */
+
+	for (int i = 0; i < mems.size(); i++){
+		uint32_t size = (mems[i]->end - mems[i]->start);
+		//if (size < 10){
+		if (size <  (total * min_threshold / 100)){
+			mems.erase(mems.begin() + i--);
+		}
+	}
+
+}
+
+void filter_mem_regions_total(vector<pc_mem_region_t *> &pc_mems, uint32_t total, uint32_t min_threshold){
+
+	for (int i = 0; i < pc_mems.size(); i++){
+		filter_mem_regions_total(pc_mems[i]->regions, total, min_threshold);
+		if (pc_mems[i]->regions.size() == 0){
+			pc_mems.erase(pc_mems.begin() + i--);
+		}
+	}
+
+}
+
 vector<func_composition_t *> filter_based_on_memory_dependancy(vector<pc_mem_region_t *> &pc_mems, moduleinfo_t * head){
 
 	/* the filter should have regions which are incoming and outgoing */

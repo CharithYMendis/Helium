@@ -53,6 +53,14 @@ string operation_to_string(uint operation){
 	case op_partial_overlap: return "PO";
 	case op_split_l: return "SL";
 	case op_split_h: return "SH";
+
+	case op_lt: return "<";
+	case op_le: return "<=";
+	case op_gt: return ">";
+	case op_ge: return ">=";
+	case op_eq: return "==";
+	case op_neq: return "!=";
+
 	default: return "__";
 	}
 
@@ -73,72 +81,6 @@ string dr_operation_to_string(uint operation){
 
 }
 
-string dr_logical_to_string(uint32_t opcode){
-
-	switch (opcode){
-
-	case OP_jnl:
-	case OP_jnl_short:
-		//Jump short if not less(SF = OF)
-		return ">=";
-
-	case OP_jl:
-	case OP_jl_short:
-		return "<";
-
-	case OP_jnle:
-	case OP_jnle_short:
-		//Jump short if not less or equal (ZF=0 and SF=OF)
-		return ">";
-
-	case OP_jnz:
-	case OP_jnz_short:
-		return "!=";
-
-	case OP_jz:
-	case OP_jz_short:
-		//ZF value
-		return "==";
-
-	case OP_jb:
-	case OP_jb_short:
-		return "<";
-
-	case OP_jnb:
-	case OP_jnb_short:
-		//CF value
-		return ">=";
-
-		/* check these */
-	case OP_jns:
-	case OP_jns_short:
-		return ">=";
-	case OP_js:
-	case OP_js_short:
-		//SF value
-		return "<";
-
-	case OP_jbe_short:
-		//Jump short if below or equal (CF=1 or ZF=1)
-		return "<=";
-
-	case OP_jle:
-	case OP_jle_short:
-		//Jump near if less or equal (ZF=1 or SF~=OF)
-		return "<=";
-	case OP_jnbe_short:
-		//Jump short if not below or equal (CF=0 and ZF=0)
-		//cout << "jnbe " << cf << " " << zf << endl;
-		return ">";
-	case OP_sbb:
-		return "<";
-
-	}
-
-	return "NS";
-
-
-}
 
 /*printing abs nodes*/
 string abs_node_mem_to_string(Abs_node * node){

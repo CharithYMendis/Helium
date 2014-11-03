@@ -40,7 +40,7 @@ endif ()
 
 include_directories("include")
 include_directories("../../common/include")
-include_directories("C:/Python278/include")
+#include_directories("C:/Python278/include")
 add_executable(buildex 
 
 src/main.cpp 
@@ -61,7 +61,7 @@ src/print_common.cpp
 src/print_halide.cpp 
 src/print_dot.cpp
 
-src/sympy.cpp
+
 src/forward_analysis.cpp
 
 ../../common/src/imageinfo.cpp
@@ -71,8 +71,10 @@ src/forward_analysis.cpp
 
 )
 
+#src/sympy.cpp
+
 target_link_libraries(buildex Gdiplus.lib)
-find_library(PYTHON python27
-		PATHS "C:\Python278\libs")
-message(${PYTHON})
-target_link_libraries(buildex ${PYTHON})
+#find_library(PYTHON python27
+#		PATHS "C:\Python278\libs")
+#message(${PYTHON})
+#target_link_libraries(buildex ${PYTHON})

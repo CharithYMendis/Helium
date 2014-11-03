@@ -37,6 +37,7 @@ int main(int argc, char **argv){
 	vector<string> out_images;
 	string exec;
 	uint threshold;
+	uint total_size = 0;
 
 	/*********************cmd line arg processing*************************/
 
@@ -67,6 +68,9 @@ int main(int argc, char **argv){
 		}
 		else if (args[i]->name.compare("-threshold") == 0){
 			threshold = atoi(args[i]->value.c_str());
+		}
+		else if (args[i]->name.compare("-total_size") == 0){
+			total_size = atoi(args[i]->value.c_str());
 		}
 		else{
 			printf("unrecognized argument - %s\n", args[i]->name);
@@ -238,7 +242,13 @@ int main(int argc, char **argv){
 		DEBUG_PRINT(("linking memory regions together... \n"), 5);
 		link_mem_regions(pc_mems, GREEDY);  /* shouldn't this return the linking information? */
 		DEBUG_PRINT(("filtering out insignificant regions... \n"), 5);
-		filter_mem_regions(pc_mems, in_image, out_image, threshold);
+		
+		if (total_size == 0){
+			filter_mem_regions(pc_mems, in_image, out_image, threshold);
+		}
+		else{
+			filter_mem_regions_total(pc_mems, total_size, threshold);
+		}
 
 		/* debug printing - this is after the filtering */
 		print_mem_layout(log_file, pc_mems);

@@ -32,7 +32,7 @@ vector<Expression_tree *> get_similar_trees(vector<mem_regions_t *> image_region
 vector< vector <Expression_tree *> > cluster_trees(vector<mem_regions_t *> mem_regions, vector<uint32_t> start_points, vec_cinstr &instrs, vector<disasm_t *> disasm, string output_folder, vector<instr_info_t *> &instr_info);
 
 
-void build_abs_trees(vector<vector< Expression_tree *> > clusters, string folder, uint32_t no_trees, vector<mem_regions_t *> total_regions);
+void build_abs_trees(vector<vector< Expression_tree *> > clusters, string folder, uint32_t no_trees, vector<mem_regions_t *> total_regions, uint32_t skip);
 
 void cinstr_convert_reg(cinstr_t * instr);
 

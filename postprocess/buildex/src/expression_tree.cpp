@@ -537,7 +537,7 @@ void Expression_tree::print_conditionals(){
 	cout << "printing conditionals" << endl;
 	cout << conditionals.size() << endl;
 	for (int i = 0; i < conditionals.size(); i++){
-		cout << conditionals[i]->jumps->cond_pc << " " << conditionals[i]->line <<  endl;
+		cout << conditionals[i]->jumps->cond_pc << " " << conditionals[i]->line_cond <<  endl;
 	}
 
 }
