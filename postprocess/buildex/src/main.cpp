@@ -367,8 +367,8 @@
 	 vector<disasm_t * > disasm_strings = parse_debug_disasm(disasm_file);
 	 vec_cinstr instrs_forward_unfiltered = walk_file_and_get_instructions(instrace_file, disasm_strings);
 	 /* need to filter unwanted instrs from the file we got */
-	 //vec_cinstr instrs_forward = filter_instr_trace(start_pc, end_pc, instrs_forward_unfiltered);
-	 vec_cinstr instrs_forward = instrs_forward_unfiltered;
+	 vec_cinstr instrs_forward = filter_instr_trace(start_pc, end_pc, instrs_forward_unfiltered);
+	 //vec_cinstr instrs_forward = instrs_forward_unfiltered;
 	 
 	 /* make a copy for the backwards analysis */
 	 vec_cinstr instrs_backward;
@@ -407,6 +407,19 @@
 	 mem_regions_t * input_mem_region = (image_regions[0]->type == IMAGE_INPUT ? image_regions[0] : image_regions[1]);
 	 mem_regions_t * output_mem_region = (image_regions[0]->type == IMAGE_INPUT ? image_regions[1] : image_regions[0]);
 
+	 uint32_t count = 0;
+	 for (int i = 0; i < disasm.size(); i++){
+		 count += disasm[i]->pc_disasm.size();
+	 }
+	 cout << "count : " << count << endl;
+
+	 filter_disasm_vector(instrs_forward,disasm);
+
+	 count = 0;
+	 for (int i = 0; i < disasm.size(); i++){
+		 count += disasm[i]->pc_disasm.size();
+	 }
+	 cout << "count : " << count << endl;
 
 	 vector<uint32_t> app_pc = find_dependant_statements(instrs_forward, input_mem_region, disasm);
 
@@ -457,7 +470,7 @@
 
 
 
-	 //exit(0);
+	 
 
 
 
@@ -497,7 +510,9 @@
 		 //Node * node = create_tree_for_dest(dest, stride, instrace_file, start_points, start_trace, end_trace, disasm)->get_head();
 		 Expression_tree * tree = new Expression_tree();
 		 build_tree(dest, stride, start_points, start_trace, end_trace, tree, instrs_backward, disasm,instr_info);
+		 cout << "printing conditionals" << endl;
 		 tree->print_conditionals();
+		 cout << "creating conditional trees" << endl;
 		 create_trees_for_conditionals(tree, instrs_backward, start_points, disasm, instr_info);
 		 for (int i = 0; i < tree->conditionals.size(); i++){
 			 conc_trees.push_back(tree->conditionals[i]->tree);
@@ -506,7 +521,7 @@
 		 conc_trees.push_back(tree);
 
 
-
+		 //exit(0);
 		
 	 }
 	 else if (tree_build == BUILD_RANDOM_SET){
@@ -546,7 +561,7 @@
 		 DEBUG_PRINT(("printing out the expression\n"), 2);
 		 ofstream expression_file(output_folder + file_substr + "_expression_" + to_string(i) + ".txt", ofstream::out);
 		 //print_node_tree(conc_trees[i]->get_head(), expression_file);
-		 //cout << get_simplify_string(conc_trees[i]->get_head()) << endl;
+		 //print_node_tree(conc_trees[i]->get_head(), cout);
 		 uint no_nodes = number_tree_nodes(conc_trees[i]->get_head());
 		 DEBUG_PRINT(("printing to dot file...\n"), 2);
 		 ofstream conc_file(output_folder + file_substr + "_conctree_" + to_string(i) + ".dot", ofstream::out);

@@ -197,7 +197,17 @@ vector<instr_info_t *> populate_conditional_instructions(vector<disasm_t *> disa
 			instr->disasm = disasm_string;
 
 			for (int k = 0; k < jumps.size(); k++){
+
+				//sbb, adc etc.
+				//cout << pc << endl;
+				if ( (pc == jumps[k]->jump_pc) && (jumps[k]->target_pc == jumps[k]->fall_pc) && (jumps[k]->target_pc == jumps[k]->merge_pc)){
+					instr->conditions.push_back(make_pair(jumps[k], true));
+					DEBUG_PRINT(("WARNING: added a non jump sbb/adc\n"), 2);
+				}
+
 				if (jumps[k]->target_pc < jumps[k]->fall_pc) continue; //this is a backward jump? we are only considering fwd jumps
+
+
 
 				if (pc >= jumps[k]->fall_pc && pc < jumps[k]->target_pc){
 					instr->conditions.push_back(make_pair(jumps[k], false));
@@ -205,6 +215,8 @@ vector<instr_info_t *> populate_conditional_instructions(vector<disasm_t *> disa
 				else if (pc >= jumps[k]->target_pc && pc < jumps[k]->merge_pc){
 					instr->conditions.push_back(make_pair(jumps[k], true));
 				}
+
+				
 
 			}
 

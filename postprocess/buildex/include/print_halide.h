@@ -29,7 +29,7 @@ public:
 	/* input, output and intermediate states that can be modelled as a Halide function*/
 	struct function {
 		vector<Abs_node *> nodes; 
-		vector<vector<Abs_node *> > conditional_nodes;
+		vector<vector< pair<Abs_node *, bool> > > conditional_nodes;
 		uint32_t variations;
 		bool recursive;
 	};
@@ -49,7 +49,7 @@ public:
 	void print_seperated_funcs();
 	
 	void print_halide_v2(ostream &out);
-	void register_funcs(Abs_node * comp_node, vector<Abs_node *> cond_nodes);
+	void register_funcs(Abs_node * comp_node, vector< pair<Abs_node *, bool > > cond_nodes);
 	void register_inputs(Abs_node * node);
 	void find_recursive_funcs();
 	
@@ -66,7 +66,7 @@ private:
 	void print_partial_overlap_string(Abs_node * node, Abs_node* head, ostream &out);
 
 	/* get strings to print */
-	string get_conditional_string(vector< Abs_node *> conditions);
+	string get_conditional_string(vector< pair<Abs_node *, bool > > conditions);
 	string get_abs_tree_string(Abs_node * node, Abs_node * head);
 	string get_full_overlap_string(Abs_node * node, Abs_node * head);
 	string get_partial_overlap_string(Abs_node * node, Abs_node * head);

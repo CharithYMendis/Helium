@@ -626,6 +626,8 @@ bool is_branch_taken(uint32_t opcode, uint32_t flags){
 		//Jump short if not below or equal (CF=0 and ZF=0)
 		//cout << "jnbe " << cf << " " << zf << endl;
 		return !cf && !zf;
+	case OP_sbb:
+		return cf;
 
 	default:
 		unhandled = true;
@@ -633,7 +635,7 @@ bool is_branch_taken(uint32_t opcode, uint32_t flags){
 
 
 
-	ASSERT_MSG((!unhandled), ("ERROR: opcode %d not handled in canonicalization\n", opcode));
+	ASSERT_MSG((!unhandled), ("ERROR: is brach taken opcode %d not handled in canonicalization\n", opcode));
 
 
 }
@@ -688,11 +690,13 @@ bool is_jmp_conditional_affected(uint32_t opcode, uint32_t flags){
 	case OP_jnbe_short:
 		//Jump short if not below or equal (CF=0 and ZF=0)
 		return cf && zf;
+	case OP_sbb:
+		return cf;
 	default:
 		unhandled = true;
 	}
 
-	ASSERT_MSG((!unhandled), ("ERROR: opcode %d not handled in canonicalization\n", opcode));
+	ASSERT_MSG((!unhandled), ("ERROR: jmp affected opcode %d not handled in canonicalization\n", opcode));
 
 }
 
@@ -734,6 +738,9 @@ bool is_conditional_jump_ins(uint32_t opcode){
 	case OP_jb:
 	case OP_jnb:
 	case OP_js:
+
+	//sbb and other computation involving eflags
+	case OP_sbb:
 
 		return true;
 	default:
@@ -1344,12 +1351,20 @@ rinstr_t * cinstr_to_rinstrs (cinstr_t * cinstr, int &amount, std::string disasm
 				amount = 1;
 			}
 			//dsts[0] <- srcs[1] - srcs[0]
-			rinstr[0] = { op_sub, cinstr->dsts[0], 2, { cinstr->srcs[1], cinstr->srcs[0] }, true };  /* changed for SUB (src1, src0) from the reverse: please verify */
+			if ( (cinstr->srcs[0].type == cinstr->srcs[1].type) && (cinstr->srcs[0].value == cinstr->srcs[1].value) ){
+				operand_t immediate_0 = { IMM_INT_TYPE, cinstr->srcs[1].width, 0 };
+				rinstr[0] = { op_assign, cinstr->dsts[0], 1, { immediate_0 }, true };
+			}
+			else{
+				rinstr[0] = { op_sub, cinstr->dsts[0], 2, { cinstr->srcs[1], cinstr->srcs[0] }, true };  /* changed for SUB (src1, src0) from the reverse: please verify */
+			}
 			if (cf){ //substract an immediate 1
 				//dsts[0] <- dsts[0] - 1
-				operand_t immediate = { IMM_INT_TYPE, cinstr->srcs[1].width, 1 };
-				rinstr[1] = { op_sub, cinstr->dsts[0], 2, { cinstr->dsts[0], immediate }, true };
+				operand_t immediate_1 = { IMM_INT_TYPE, cinstr->srcs[1].width, 1 };
+				rinstr[1] = { op_sub, cinstr->dsts[0], 2, { cinstr->dsts[0], immediate_1 }, true };
 			}
+
+			
 
 		}
 		else_bounds;

@@ -76,6 +76,39 @@ void print_vector(vector<pair<uint32_t,uint32_t> > lines, vector<disasm_t *> dis
  	}
 }
 
+
+
+void filter_disasm_vector(vec_cinstr &instrs, vector<disasm_t * > &disasm){
+
+
+	for (int i = 0; i < disasm.size(); i++){
+		for (int j = 0; j < disasm[i]->pc_disasm.size(); j++){
+			uint32_t pc = disasm[i]->pc_disasm[j].first;
+			
+			bool found = false;
+			for (int k = 0; k < instrs.size(); k++){
+				cinstr_t * instr = instrs[k].first;
+				if (instr->pc == pc){
+					found = true;
+					break;
+				}
+			}
+
+			if (!found){
+				disasm[i]->pc_disasm.erase(disasm[i]->pc_disasm.begin() + j--);
+			}
+
+
+		}
+		
+
+	}
+
+
+}
+
+/* auxiliary functions end */
+
 void remove_head_node(Expression_tree * tree){
 
 	if (tree->head->operation == op_assign){ /* then this node can be removed */
@@ -283,7 +316,7 @@ void update_jump_conditionals(Expression_tree * tree, vec_cinstr &instrs, uint32
 		cout << instr_affected->disasm << endl;
 		cout << jump_info->cond_pc << endl;
 
-		for (int j = pos + 1; j < instrs.size() ; j++){
+		for (int j = pos ; j < instrs.size() ; j++){ //changed pos + 1 to pos
 			cinstr_t * instr_j = instrs[j].first;
 			if (instr_j->pc == jump_info->jump_pc){
 				line_jump = j;
@@ -297,7 +330,8 @@ void update_jump_conditionals(Expression_tree * tree, vec_cinstr &instrs, uint32
 		ASSERT_MSG((line_cond != 0), ("ERROR: couldn't find the conditional instruction\n"));
 		ASSERT_MSG((line_jump != 0), ("ERROR: couldn't find the jump instruction\n"));
 
-
+		//added
+		taken = is_branch_taken(instrs[line_jump].first->opcode, instrs[line_jump].first->eflags);
 
 		bool is_there = false;
 		for (int j = 0; j < tree->conditionals.size(); j++){
@@ -371,9 +405,17 @@ void build_tree(uint64 destination, uint32_t stride, vector<uint32_t> start_poin
 	//major assumption here is that reg and mem 'value' fields do not overlap. This is assumed in all other places as well. can have an assert for this
 
 	instr = instrs[curpos].first;
+	//cout << instr->pc << endl;
 
 
 	ASSERT_MSG((instr != NULL), ("ERROR: you have given a line no beyond this file\n"));
+
+	vector<string> string_disasm = get_disasm_string(disasm, instr->pc);
+	if (debug && debug_level >= 3){
+		for (int i = 0; i < string_disasm.size(); i++){
+			cout << string_disasm[i] << endl;
+		}
+	}
 
 	if (debug && debug_level >= 2){
 		if (instrs[curpos].second != NULL){
@@ -476,7 +518,7 @@ void build_tree(uint64 destination, uint32_t stride, vector<uint32_t> start_poin
 
 	DEBUG_PRINT(("build_tree(concrete) - done\n"), 2);
 	//print_vector(lines,disasm);
-	order_tree(tree->get_head());
+	//order_tree(tree->get_head());
 	
 
 
@@ -913,16 +955,20 @@ void build_abs_trees(vector<vector< Expression_tree *> > clusters, string folder
 		Abs_node * comp_node = abstract_the_trees(clusters[i], no_trees, total_regions);
 
 		/* now get the conditional trees */
+		vector< pair<Abs_node *, bool> > cond_nodes_truth;
 		vector<Abs_node * > cond_nodes = get_conditional_trees(clusters[i], no_trees, total_regions,skip);
+		for (int j = 0; j < clusters[i][0]->conditionals.size(); j++){
+			cond_nodes_truth.push_back(make_pair(cond_nodes[j], clusters[i][0]->conditionals[j]->taken));
+		}
 		
 		/* computational_tree +  set of conditional_trees */
-		halide_program->register_funcs(comp_node, cond_nodes);
-		halide_program->register_funcs(comp_node);
+		halide_program->register_funcs(comp_node, cond_nodes_truth);
+		halide_program->register_inputs(comp_node);
 
 	}
 
 	/* straight away go for Halide code generation */
-
+	halide_program->print_halide_v2(cout);
 	
 
 

@@ -34,6 +34,8 @@ vector< vector <Expression_tree *> > cluster_trees(vector<mem_regions_t *> mem_r
 
 void build_abs_trees(vector<vector< Expression_tree *> > clusters, string folder, uint32_t no_trees, vector<mem_regions_t *> total_regions, uint32_t skip);
 
+void filter_disasm_vector(vec_cinstr &instrs, vector<disasm_t * > &disasm);
+
 void cinstr_convert_reg(cinstr_t * instr);
 
 

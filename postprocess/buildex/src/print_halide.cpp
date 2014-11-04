@@ -262,7 +262,7 @@ string Halide_program::get_full_overlap_string(Abs_node * node, Abs_node * head)
 
 	//if (overlap_end == node_end){
 	ret += " ( ";
-	get_abs_tree_string(overlap, head);
+	ret += get_abs_tree_string(overlap, head);
 	ret += " ) & " + to_string((uint32_t(~0) >> (32 - node->width * 8)));
 	//}
 	/*else{
@@ -288,7 +288,7 @@ string Halide_program::get_partial_overlap_string(Abs_node * node, Abs_node * he
 		uint node_end = node->range + node->width;
 
 		ret += "(";
-		get_abs_tree_string(overlap, head);
+		ret += get_abs_tree_string(overlap, head);
 		ret += " << " + to_string((node_end - overlap_end) * 8);
 		ret += ")";
 
@@ -307,6 +307,8 @@ string Halide_program::get_abs_tree_string(Abs_node * node, Abs_node * head){
 	string ret = "";
 
 	if (node->type == OPERATION_ONLY){
+
+
 		if (node->operation == op_full_overlap){
 			ret += " ( ";
 			ret += get_full_overlap_string(node, head);
@@ -354,6 +356,8 @@ string Halide_program::get_abs_tree_string(Abs_node * node, Abs_node * head){
 		return ret;
 	}
 	else {
+
+
 		ret += " " + get_abs_node_string(node) + " ";
 		/* head node is special and this should be printed out in a special manner */
 		if (node == head){
@@ -362,7 +366,7 @@ string Halide_program::get_abs_tree_string(Abs_node * node, Abs_node * head){
 			}
 			uint ori_type = node->type;
 			node->type = OPERATION_ONLY;
-			get_abs_tree_string(node, head);
+			ret += get_abs_tree_string(node, head);
 			node->type = ori_type;
 		}
 
@@ -483,15 +487,32 @@ void Halide_program::find_recursive_funcs(){
 
 }
 
-void Halide_program::register_funcs(Abs_node * comp_node, vector<Abs_node *> cond_nodes){
+void Halide_program::register_funcs(Abs_node * comp_node, vector< pair<Abs_node *, bool > > cond_nodes){
 
 	Halide_program::function * func = check_function(comp_node->mem_info.associated_mem);
 	if (func == NULL){
 		func = new Halide_program::function();
 		funcs.push_back(func);
 	}
-	func->nodes.push_back(comp_node);
-	func->conditional_nodes.push_back(cond_nodes);
+
+
+	uint32_t size_cond = cond_nodes.size();
+	uint32_t insert_at = 0;
+	bool inserted = false;
+	for (int i = 0; i < func->nodes.size(); i++){
+		if (size_cond > func->conditional_nodes[i].size()){
+			func->nodes.insert(func->nodes.begin() + i, comp_node);
+			func->conditional_nodes.insert(func->conditional_nodes.begin() + i, cond_nodes);
+			insert_at = i;
+			inserted = true;
+			break;
+		}
+	}
+
+	if (!inserted){
+		func->nodes.push_back(comp_node);
+		func->conditional_nodes.push_back(cond_nodes);
+	}
 	
 }
 
@@ -510,15 +531,26 @@ void Halide_program::register_inputs(Abs_node * node){
 }
 
 
-string Halide_program::get_conditional_string(vector< Abs_node *> conditions){
+string Halide_program::get_conditional_string(vector< pair<Abs_node *, bool> > conditions){
 
 	string ret = "";
 
 	for (int i = 0; i < conditions.size(); i++){
-		ASSERT_MSG((conditions[i]->srcs.size() == 1), ("ERROR: expected single source\n"));
-		ret += get_abs_tree_string(conditions[i]->srcs[0], conditions[i]);
+		ASSERT_MSG((conditions[i].first->srcs.size() == 1), ("ERROR: expected single source\n"));
+		Abs_node * node = conditions[i].first;
+		bool taken = conditions[i].second;
+
+		if (!taken){
+			ret += "! (";
+		}
+
+		ret += get_abs_tree_string(conditions[i].first->srcs[0], conditions[i].first);
 		if (i != conditions.size() - 1){
 			ret += " && ";
+		}
+
+		if (!taken){
+			ret += ")";
 		}
 	}
 
@@ -527,11 +559,53 @@ string Halide_program::get_conditional_string(vector< Abs_node *> conditions){
 
 }
 
-void get_output_func_string(){
+string get_output_func_string(Halide_program::function * func, vector<string> vars){
+	mem_regions_t * mem = func->nodes[0]->mem_info.associated_mem;
+	string ret = mem->name + "(";
+	for (int i = 0; i < vars.size(); i++){
+		ret += vars[i];
+		if (i == vars.size() - 1){
+			ret += ")";
+		}
+		else{
+			ret += ",";
+		}
+	}
+	return ret;
 
 }
 
+string get_expression_name(mem_regions_t * region, uint32_t function, uint32_t conditional){
 
+	return region->name + "_" + to_string(function) + "_" + to_string(conditional);
+
+}
+
+struct Expression{
+	string name;
+	string condtions;
+	string tree;
+
+};
+
+
+vector<string> get_expression_strings(vector<Expression *> exprs){
+
+	vector<string> ret;
+
+	/* printing out the expressions */
+	for (int i = 0; i < exprs.size() - 1 ; i++){
+		string ret_string = "";
+		ASSERT_MSG((exprs[i]->condtions != ""), ("ERROR: if there are more than one node then there should be conditionals\n"));
+		ret_string += "Expr " + exprs[i]->name + " = select(" + exprs[i]->condtions + "," + exprs[i]->tree + "," + exprs[i + 1]->name + ");";
+		ret.push_back(ret_string);
+	}
+
+	uint32_t fin = exprs.size() - 1;
+	ret.push_back("Expr " + exprs[fin]->name + " = " + exprs[fin]->tree + ";");
+	return ret;
+
+}
 
 
 void Halide_program::print_halide_v2(ostream &out){
@@ -553,7 +627,7 @@ void Halide_program::print_halide_v2(ostream &out){
 	vector<uint> params;
 	vector<string> param_strings;
 
-	print_input_params(head, out, params, param_strings);
+	//print_input_params(head, out, params, param_strings);
 
 
 	/* these are only declarartions */
@@ -575,24 +649,40 @@ void Halide_program::print_halide_v2(ostream &out){
 	}
 
 	
-	vector<vector<string> > Expression_declarations;
-	vector<vector<string> > Expression_definitions;
-
+	
 
 	/*print the actual function definitions - assumes the abs_nodes are stored based on the number of conditional statements*/
 	for (int i = funcs.size() - 1; i >= 0; i--){
+
 		function * func = funcs[i];
+		mem_regions_t * mem = func->nodes[0]->mem_info.associated_mem;
+		vector<Expression *> exprs;
+
 
 		/* print out the function start and say expression e */
 		for (int j = 0; j < func->nodes.size(); j++){
-			
 			Abs_node * tree_node = func->nodes[j];
-			vector<Abs_node *>  conditionals = func->conditional_nodes[j];
-
-			
-
+			vector< pair<Abs_node *, bool > >  conditionals = func->conditional_nodes[j];
+			Expression * expr = new Expression();
+			expr->name = get_expression_name(mem, i, j);
+			cout << expr->name << endl;
+			expr->condtions = get_conditional_string(conditionals);
+			cout << expr->condtions << endl;
+			expr->tree = get_abs_tree_string(tree_node->srcs[0], tree_node);
+			cout << expr->tree << endl;
+			exprs.push_back(expr);
 		}
-	
+
+
+		/* printing out the expressions */
+		vector<string> expr_strings = get_expression_strings(exprs); 
+
+		for (int j = expr_strings.size() - 1; j >= 0; j--){
+			out << expr_strings[j] << endl;
+		}
+
+		out << get_output_func_string(func, vars) << " = " << "cast<uint8_t>( " << exprs[0]->name << ") ;" << endl;
+
 	}
 
 	/*output to file the functions*/
@@ -602,7 +692,6 @@ void Halide_program::print_halide_v2(ostream &out){
 
 	/*print the halide footer*/
 	out << get_halide_footer() << endl;
-
 
 }
 
@@ -723,6 +812,7 @@ void Halide_program::print_halide(ostream &out){
 
 	/*print the halide footer*/
 	out << get_halide_footer() << endl;
+
 }
 
 

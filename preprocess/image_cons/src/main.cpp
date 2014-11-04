@@ -19,6 +19,7 @@ ofstream log_file;
 void create_arith_image(uint32_t width, uint32_t height, const char * name);
 void create_row_image(uint32_t width, uint32_t height, const char * name);
 void create_column_image(uint32_t width, uint32_t height, const char * name);
+void create_alternating_image(uint32_t width, uint32_t height, const char * name);
 
 
 void print_usage(){
@@ -69,7 +70,7 @@ int main(int argc, char **argv){
 
 		for (int j = 0; j < image->GetHeight(); j++){
 			for (int i = 0; i < image->GetWidth(); i++){
-			cout << (uint32_t)buffer[j * width + i] << endl;
+			//cout << (uint32_t)buffer[j * width + i] << endl;
 		}
 	}
 
@@ -80,6 +81,7 @@ int main(int argc, char **argv){
 	create_column_image(width, height, (image_folder + "\\column.png").c_str());
 	create_row_image(width, height, (image_folder + "\\row.png").c_str());
 	create_arith_image(width, height, (image_folder + "\\arith.png").c_str());
+	create_alternating_image(width, height, (image_folder + "\\alter.png").c_str());
 
 
 	shutdown_image_subsystem(token);
@@ -145,6 +147,33 @@ void create_arith_image(uint32_t width, uint32_t height, const char * name){
 			buffer[i + (j + 0 * height) * width] = count % 255;
 			buffer[i + (j + 1 * height) * width] = count % 255;
 			buffer[i + (j + 2 * height) * width] = count % 255;
+			count++;
+		}
+	}
+
+	update_image_buffer(image, buffer);
+
+	save_image(image, name);
+	delete image;
+
+
+}
+
+void create_alternating_image(uint32_t width, uint32_t height, const char * name){
+
+	Gdiplus::Bitmap * image = create_image(width, height);
+	byte * buffer = get_image_buffer(image);
+
+	uint32_t count = 0;
+
+	for (int j = 0; j < height; j++){
+		for (int i = 0; i < width; i++){
+
+			uint32_t val = (i + (j * width)) % 2 == 0 ? 32 : 150;
+
+			buffer[i + (j + 0 * height) * width] = val;
+			buffer[i + (j + 1 * height) * width] = val;
+			buffer[i + (j + 2 * height) * width] = val;
 			count++;
 		}
 	}
