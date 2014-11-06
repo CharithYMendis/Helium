@@ -855,13 +855,14 @@ vector<Expression_tree *> get_similar_trees(vector<mem_regions_t *> image_region
 
 }
 
-Abs_node * abstract_the_trees(vector<Expression_tree *> cluster, uint32_t no_trees, vector<mem_regions_t *> total_regions){
+Abs_node * abstract_the_trees(vector<Expression_tree *> cluster, uint32_t no_trees, vector<mem_regions_t *> total_regions, vector<pc_mem_region_t *> &pc_mem){
 
 	/* build the abs trees for the main computational tree and abstract it */
 	vector<Abs_node *> abs_nodes;
 
 	for (int j = 0; j < no_trees; j++){
 		Abs_tree  * abs_tree = new Abs_tree();
+		identify_parameters(cluster[j]->head, pc_mem);
 		abs_tree->build_abs_tree(NULL, cluster[j]->get_head(), total_regions);
 		abs_nodes.push_back(abs_tree->head);
 	}
@@ -890,7 +891,7 @@ Abs_node * abstract_the_trees(vector<Expression_tree *> cluster, uint32_t no_tre
 
 
 /* get the abs trees for the conditionals in the main computational expression tree */
-vector<Abs_node *> get_conditional_trees(vector<Expression_tree *> clusters, uint32_t no_trees, vector<mem_regions_t * > total_regions, uint32_t skip){
+vector<Abs_node *> get_conditional_trees(vector<Expression_tree *> clusters, uint32_t no_trees, vector<mem_regions_t * > total_regions, uint32_t skip, vector<pc_mem_region_t * > &pc_mem){
 
 	vector<Abs_node *> cond_abs_trees;
 	uint32_t number_conditionals = clusters[0]->conditionals.size();
@@ -909,7 +910,7 @@ vector<Abs_node *> get_conditional_trees(vector<Expression_tree *> clusters, uin
 			trees.push_back(clusters[k]->conditionals[i]->tree);
 		}
 
-		Abs_node * node = abstract_the_trees(trees, no_trees, total_regions);
+		Abs_node * node = abstract_the_trees(trees, no_trees, total_regions, pc_mem);
 		node->jump = clusters[0]->conditionals[i]->jumps;
 		per_cond_nodes = node;
 		cond_abs_trees.push_back(per_cond_nodes);
@@ -925,7 +926,7 @@ vector<Abs_node *> get_conditional_trees(vector<Expression_tree *> clusters, uin
 }*/
 
 /* builds the abs trees from the cluster of trees */
-void build_abs_trees(vector<vector< Expression_tree *> > clusters, string folder, uint32_t no_trees, vector<mem_regions_t *> total_regions, uint32_t skip){
+void build_abs_trees(vector<vector< Expression_tree *> > clusters, string folder, uint32_t no_trees, vector<mem_regions_t *> total_regions, uint32_t skip, ostream &halide_file, vector<pc_mem_region_t * > &pc_mem){
 
 	/* sanity print */
 	for (int i = 0; i < clusters.size(); i++){
@@ -952,13 +953,14 @@ void build_abs_trees(vector<vector< Expression_tree *> > clusters, string folder
 	for (int i = 0; i < clusters.size(); i++){
 
 		/* get the abstract tree for the computational path */
-		Abs_node * comp_node = abstract_the_trees(clusters[i], no_trees, total_regions);
+		Abs_node * comp_node = abstract_the_trees(clusters[i], no_trees, total_regions, pc_mem);
 
 		/* now get the conditional trees */
 		vector< pair<Abs_node *, bool> > cond_nodes_truth;
-		vector<Abs_node * > cond_nodes = get_conditional_trees(clusters[i], no_trees, total_regions,skip);
+		vector<Abs_node * > cond_nodes = get_conditional_trees(clusters[i], no_trees, total_regions,skip, pc_mem);
 		for (int j = 0; j < clusters[i][0]->conditionals.size(); j++){
 			cond_nodes_truth.push_back(make_pair(cond_nodes[j], clusters[i][0]->conditionals[j]->taken));
+			halide_program->register_inputs(cond_nodes[j]);
 		}
 		
 		/* computational_tree +  set of conditional_trees */
@@ -968,7 +970,7 @@ void build_abs_trees(vector<vector< Expression_tree *> > clusters, string folder
 	}
 
 	/* straight away go for Halide code generation */
-	halide_program->print_halide_v2(cout);
+	halide_program->print_halide_v2(halide_file);
 	
 
 

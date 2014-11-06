@@ -423,15 +423,15 @@ bool remove_full_overlap_nodes_aggressive(Node * node, Node * head, uint width){
 
 		ASSERT_MSG((node->srcs.size() == 1), ("ERROR: full overlaps should only have one source\n"));
 
-		/* check whether the overlap is at the end of the range */
-		Node * overlap = node->srcs[0];
-		if (overlap->symbol->value + overlap->symbol->width == node->symbol->value + node->symbol->width){
-			/*now check whether the width */
-			if (is_possible){
-				remove_full_overlap_node(node, head);
-			}
-		}
-		return true;
+/* check whether the overlap is at the end of the range */
+Node * overlap = node->srcs[0];
+if (overlap->symbol->value + overlap->symbol->width == node->symbol->value + node->symbol->width){
+	/*now check whether the width */
+	if (is_possible){
+		remove_full_overlap_node(node, head);
+	}
+}
+return true;
 	}
 	else if (node->operation == op_rsh){
 		return  (width == node->srcs[0]->symbol->width);
@@ -464,7 +464,7 @@ int remove_full_overlap_nodes_conservative(Node * node, Node * head){
 
 	/* return the width depending on the node's operation */
 	if (node->operation == op_full_overlap){
-		
+
 		ASSERT_MSG((node->srcs.size() == 1), ("ERROR: full overlaps should only have one source\n"));
 
 		/* check whether the overlap is at the end of the range */
@@ -498,7 +498,7 @@ int remove_full_overlap_nodes_conservative(Node * node, Node * head){
 		else{
 			ret_size = max_width;
 		}
-		
+
 		if (node->symbol->width < ret_size){
 			ret_size = node->symbol->width;
 		}
@@ -517,17 +517,51 @@ int get_parameter_num(){
 }
 
 
-void identify_parameters(Node * node){
+bool is_para_there(vector<Node * > para_nodes, Node * node){
+
+	for (int i = 0; i < para_nodes.size(); i++){
+		if ((para_nodes[i]->symbol->type == node->symbol->type) &&
+			(para_nodes[i]->symbol->value == node->symbol->value) &&
+			(para_nodes[i]->symbol->width == node->symbol->width)){
+			return true;
+		}
+	}
+
+	return true;
+
+
+}
+
+/**/
+void identify_parameters(Node * node, vector<pc_mem_region_t *> pc_mems){
 
 	if (node->srcs.size() == 0){
-		if (node->symbol->type == MEM_STACK_TYPE || node->symbol->type == REG_TYPE){
-			node->is_para = true;
+		if (node->symbol->type == REG_TYPE){
+			node->is_para;
 			node->para_num = get_parameter_num();
+		}
+		if (node->symbol->type == MEM_STACK_TYPE){
+
+			node->is_para = false;
+			for (int i = 0; i < pc_mems.size(); i++){
+				if ((node->pc == pc_mems[i]->pc)){
+					if (pc_mems[i]->regions.size() == 1){
+						uint32_t size = (pc_mems[i]->regions[0]->end - pc_mems[i]->regions[0]->start) / (pc_mems[i]->regions[0]->prob_stride);
+						if (size == 1){
+							node->is_para = true;
+							node->para_num = get_parameter_num();
+						}
+					}
+					break;
+				}
+			}
+
+			
 		}
 	}
 	else{
 		for (int i = 0; i < node->srcs.size(); i++){
-			identify_parameters(node->srcs[i]);
+			identify_parameters(node->srcs[i], pc_mems);
 		}
 	}
 

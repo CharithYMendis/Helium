@@ -26,6 +26,7 @@ void print_usage(){
 	printf("\t debug - 1,0 which turns debug mode on/off \n");
 	printf("\t debug_level - the level of debugging (higher means more debug info) \n");
 	printf("\t mode - mode of filtering \n");
+	printf("\t -total_size - size of the buffer\n");
 	printf("\t threshold - continuous chunck % of image\n");
 }
 
@@ -98,8 +99,8 @@ int main(int argc, char **argv){
 	vector<string> files = get_all_files_in_folder(output_folder);
 
 	for (int i = 0; i < in_images.size(); i++){
-		string profile_string("profile_" + exec + ".exe_" + in_images[i]);
-		string memtrace_string("memtrace_" + exec + ".exe_" + in_images[i]);
+		string profile_string("profile_" + exec + ".EXE_" + in_images[i]);
+		string memtrace_string("memtrace_" + exec + ".EXE_" + in_images[i]);
 
 		DEBUG_PRINT(("profile string - %s\n", profile_string.c_str()), 5);
 		DEBUG_PRINT(("memtrace string - %s\n", memtrace_string.c_str()), 5);

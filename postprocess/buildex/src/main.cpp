@@ -469,11 +469,6 @@
 	 }
 
 
-
-	 
-
-
-
 	 /* data structures that will be passed to the next stage */
 	 vector<Expression_tree *> conc_trees;
 
@@ -548,7 +543,7 @@
  	 }
 	 else if (tree_build == BUILD_CLUSTERS){
 		 vector< vector< Expression_tree *> > clustered_trees = cluster_trees(image_regions, start_points, instrs_backward, disasm, output_folder + file_substr, instr_info);
-		 build_abs_trees(clustered_trees, output_folder + file_substr,4,total_mem_regions, 30);
+		 build_abs_trees(clustered_trees, output_folder + file_substr,4,total_mem_regions, 30, halide_file, pc_mem_info);
 
 
 		 /* build abs_trees for a sub section of each cluster  + their conditionals */

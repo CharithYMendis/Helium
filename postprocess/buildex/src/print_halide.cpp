@@ -4,6 +4,7 @@
 #include <string>
 #include <stack>
 #include <algorithm>
+#include <list>
 
 string get_abs_node_string(Abs_node * node);
 
@@ -522,6 +523,7 @@ void Halide_program::register_inputs(Abs_node * node){
 		Halide_program::function * func = check_function(node->mem_info.associated_mem);
 		if (func == NULL){
 			func = new Halide_program::function();
+			func->nodes.push_back(node);
 			inputs.push_back(func);
 		}
 	}
@@ -608,6 +610,65 @@ vector<string> get_expression_strings(vector<Expression *> exprs){
 }
 
 
+bool compareNoCase(string first, string second)
+{
+	ULONG i = 0;
+	while ((i < first.length()) && (i < second.length()))
+	{
+		if (tolower(first[i]) < tolower(second[i])) return true;
+		else if (tolower(first[i]) > tolower(second[i])) return false;
+		i++;
+	}
+
+	if (first.length() < second.length()) return true;
+	else return false;
+}
+
+
+void get_parameters_from_tree(Abs_node * tree, vector<string> &para){
+
+
+	if (tree->type == PARAMETER){
+
+		bool found = false;
+		string para_string = "p_" + to_string(tree->value); 
+		para.push_back(para_string);
+	}
+
+	for (int i = 0; i < tree->srcs.size(); i++){
+		get_parameters_from_tree(tree->srcs[i], para); 
+	}
+	
+}
+
+
+vector<string> get_parameters_from_functions(vector<Halide_program::function * > func){
+
+
+	vector<string> paras;
+
+	for (int i = 0; i < func.size(); i++){
+		for (int j = 0; j < func[i]->nodes.size(); j++){
+
+			get_parameters_from_tree(func[i]->nodes[j], paras);
+
+			for (int k = 0; k < func[i]->conditional_nodes[j].size(); k++){
+				get_parameters_from_tree(func[i]->conditional_nodes[j][k].first, paras);
+			}
+
+		}
+	}
+
+	cout << paras.size() << endl;
+	for (int i = 0; i < paras.size(); i++){
+		cout << paras[i] << endl;
+	}
+
+	return paras;
+
+}
+
+
 void Halide_program::print_halide_v2(ostream &out){
 
 	DEBUG_PRINT(("printing halide....\n"), 1);
@@ -627,6 +688,11 @@ void Halide_program::print_halide_v2(ostream &out){
 	vector<uint> params;
 	vector<string> param_strings;
 
+
+	vector<string> paras = get_parameters_from_functions(funcs); 
+	for (int i = 0; i < paras.size(); i++){
+		out << "Param<uint32_t> " << paras[i] << ";" << endl;
+	}
 	//print_input_params(head, out, params, param_strings);
 
 
@@ -638,14 +704,35 @@ void Halide_program::print_halide_v2(ostream &out){
 			out << get_function_string(funcs[i]) << endl;
 			DEBUG_PRINT(("function node - %s\n", node->mem_info.associated_mem->name.c_str()), 1);
 		}
+		outputs.push_back(funcs[i]);
 	}
 
 	/* print the input declarations */
+	vector<string> inputs_s;
+
 	for (int i = 0; i < inputs.size(); i++){
 		Abs_node * node = inputs[i]->nodes[0];
-		DEBUG_PRINT(("input param node - %s\n", node->mem_info.associated_mem->name.c_str()), 1);
-		out << get_input_definition_string(node) << endl;
+
+		bool found = false;
+		for (int j = 0; j < i; j++){
+			Abs_node * comp = inputs[j]->nodes[0];
+			if (comp->mem_info.associated_mem == node->mem_info.associated_mem){
+				found = true;
+				break;
+			}
+		}
+
+		if (found) continue;
+
+		//DEBUG_PRINT(("input param node - %s\n", node->mem_info.associated_mem->name.c_str()), 1);
+		inputs_s.push_back(get_input_definition_string(node));
 		param_strings.push_back(node->mem_info.associated_mem->name);
+	}
+
+
+
+	for (int i = 0; i < inputs_s.size(); i++){
+		out << inputs_s[i] << endl;
 	}
 
 	
@@ -685,10 +772,17 @@ void Halide_program::print_halide_v2(ostream &out){
 
 	}
 
+	/* for params */
+	for (int i = 0; i < paras.size(); i++){
+		out << "args.push_back(" << paras[i] << ");" << endl;
+	}
+
 	/*output to file the functions*/
 	for (int i = 0; i < outputs.size(); i++){
 		out << get_output_to_file_string(outputs[i]->nodes[0], "halide_out", i, param_strings) << endl;
 	}
+
+
 
 	/*print the halide footer*/
 	out << get_halide_footer() << endl;

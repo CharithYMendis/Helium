@@ -9,6 +9,7 @@
 #include "expression_tree.h"
 #include "memregions.h"
 #include "forward_analysis.h"
+#include "meminfo.h"
 
 
 #define FILE_BEGINNING  -2
@@ -32,7 +33,7 @@ vector<Expression_tree *> get_similar_trees(vector<mem_regions_t *> image_region
 vector< vector <Expression_tree *> > cluster_trees(vector<mem_regions_t *> mem_regions, vector<uint32_t> start_points, vec_cinstr &instrs, vector<disasm_t *> disasm, string output_folder, vector<instr_info_t *> &instr_info);
 
 
-void build_abs_trees(vector<vector< Expression_tree *> > clusters, string folder, uint32_t no_trees, vector<mem_regions_t *> total_regions, uint32_t skip);
+void build_abs_trees(vector<vector< Expression_tree *> > clusters, string folder, uint32_t no_trees, vector<mem_regions_t *> total_regions, uint32_t skip, ostream &halide_file, vector<pc_mem_region_t *> &pc_mem);
 
 void filter_disasm_vector(vec_cinstr &instrs, vector<disasm_t * > &disasm);
 

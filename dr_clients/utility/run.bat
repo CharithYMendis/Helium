@@ -34,6 +34,7 @@ set HALIDE_TEST=%EXALGO_TEST_FOLDER%\halide_tests\bin32\%4.exe
 set ASM_TEST=%EXALGO_TEST_FOLDER%\asm_tests\bin32\%4.exe
 set C_TEST=%EXALGO_TEST_FOLDER%\c_tests\bin32\%4.exe
 set GIMP="C:\Program Files\GIMP 2\bin\gimp-2.8.exe"
+set PPT="C:\Program Files (x86)\Microsoft Office\Office15\POWERPNT.EXE"
 )
 
 set INPUT_IMAGE=%EXALGO_IMAGE_FOLDER%\%IN_IMAGE%
@@ -55,6 +56,10 @@ if "%2" == "asm" (
 )
 if "%2" == "gimp" (
 	set EXEC=%GIMP%
+)
+
+if "%2" == "ppt" (
+	set EXEC=%PPT%
 )
  
  ::-msgbox_mask 0xf
