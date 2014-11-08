@@ -38,6 +38,9 @@ struct mem_regions_t {
 	/*name of the mem region */
 	std::string name;
 
+	/* pcs which reference this region */
+	std::vector<uint32_t > pcs;
+
 };
 
 /* get random memory location */

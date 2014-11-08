@@ -31,7 +31,7 @@ set FILTER_FILE=%EXALGO_FILTER_FOLDER%\%FILTER_FILENAME%
 if "%DR_PHASE%" == "profile_memtrace" (
 
 	del %EXALGO_OUTPUT_FOLDER%\memtrace_%TEST_NAME%.exe_%IN_IMAGE%*	
-	call run_client %ARCH% %EXEC% %TEST_NAME% %DEBUG% "profile memtrace" %FILTER_FILE% %FILTER_MODE_STRING% %INSTRACE_MODE_STRING%	
+	call run_client %ARCH% %EXEC% %TEST_NAME% %DEBUG% "profile memtrace cpuid" %FILTER_FILE% %FILTER_MODE_STRING% %INSTRACE_MODE_STRING%	
 )
 
 

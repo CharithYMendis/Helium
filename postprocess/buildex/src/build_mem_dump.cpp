@@ -187,7 +187,7 @@ vector<mem_regions_t *> merge_instrace_and_dump_regions(vector<mem_regions_t *> 
 
 					cout << "--------------------------" << endl;
 
-					mem_regions[i]->start = mem_info[j]->start; 
+					mem_regions[i]->start = mem_info[j]->start;
 					mem_regions[i]->end = mem_info[j]->end;
 
 				}

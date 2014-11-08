@@ -518,7 +518,7 @@ void build_tree(uint64 destination, uint32_t stride, vector<uint32_t> start_poin
 
 	DEBUG_PRINT(("build_tree(concrete) - done\n"), 2);
 	//print_vector(lines,disasm);
-	//order_tree(tree->get_head());
+	order_tree(tree->get_head());
 	
 
 
@@ -955,12 +955,27 @@ void build_abs_trees(vector<vector< Expression_tree *> > clusters, string folder
 		/* get the abstract tree for the computational path */
 		Abs_node * comp_node = abstract_the_trees(clusters[i], no_trees, total_regions, pc_mem);
 
+		uint32_t nodes = number_tree_nodes(comp_node);
+		ofstream conc_file(folder + "_abs_comp_" + to_string(i) + "_" + ".dot", ofstream::out);
+		ofstream conc_file_alg(folder + "_alg_comp_" + to_string(i) + "_" + ".dot", ofstream::out);
+		print_to_dotfile(conc_file, comp_node, nodes, 0, false);
+		print_to_dotfile(conc_file_alg, comp_node, nodes, 0, true);
+
+
+
 		/* now get the conditional trees */
 		vector< pair<Abs_node *, bool> > cond_nodes_truth;
 		vector<Abs_node * > cond_nodes = get_conditional_trees(clusters[i], no_trees, total_regions,skip, pc_mem);
 		for (int j = 0; j < clusters[i][0]->conditionals.size(); j++){
 			cond_nodes_truth.push_back(make_pair(cond_nodes[j], clusters[i][0]->conditionals[j]->taken));
 			halide_program->register_inputs(cond_nodes[j]);
+
+			uint32_t nodes = number_tree_nodes(cond_nodes[j]);
+			ofstream conc_file(folder + "_abs_cond_" + to_string(i) + "_" + to_string(j) + ".dot", ofstream::out);
+			ofstream conc_file_alg(folder + "_alg_cond_" + to_string(i) + "_" + to_string(j) + ".dot", ofstream::out);
+			print_to_dotfile(conc_file, cond_nodes[j], nodes, 0, false);
+			print_to_dotfile(conc_file_alg, cond_nodes[j], nodes, 0, true);
+
 		}
 		
 		/* computational_tree +  set of conditional_trees */

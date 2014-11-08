@@ -2,6 +2,7 @@
 #include <iostream>
 #include <string>
 #include "common_defines.h"
+#include "meminfo.h"
 
 using namespace std;
 

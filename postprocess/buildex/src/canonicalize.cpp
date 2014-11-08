@@ -628,6 +628,8 @@ bool is_branch_taken(uint32_t opcode, uint32_t flags){
 		return !cf && !zf;
 	case OP_sbb:
 		return cf;
+	case OP_jnbe:
+		return !cf && !zf;
 
 	default:
 		unhandled = true;
@@ -692,6 +694,8 @@ bool is_jmp_conditional_affected(uint32_t opcode, uint32_t flags){
 		return cf && zf;
 	case OP_sbb:
 		return cf;
+	case OP_jnbe:
+		return cf && zf;
 	default:
 		unhandled = true;
 	}
@@ -738,6 +742,7 @@ bool is_conditional_jump_ins(uint32_t opcode){
 	case OP_jb:
 	case OP_jnb:
 	case OP_js:
+	case OP_jnbe:
 
 	//sbb and other computation involving eflags
 	case OP_sbb:
@@ -834,6 +839,8 @@ uint32_t dr_logical_to_operation(uint32_t opcode){
 		return op_gt;
 	case OP_sbb:
 		return op_lt;
+	case OP_jnbe:
+		return op_gt;
 
 	}
 
@@ -1071,6 +1078,7 @@ rinstr_t * cinstr_to_rinstrs (cinstr_t * cinstr, int &amount, std::string disasm
 	case OP_movd:
 	case OP_movapd:
 	case OP_movdqa:
+	case OP_mov_seg:
 
 	case OP_cvttsd2si:
 		// dst[0] <- src[0]
@@ -1373,6 +1381,7 @@ rinstr_t * cinstr_to_rinstrs (cinstr_t * cinstr, int &amount, std::string disasm
 	case OP_setz:
 	case OP_sets:
 	case OP_setns:
+	case OP_setnz:
 	case OP_setb:
 
 		if_bounds(1, 0){
@@ -1381,6 +1390,7 @@ rinstr_t * cinstr_to_rinstrs (cinstr_t * cinstr, int &amount, std::string disasm
 			bool flag;
 			switch (cinstr->opcode){
 			case OP_setz: flag = check_lahf_bit(Zero_lahf, cinstr->eflags); break;
+			case OP_setnz: flag = check_lahf_bit(Zero_lahf, cinstr->eflags); break;
 			case OP_sets: flag = check_lahf_bit(Sign_lahf, cinstr->eflags); break;
 			case OP_setns: flag = !check_lahf_bit(Sign_lahf, cinstr->eflags); break;
 			case OP_setb: flag = check_lahf_bit(Carry_lahf, cinstr->eflags); break;
@@ -1393,6 +1403,20 @@ rinstr_t * cinstr_to_rinstrs (cinstr_t * cinstr, int &amount, std::string disasm
 				operand_t immediate = { IMM_INT_TYPE, cinstr->dsts[0].width, 0 };
 				rinstr[0] = { op_assign, cinstr->dsts[0], 1, { immediate }, true };
 			}
+		}
+		else_bounds;
+
+	case OP_xadd:
+
+		if_bounds(2, 2){
+			rinstr = new rinstr_t[3];
+			operand_t virtual_reg = { REG_TYPE, cinstr->srcs[0].width, DR_REG_VIRTUAL_1 };
+			reg_to_mem_range(&virtual_reg);
+			rinstr[0] = { op_add, virtual_reg, 2, { cinstr->srcs[0], cinstr->srcs[1] }, true };
+			rinstr[1] = { op_assign, cinstr->srcs[1], 1, { cinstr->srcs[0] }, true};
+			rinstr[2] = { op_assign, cinstr->srcs[0] , 1, { virtual_reg }, true };
+			amount = 3;
+
 		}
 		else_bounds;
 
@@ -1481,9 +1505,21 @@ rinstr_t * cinstr_to_rinstrs (cinstr_t * cinstr, int &amount, std::string disasm
 		}
 		else_bounds;
 	
+	case OP_fsubr:
+		if_bounds(1, 2){
+			rinstr = new rinstr_t[1];
+			amount = 1;
+			rinstr[0] = { op_sub, cinstr->dsts[0], 2, { cinstr->srcs[0], cinstr->srcs[1] }, false };
+		}
+		else_bounds;
 
 		/******************************************************control flow instructions**************************************************************************************************/
 
+	case OP_cmpxchg:
+	case OP_rep_stos:
+	case OP_cld:
+	case OP_jbe:
+		/* above change */
 
 	case OP_jmp:
 	case OP_jmp_short:
@@ -1510,6 +1546,7 @@ rinstr_t * cinstr_to_rinstrs (cinstr_t * cinstr, int &amount, std::string disasm
 	case OP_jnb:
 	case OP_js:
 	case OP_jmp_ind:
+	case OP_jnbe:
 
 	case OP_cmp:
 	case OP_test:

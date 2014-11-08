@@ -279,6 +279,11 @@ vector<jump_info_t * > lookup_inverse_table(inverse_table_t jump_table, uint32_t
 }
 
 
+void parse_for_indirect_accesses(){
+
+}
+
+
 
 void find_rdom_loops(){
 

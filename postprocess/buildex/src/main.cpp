@@ -97,6 +97,8 @@
 	 uint32_t seed = 10;
 	 uint32_t tree_build = BUILD_RANDOM;
 	 uint32_t mode = TREE_BUILD_STAGE;
+	 uint32_t dump = 1;
+	 uint32_t output_pc = 0;
 
 
 	 /***************************** command line args processing ************************/
@@ -156,6 +158,12 @@
 		 }
 		 else if (args[i]->name.compare("-end_pc") == 0){
 			 end_pc = atoi(args[i]->value.c_str());
+		 }
+		 else if (args[i]->name.compare("-dump") == 0){
+			 dump = atoi(args[i]->value.c_str());
+		 }
+		 else if (args[i]->name.compare("-output_pc") == 0){
+			 output_pc = atoi(args[i]->value.c_str());
 		 }
 		 else{
 			 ASSERT_MSG(false, ("ERROR: unknown option\n"));
@@ -314,10 +322,13 @@
 	 }
 
 	 /* analyzing mem dumps for input and output image locations */
-	 DEBUG_PRINT(("analyzing mem dumps\n"), 1);
+	 
 	 vector<mem_regions_t *> regions;
-	 regions = get_image_regions_from_dump(memdump_files, in_image_filename, out_image_filename);
-	 DEBUG_PRINT(("analyzing instrace file - %s\n", instrace_filename.c_str()), 1);
+	 if (dump){
+		 DEBUG_PRINT(("analyzing mem dumps\n"), 1);
+		 regions = get_image_regions_from_dump(memdump_files, in_image_filename, out_image_filename);
+		 DEBUG_PRINT(("analyzing instrace file - %s\n", instrace_filename.c_str()), 1);
+	 }
 
 	 /* independently create the memory layout from the instrace */
 	 vector<mem_info_t *> mem_info;
@@ -403,70 +414,75 @@
 	 }*/
 
 
+	 vector<uint32_t> app_pc;
+     vector<jump_info_t * > cond_app_pc;
 
-	 mem_regions_t * input_mem_region = (image_regions[0]->type == IMAGE_INPUT ? image_regions[0] : image_regions[1]);
-	 mem_regions_t * output_mem_region = (image_regions[0]->type == IMAGE_INPUT ? image_regions[1] : image_regions[0]);
+	 if (dump){
 
-	 uint32_t count = 0;
-	 for (int i = 0; i < disasm.size(); i++){
-		 count += disasm[i]->pc_disasm.size();
-	 }
-	 cout << "count : " << count << endl;
+		 mem_regions_t * input_mem_region = (image_regions[0]->type == IMAGE_INPUT ? image_regions[0] : image_regions[1]);
+		 mem_regions_t * output_mem_region = (image_regions[0]->type == IMAGE_INPUT ? image_regions[1] : image_regions[0]);
 
-	 filter_disasm_vector(instrs_forward,disasm);
+		 uint32_t count = 0;
+		 for (int i = 0; i < disasm.size(); i++){
+			 count += disasm[i]->pc_disasm.size();
+		 }
+		 cout << "count : " << count << endl;
 
-	 count = 0;
-	 for (int i = 0; i < disasm.size(); i++){
-		 count += disasm[i]->pc_disasm.size();
-	 }
-	 cout << "count : " << count << endl;
+		 filter_disasm_vector(instrs_forward, disasm);
 
-	 vector<uint32_t> app_pc = find_dependant_statements(instrs_forward, input_mem_region, disasm);
+		 count = 0;
+		 for (int i = 0; i < disasm.size(); i++){
+			 count += disasm[i]->pc_disasm.size();
+		 }
+		 cout << "count : " << count << endl;
 
-	 cout << "dependant statements" << endl;
-	 for (int i = 0; i < app_pc.size(); i++){
+		 app_pc = find_dependant_statements(instrs_forward, input_mem_region, disasm);
 
-		 vector<string> disasm_string = get_disasm_string(disasm, app_pc[i]);
-		 cout << app_pc[i] << " " << disasm_string[0] <<  endl;
-	 }
+		 cout << "dependant statements" << endl;
+		 for (int i = 0; i < app_pc.size(); i++){
 
-	 vector<jump_info_t * > cond_app_pc = find_depedant_conditionals(app_pc, instrs_forward, disasm);
+			 vector<string> disasm_string = get_disasm_string(disasm, app_pc[i]);
+			 cout << app_pc[i] << " " << disasm_string[0] << endl;
+		 }
 
-	 cout << "dependant conditionals" << endl;
-	 for (int i = 0; i < cond_app_pc.size(); i++){
+		 cond_app_pc = find_depedant_conditionals(app_pc, instrs_forward, disasm);
 
-		 vector<string> dis_jmp_string = get_disasm_string(disasm, cond_app_pc[i]->jump_pc);
-		 vector<string> dis_cond_string = get_disasm_string(disasm, cond_app_pc[i]->cond_pc);
+		 cout << "dependant conditionals" << endl;
+		 for (int i = 0; i < cond_app_pc.size(); i++){
 
-		 cout << i + 1 << " - conditional " << endl;
-		 cout << "jump ";
-		 cout << cond_app_pc[i]->jump_pc << " " << dis_jmp_string[0] << endl;
-		 cout << "cond_pc ";
-		 cout << cond_app_pc[i]->cond_pc << " " << dis_cond_string[0] << endl;
-		 cout << "target_pc ";
-		 cout << cond_app_pc[i]->target_pc << endl;
-		 cout << "fall_pc ";
-		 cout << cond_app_pc[i]->fall_pc << endl;
-		 cout << "merge_pc ";
-		 cout << cond_app_pc[i]->merge_pc << endl;
+			 vector<string> dis_jmp_string = get_disasm_string(disasm, cond_app_pc[i]->jump_pc);
+			 vector<string> dis_cond_string = get_disasm_string(disasm, cond_app_pc[i]->cond_pc);
 
-	 }
+			 cout << i + 1 << " - conditional " << endl;
+			 cout << "jump ";
+			 cout << cond_app_pc[i]->jump_pc << " " << dis_jmp_string[0] << endl;
+			 cout << "cond_pc ";
+			 cout << cond_app_pc[i]->cond_pc << " " << dis_cond_string[0] << endl;
+			 cout << "target_pc ";
+			 cout << cond_app_pc[i]->target_pc << endl;
+			 cout << "fall_pc ";
+			 cout << cond_app_pc[i]->fall_pc << endl;
+			 cout << "merge_pc ";
+			 cout << cond_app_pc[i]->merge_pc << endl;
 
-	 vector<instr_info_t *> instr_info;
-	 instr_info = populate_conditional_instructions(disasm, cond_app_pc);
-
-
-	 cout << "populated cond. instrs" << endl;
-	 for (int i = 0; i < instr_info.size(); i++){
-		 instr_info_t * info = instr_info[i];
-		 if (info->conditions.size() > 0){
-			 cout << info->pc << " " << info->disasm << endl;
-			 //conditionals
-			 for (int j = 0; j < info->conditions.size(); j++){
-				 cout << info->conditions[j].first->cond_pc << " " << info->conditions[j].second << endl;
-			 }
 		 }
 	 }
+
+	vector<instr_info_t *> instr_info;
+	instr_info = populate_conditional_instructions(disasm, cond_app_pc);
+
+	cout << "populated cond. instrs" << endl;
+	for (int i = 0; i < instr_info.size(); i++){
+		instr_info_t * info = instr_info[i];
+		if (info->conditions.size() > 0){
+			cout << info->pc << " " << info->disasm << endl;
+			//conditionals
+			for (int j = 0; j < info->conditions.size(); j++){
+				cout << info->conditions[j].first->cond_pc << " " << info->conditions[j].second << endl;
+			}
+		}
+	}
+	 
 
 
 	 /* data structures that will be passed to the next stage */
@@ -489,8 +505,9 @@
 	 if (tree_build == BUILD_RANDOM){
 
 
-		 mem_regions_t * random_mem_region = get_random_output_region(image_regions);
+		 
 		 if (start_trace == FILE_BEGINNING){
+			 mem_regions_t * random_mem_region = get_random_output_region(image_regions);
 			 uint64 mem_location = get_random_mem_location(random_mem_region, seed);
 			 DEBUG_PRINT(("random mem location we got - %llx\n", mem_location), 1);
 			 dest = mem_location;

@@ -21,9 +21,11 @@ int main(int argc, char **argv) {
 
 	blur_y(x, y) = cast<uint8_t>((clamped_y(x, y - 1) + clamped_y(x, y) + clamped_y(x, y + 1)) / 3);
 
+	clamped_y.compute_root();
+
 	// How to schedule it
-	blur_y.split(y, y, yi, 8).parallel(y).vectorize(x, 8);
-	blur_x.store_at(blur_y, y).compute_at(blur_y, yi).vectorize(x, 8);
+	//blur_y.split(y, y, yi, 8).parallel(y).vectorize(x, 8);
+	//blur_x.store_at(blur_y, y).compute_at(blur_y, yi).vectorize(x, 8);
 
 	blur_y.compile_to_file("halide_blur_hvscan_gen", input);
 
