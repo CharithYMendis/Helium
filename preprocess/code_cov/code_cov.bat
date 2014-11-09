@@ -6,6 +6,7 @@ set PHOTOSHOP32="C:\Program Files (x86)\Adobe\Adobe Photoshop CS6\Photoshop.exe"
 set PHOTOSHOP64="C:\Program Files\Adobe\Adobe Photoshop CS6 (64 Bit)\Photoshop.exe"
 set GIMP="C:\Program Files\GIMP 2\bin\gimp-2.8.exe"
 set PPT="C:\Program Files (x86)\Microsoft Office\Office15\POWERPNT.EXE"
+set IRFAN="C:\Program Files (x86)\IrfanView\i_view32.exe"
 
 
 
@@ -20,6 +21,10 @@ if "%1"=="m32" (
 	echo %PPT%
 	%DREXPORT%\bin32\drrun.exe -root %DREXPORT% -t drcov -dump_text -logdir %LOGDIR% -- %PPT%
  )
+ if "%2"=="irfan" (
+	%DREXPORT%\bin32\drrun.exe -root %DREXPORT% -t drcov -dump_text -logdir %LOGDIR% -- %IRFAN%
+ )
+ 
 )
 
 if "%1"=="m64" (

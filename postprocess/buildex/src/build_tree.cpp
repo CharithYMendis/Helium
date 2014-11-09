@@ -267,7 +267,7 @@ pair<int32_t, int32_t> get_start_and_end_points(vector<uint32_t> start_points,ui
 	if (start_trace == FILE_BEGINNING){
 		bool found = false;
 		for (int i = 0; i < instrs.size(); i++){
-			for (int j = 0; j < instrs[i].first->num_dsts; i++){
+			for (int j = 0; j < instrs[i].first->num_dsts; j++){
 				if (instrs[i].first->dsts[j].value == dest &&  instrs[i].first->dsts[j].width == stride){
 					start = i + 1;
 					found = true;

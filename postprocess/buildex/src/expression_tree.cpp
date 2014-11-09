@@ -426,7 +426,7 @@ bool Expression_tree::update_frontier(rinstr_t * instr, uint32_t pc, string disa
 
 		DEBUG_PRINT(("src - %s\n", opnd_to_string(src->symbol).c_str()), 4);
 
-		if ( (instr->num_srcs == 1) && (instr->operation == op_assign) ){  //this is just an assign then remove the current node and place the new src node -> compiler didn't optimize for this?
+		/*if ( (instr->num_srcs == 1) && (instr->operation == op_assign) ){  //this is just an assign then remove the current node and place the new src node -> compiler didn't optimize for this?
 			
 			uint num_references = dst->prev.size();
 			
@@ -449,7 +449,7 @@ bool Expression_tree::update_frontier(rinstr_t * instr, uint32_t pc, string disa
 			if (assign_opt)  delete dst;  //we have broken all linkages, so just delete it 
 
 
-		}
+		}*/
 
 		/* update the tree + backward references */
 
@@ -481,7 +481,7 @@ bool Expression_tree::update_frontier(rinstr_t * instr, uint32_t pc, string disa
 	if (!assign_opt){
 		//simplify_identity_add(dst);
 		//simplify_identity_mul(dst);
-		canonicalize_node(dst);
+		//canonicalize_node(dst);
 	}
 
 	return true;

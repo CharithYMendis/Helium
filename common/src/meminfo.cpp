@@ -418,6 +418,20 @@ void postprocess_mem_regions(vector<pc_mem_region_t *> &pc_mem){
 }
 
 
+void link_mem_regions_2(vector<pc_mem_region_t *> &pc_mems, uint32_t mode){
+
+	for (int i = 0; i < pc_mems.size(); i++){
+
+		if (mode == DYNAMIC_PROG){
+			link_mem_regions(pc_mems[i]->regions, pc_mems[i]->pc);
+		}
+		else if (mode == GREEDY){
+			link_mem_regions_greedy_2(pc_mems[i]->regions, pc_mems[i]->pc);
+		}
+
+	}
+}
+
 void link_mem_regions(vector<pc_mem_region_t *> &pc_mems, uint32_t mode){
 
 	for (int i = 0; i < pc_mems.size(); i++){
@@ -505,11 +519,21 @@ void print_mem_layout(ostream &file, vector<mem_info_t *> &mem_info){
 
 		file << "stride (most) - " << dec << stride << endl;
 
-		for (int i = 0; i < info->stride_freqs.size(); i++){
-			file << "stride - " << dec << info->stride_freqs[i].first << ", freq - " << info->stride_freqs[i].second << endl;
+		for (int j = 0; j < info->stride_freqs.size(); j++){
+			file << "stride - " << dec << info->stride_freqs[j].first << ", freq - " << info->stride_freqs[j].second << endl;
 		}
 
 		file << "estimated size - " << dec << (info->end - info->start) / (stride) << endl;
+
+		uint32_t dims = get_number_dimensions(info);
+		file << "dims - " << dims << endl;
+		//cout << "dims - " << dims << endl;
+		for (int j = 1; j <= dims; j++){
+			file << "dim_no - " << j << endl;
+			file << "stride - " << get_stride(info, j, dims) << endl;
+			file << "extent - " << get_extents(info, j, dims) << endl;
+		}
+
 		file << "--------------------------------------------------------------------------" << endl;
 
 	}
@@ -526,6 +550,146 @@ bool compare_mem_regions(mem_info_t * first, mem_info_t * second){
 /*
 * this is a greedy (non-optimal) coalescing of mem regions
 */
+
+
+
+uint32_t get_stride(mem_info_t * mem, uint32_t dim, uint32_t total_dims){
+	
+	vector<mem_info_t * > local_mems;
+	local_mems.push_back(mem);
+
+	mem_info_t * local = mem;
+
+	while (local->mem_infos.size() > 0){
+		local_mems.push_back(local->mem_infos[0]);
+		local = local->mem_infos[0];
+	}
+
+	mem_info_t * wanted = local_mems[total_dims - dim];
+	if (wanted->mem_infos.size() > 0){
+		return wanted->mem_infos[1]->start - wanted->mem_infos[0]->start;
+	}
+	else{
+		return wanted->prob_stride;
+	}
+
+}
+
+uint32_t get_extents(mem_info_t * mem, uint32_t dim, uint32_t total_dims){
+
+	vector<mem_info_t * > local_mems;
+	local_mems.push_back(mem);
+
+	mem_info_t * local = mem;
+
+	while (local->mem_infos.size() > 0){
+		local_mems.push_back(local->mem_infos[0]);
+		local = local->mem_infos[0];
+	}
+
+	mem_info_t * wanted = local_mems[total_dims - dim];
+	if (wanted->mem_infos.size() > 0){
+		return wanted->mem_infos.size();
+	}
+	else{
+		return (wanted->end - wanted->start) / wanted->prob_stride;
+	}
+
+}
+
+uint32_t get_number_dimensions(mem_info_t * mem){
+
+	uint32_t dim = 1;
+	mem_info_t * local_mem = mem;
+	while (local_mem->mem_infos.size() > 0){
+		dim++;
+		local_mem = local_mem->mem_infos[0];
+	}
+	return dim;
+}
+
+bool link_mem_regions_greedy_2(vector<mem_info_t *> &mem, uint32_t app_pc){
+
+	DEBUG_PRINT(("link_mem_regions_greedy...\n"), 4);
+
+	sort(mem.begin(), mem.end(), compare_mem_regions);
+
+	bool ret = true;
+
+	while (ret){
+
+		ret = false;
+		for (int i = 0; i < mem.size(); i++){
+
+			if (i + 2 >= mem.size()) continue; //at least three regions should be connected
+			int32_t gap_first = mem[i + 1]->start - mem[i]->end;
+			int32_t gap_second = mem[i + 2]->start - mem[i + 1]->end;
+
+			if (gap_first == gap_second){ /* ok we can now merge the regions */
+
+				mem_info_t * new_mem_info = new mem_info_t;
+
+				int32_t gap = gap_first;
+				//cout << mem[i+1]->start << " "<< mem[i]-> end<< endl;
+				//mem[i]->end = mem[i + 2]->end;
+				//merge_info_to_first(mem[i], mem[i + 1]);
+				//merge_info_to_first(mem[i], mem[i + 2]);
+
+				new_mem_info->direction = mem[i]->direction;
+				new_mem_info->prob_stride = mem[i]->prob_stride;
+				new_mem_info->type = mem[i]->type;
+				new_mem_info->stride_freqs = mem[i]->stride_freqs;
+
+				new_mem_info->start = mem[i]->start;
+				new_mem_info->end = mem[i + 2]->end;
+				new_mem_info->mem_infos.push_back(mem[i]);
+				new_mem_info->mem_infos.push_back(mem[i+1]);
+				new_mem_info->mem_infos.push_back(mem[i+2]);
+
+				merge_info_to_first(new_mem_info, mem[i + 1]);
+				merge_info_to_first(new_mem_info, mem[i + 2]);
+
+				uint32_t index = i + 2;
+				for (int j = i + 3; j < mem.size(); j++){
+					int32_t gap_now = mem[j]->start - new_mem_info->end;
+					//cout << gap << " " << gap_now << endl;
+					if (mem[j]->start == 0x80067a08){
+						cout << "gap:" << gap_now << " g : " << gap << endl;
+						cout << hex << app_pc << dec << endl;
+					}
+					if (gap_now == gap){
+						//mem[i]->end = mem[j]->end;
+						//merge_info_to_first(mem[i], mem[j]);
+						new_mem_info->mem_infos.push_back(mem[j]);
+						new_mem_info->end = mem[j]->end;
+						merge_info_to_first(new_mem_info, mem[j]);
+						index = j;
+					}
+					else{
+						break;
+					}
+				}
+
+				DEBUG_PRINT(("app_pc %x merged indexes from %d to %d\n", app_pc, i, index), 5);
+				for (int j = i; j <= index; j++){
+					//delete mem[i + 1];
+					mem.erase(mem.begin() + i);
+				}
+
+				mem.insert(mem.begin() + i, new_mem_info);
+
+				ret = true;
+
+
+			}
+		}
+	}
+
+	DEBUG_PRINT(("link_mem_regions_greedy - done\n"), 4);
+
+	return ret;
+}
+
 
 bool link_mem_regions_greedy(vector<mem_info_t *> &mem, uint32_t app_pc){
 	

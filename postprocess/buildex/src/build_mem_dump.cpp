@@ -208,11 +208,14 @@ vector<mem_regions_t *> merge_instrace_and_dump_regions(vector<mem_regions_t *> 
 
 				mem->start = mem_info[i]->start;
 				mem->end = mem_info[i]->end;
-				mem->dimensions = 1; /* we don't know the dimensions of this yet */
-				mem->bytes_per_pixel = 1;
-				
-				mem->strides[0] = 1;
-				mem->extents[0] = mem->end - mem->start + 1;
+				mem->dimensions = get_number_dimensions(mem_info[i]); /* we don't know the dimensions of this yet */
+				mem->bytes_per_pixel = mem_info[i]->prob_stride;
+				for (int j = 1; j <= mem->dimensions; j++){
+					mem->strides[j - 1] = get_stride(mem_info[i], j, mem->dimensions);
+					mem->extents[j - 1] = get_extents(mem_info[i], j, mem->dimensions);
+				}
+				//mem->strides[0] = mem_info[i]->prob_stride;
+				//mem->extents[0] = (mem->end - mem->start + 1)/ mem->strides[0];
 				mem->padding_filled = 0;
 				
 				mem->type = 0;

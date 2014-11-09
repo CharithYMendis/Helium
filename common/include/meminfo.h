@@ -39,6 +39,9 @@ struct mem_info_t {
 	/* stride */
 	uint32_t prob_stride;
 	std::vector<std::pair<uint32_t, uint32_t> > stride_freqs;
+
+	std::vector < mem_info_t * > mem_infos; // if merged this would be filled
+
 };
 
 
@@ -73,6 +76,11 @@ bool				 random_dest_select(std::vector<mem_info_t *> &mem, uint64_t * dest, uin
 bool				 link_mem_regions(std::vector<mem_info_t *> &mem, uint32_t app_pc);
 bool				 link_mem_regions_greedy(std::vector<mem_info_t *> &mem, uint32_t app_pc);
 
+uint32_t get_stride(mem_info_t * mem, uint32_t dim, uint32_t total_dims);
+uint32_t get_extents(mem_info_t * mem, uint32_t dim, uint32_t total_dims);
+uint32_t get_number_dimensions(mem_info_t * mem);
+void link_mem_regions_2(std::vector<pc_mem_region_t *> &pc_mems, uint32_t mode);
+bool link_mem_regions_greedy_2(std::vector<mem_info_t *> &mem, uint32_t app_pc);
 
 
 #endif

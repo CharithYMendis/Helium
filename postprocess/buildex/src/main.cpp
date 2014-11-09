@@ -98,7 +98,7 @@
 	 uint32_t tree_build = BUILD_RANDOM;
 	 uint32_t mode = TREE_BUILD_STAGE;
 	 uint32_t dump = 1;
-	 uint32_t output_pc = 0;
+	 uint32_t mem_region_addr = 0;
 
 
 	 /***************************** command line args processing ************************/
@@ -162,8 +162,10 @@
 		 else if (args[i]->name.compare("-dump") == 0){
 			 dump = atoi(args[i]->value.c_str());
 		 }
-		 else if (args[i]->name.compare("-output_pc") == 0){
-			 output_pc = atoi(args[i]->value.c_str());
+		 else if (args[i]->name.compare("-mem_addr") == 0){
+			 cout << "got it" << endl;
+			 mem_region_addr = stoul(args[i]->value.c_str());
+			 cout << mem_region_addr << endl;
 		 }
 		 else{
 			 ASSERT_MSG(false, ("ERROR: unknown option\n"));
@@ -335,16 +337,20 @@
 	 vector<pc_mem_region_t *> pc_mem_info;
 	 create_mem_layout(instrace_file, mem_info);
 	 create_mem_layout(instrace_file, pc_mem_info);
-	 link_mem_regions_greedy(mem_info, 0);
-	 link_mem_regions(pc_mem_info, 1);
+	 link_mem_regions_greedy_2(mem_info, 0);
+	 link_mem_regions_2(pc_mem_info, 1);
 	 //print_mem_layout(log_file, mem_info);
-	 print_mem_layout(log_file, pc_mem_info);
 
+
+	 //cout << pc_mem_info.size() << endl;
+
+	 print_mem_layout(log_file, pc_mem_info);
 
 	 mem_info = extract_mem_regions(pc_mem_info);
 
 	 print_mem_layout(log_file, mem_info);
 
+	 //exit(0);
 	 /* merge these two information - instrace mem info + mem dump info */
 	 vector<mem_regions_t *> total_mem_regions;
 	 vector<mem_regions_t *> image_regions = merge_instrace_and_dump_regions(total_mem_regions, mem_info, regions);
@@ -504,8 +510,6 @@
 
 	 if (tree_build == BUILD_RANDOM){
 
-
-		 
 		 if (start_trace == FILE_BEGINNING){
 			 mem_regions_t * random_mem_region = get_random_output_region(image_regions);
 			 uint64 mem_location = get_random_mem_location(random_mem_region, seed);
@@ -538,14 +542,28 @@
 	 }
 	 else if (tree_build == BUILD_RANDOM_SET){
 
+		 /* miniGMG output buffer selection */
+		 if (image_regions.empty()){
+			 for (int i = 0; i < total_mem_regions.size(); i++){
+				 if (total_mem_regions[i]->start <= mem_region_addr && total_mem_regions[i]->end >= mem_region_addr){
+					 image_regions.push_back(total_mem_regions[i]);
+				 }
+			 }
+		 }
+
+		 cout << hex << mem_region_addr << endl;
+		 cout << image_regions.size() << endl;
+
 		 /*ok we need find a set of random locations */
-		 vector<uint64_t> nbd_locations = get_nbd_of_random_points(image_regions, seed, &stride);
+		 vector<uint64_t> nbd_locations = get_nbd_of_random_points_2(image_regions, seed, &stride);
+		 //exit(0);
 
 		 /* ok now build trees for the set of locations */
 		 for (int i = 0; i < nbd_locations.size(); i++){
 
 			 Expression_tree * tree = new Expression_tree();
 			 build_tree(nbd_locations[i], stride, start_points, FILE_BEGINNING, end_trace, tree, instrs_backward, disasm, instr_info);
+			 identify_parameters(tree->get_head(), pc_mem_info);
 			 conc_trees.push_back(tree);
 			 
 		 }

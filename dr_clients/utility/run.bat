@@ -35,6 +35,7 @@ set ASM_TEST=%EXALGO_TEST_FOLDER%\asm_tests\bin32\%4.exe
 set C_TEST=%EXALGO_TEST_FOLDER%\c_tests\bin32\%4.exe
 set GIMP="C:\Program Files\GIMP 2\bin\gimp-2.8.exe"
 set PPT="C:\Program Files (x86)\Microsoft Office\Office15\POWERPNT.EXE"
+set IRFAN="C:\Program Files (x86)\IrfanView\i_view32.exe"
 )
 
 set INPUT_IMAGE=%EXALGO_IMAGE_FOLDER%\%IN_IMAGE%
@@ -60,6 +61,10 @@ if "%2" == "gimp" (
 
 if "%2" == "ppt" (
 	set EXEC=%PPT%
+)
+
+if "%2" == "irfan" (
+	set EXEC=%IRFAN%
 )
  
  ::-msgbox_mask 0xf

@@ -773,6 +773,7 @@ bool is_floating_point_ins(uint32_t opcode){
 	case OP_fsub:   //Subtract m32fp from ST(0) and store result in ST(0).
 	case OP_fdivp:  //Divide ST(1) by ST(0), store result in ST(1), and pop the register stack.
 	case OP_fdiv:   //Divide ST(0) by m32fp and store result in ST(0).
+	case OP_fcomp:
 		return true;
 	default:
 		return false;
@@ -921,6 +922,9 @@ void update_floating_point_regs(vec_cinstr &instrs, uint32_t direction, vector<d
 			tos = DR_REG_ST8;
 		}
 
+		int amount;
+		//cinstr_to_rinstrs(cinstr, amount, "", 5);
+
 		if (!is_floating_point_ins(cinstr->opcode)){
 			update_fp_reg(cinstr, disasm, i+1);
 		}
@@ -980,6 +984,9 @@ void update_floating_point_regs(vec_cinstr &instrs, uint32_t direction, vector<d
 				if (((cinstr->opcode == OP_faddp) || (cinstr->opcode == OP_fsubp) || (cinstr->opcode == OP_fdivp)) && (direction == FORWARD_ANALYSIS)){
 					update_tos(FP_POP, disasm, line, direction);
 				}
+				break;
+			case OP_fcomp:
+				update_tos(FP_POP, disasm, line, direction);
 				break;
 			default:
 				unhandled = true;
@@ -1519,6 +1526,10 @@ rinstr_t * cinstr_to_rinstrs (cinstr_t * cinstr, int &amount, std::string disasm
 	case OP_rep_stos:
 	case OP_cld:
 	case OP_jbe:
+
+	case OP_fcom:
+	case OP_fcomp:
+
 		/* above change */
 
 	case OP_jmp:
@@ -1562,7 +1573,11 @@ rinstr_t * cinstr_to_rinstrs (cinstr_t * cinstr, int &amount, std::string disasm
 		/* floating point control word stores and loads */
 	case OP_fldcw:
 	case OP_fnstcw:
+	case OP_fnstsw:
 	case OP_stmxcsr:
+	case OP_fwait:
+
+	
 
 	case OP_nop:
 
