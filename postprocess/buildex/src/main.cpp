@@ -621,7 +621,7 @@
 
 	 }
 
-	 /*debug printing*/
+	 /*debug printing - need to change the branches*/
 	 for (int i = 0; i < conc_trees.size(); i++){
 
 		 DEBUG_PRINT(("printing out the expression\n"), 2);
