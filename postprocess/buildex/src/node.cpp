@@ -25,6 +25,7 @@ Node::Node(operand_t * symbol){
 	this->is_para = false;
 	this->line = 0;
 	this->pc = 0;
+	this->is_double = false;
 }
 
 Node::Node(uint type, uint64 value, uint width, float float_value){
@@ -47,6 +48,7 @@ Node::Node(uint type, uint64 value, uint width, float float_value){
 	this->is_para = false;
 	this->line = 0;
 	this->pc = 0;
+	this->is_double = false;
 	
 }
 

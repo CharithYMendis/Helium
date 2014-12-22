@@ -12,11 +12,16 @@ extern "C" {
 
 Image<uint8_t> halide_function(Image<uint8_t> in) {
 
-	Image<uint8_t> out(in.height(), in.width());
+	Image<uint8_t> out(3, in.height() - 2, in.channels() - 2);
+	//cout << in.channels() << endl;
+	//cout << in.height() << endl;
+	//cout << in.width() << endl;
 
 	// Call it once to initialize the halide runtime stuff
-	halide_rotate_gen(in, out);
+	halide_rotate_gen(20, 5e-3, in, out);
 
+	//const double _p_1, const double _input_3, const double _input_2, const double _input_5,
+	//halide_rotate_gen(33.0, 1.0, 1e-2, 1.25e-1 , in, out);
 
 	return out;
 }

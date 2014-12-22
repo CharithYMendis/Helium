@@ -1,33 +1,27 @@
 #include <Halide.h>
+#include <vector>
+using namespace std;
 using namespace Halide;
-#include <math.h>
+int main(){
 
+	Var x_0;
+	Var x_1;
+	Var x_2;
+	Param<double>  p_1("p_1");
+	Param<double> input_2("input_2");
+	ImageParam input_3(UInt(8), 3);
+	Func output_1("output_1");
+	//output_1(x_0, x_1, x_2) = cast<uint8_t>(((((cast<double>(input_3(x_0, x_1 + 1, x_2 + 1)) - (cast<double>(((cast<uint32_t>(input_3(x_0, x_1 + 1, x_2 + 2)) - (0 + (8 * cast<uint32_t>(input_3(x_0, x_1 + 1, x_2 + 1))) + 0)) + cast<uint32_t>(input_3(x_0, x_1 + 2, x_2 + 2)) + cast<uint32_t>(input_3(x_0, x_1, x_2 + 2)) + cast<uint32_t>(input_3(x_0, x_1 + 2, x_2 + 1)) + cast<uint32_t>(input_3(x_0, x_1, x_2 + 1)) + cast<uint32_t>(input_3(x_0, x_1 + 2, x_2)) + cast<uint32_t>(input_3(x_0, x_1 + 1, x_2)) + cast<uint32_t>(input_3(x_0, x_1, x_2)))) * cast<double>(p_1) * cast<double>(input_2)))))));
+	
+	output_1(x_0, x_1, x_2) = cast<uint8_t>(34);
+	output_1.trace_stores(); 
 
-int main(int argc, char **argv){
+	vector<Argument> args;
+	args.push_back(p_1);
+	args.push_back(input_2);
+	args.push_back(input_3);
+	output_1.compile_to_file("halide_misc_gen", args);
 
-	ImageParam input(UInt(8), 2, "input");
-	Var x("x"), y("y");
-	Func output("output");
-
-	//histogram equalization
-
-	//1. calculate the histogram of original function
-	RDom r(input);
-	Func hist("hist");
-	hist(x) = 0;
-	hist(input(r.x, r.y)) = hist(input(r.x, r.y)) + 1; //serial dependancy
-
-	//hist.trace_stores();
-
-	//2. calculate cdf and normalize it
-	RDom bins(1, 256);
-	Expr n = input.width() * input.height();
-	hist(0) = hist(0);
-	hist(bins) = (hist(bins) + hist(bins - 1));
-
-	//hist.trace_stores();
-
-	output(x, y) = cast<uint8_t>((255 * hist(input(x, y))) / n);
-	output.compile_to_file("halide_misc_gen", input);
-
+	
+	return 0;
 }

@@ -90,6 +90,8 @@ public:
 	/*conditional or not*/
 	jump_info_t * jump;
 
+	bool is_double;
+
 	Abs_node();
 
 };

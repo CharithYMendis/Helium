@@ -518,6 +518,7 @@ void build_tree(uint64 destination, uint32_t stride, vector<uint32_t> start_poin
 
 	DEBUG_PRINT(("build_tree(concrete) - done\n"), 2);
 	//print_vector(lines,disasm);
+	remove_po_node(tree->get_head(), tree->get_head(),NULL,0);
 	order_tree(tree->get_head());
 	
 

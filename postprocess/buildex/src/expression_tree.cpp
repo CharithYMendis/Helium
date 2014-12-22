@@ -4,6 +4,7 @@
 #include <iostream>
 #include "defines.h"
 #include "print_common.h"
+#include "canonicalize.h"
 
 
 
@@ -333,9 +334,9 @@ bool Expression_tree::update_frontier(rinstr_t * instr, uint32_t pc, string disa
 			Node * node =  partial_overlap_nodes[i].first;
 			vector<Node *> overlaps = partial_overlap_nodes[i].second;
 			remove_from_frontier(node->symbol);
-			for (int j = 0; j < overlaps.size(); j++){
-				add_dependancy(node, overlaps[i], op_partial_overlap);
-				add_to_frontier(generate_hash(overlaps[i]->symbol), overlaps[i]);
+			for (int j = 1; j < overlaps.size(); j++){
+				add_dependancy(node, overlaps[j], op_partial_overlap);
+				add_to_frontier(generate_hash(overlaps[j]->symbol), overlaps[j]);
 			}
 		}
 	}
@@ -426,7 +427,7 @@ bool Expression_tree::update_frontier(rinstr_t * instr, uint32_t pc, string disa
 
 		DEBUG_PRINT(("src - %s\n", opnd_to_string(src->symbol).c_str()), 4);
 
-		/*if ( (instr->num_srcs == 1) && (instr->operation == op_assign) ){  //this is just an assign then remove the current node and place the new src node -> compiler didn't optimize for this?
+		if ( (instr->num_srcs == 1) && (instr->operation == op_assign) ){  //this is just an assign then remove the current node and place the new src node -> compiler didn't optimize for this?
 			
 			uint num_references = dst->prev.size();
 			
@@ -444,12 +445,18 @@ bool Expression_tree::update_frontier(rinstr_t * instr, uint32_t pc, string disa
 				assign_opt = true;  //this is here to differentitate between the head and the rest of the nodes
 			}
 
+
+			if (instr->is_floating){
+				src->is_double = instr->is_floating;
+			}
+
+
 			DEBUG_PRINT(("optimizing assign\n"), 4);
 
 			if (assign_opt)  delete dst;  //we have broken all linkages, so just delete it 
 
 
-		}*/
+		}
 
 		/* update the tree + backward references */
 
@@ -460,6 +467,10 @@ bool Expression_tree::update_frontier(rinstr_t * instr, uint32_t pc, string disa
 			src->prev.push_back(dst);
 			src->pos.push_back(src_index);
 			
+			if (instr->is_floating){
+				src->is_double = instr->is_floating;
+			}
+
 
 		}
 
@@ -481,7 +492,7 @@ bool Expression_tree::update_frontier(rinstr_t * instr, uint32_t pc, string disa
 	if (!assign_opt){
 		//simplify_identity_add(dst);
 		//simplify_identity_mul(dst);
-		//canonicalize_node(dst);
+		canonicalize_node(dst);
 	}
 
 	return true;

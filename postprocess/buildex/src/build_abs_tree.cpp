@@ -73,7 +73,7 @@ void fill_abs_node(Abs_node * abs_node, Node * node, vector<mem_regions_t *> &me
 	}
 
 	abs_node->range = node->symbol->value;
-
+	abs_node->is_double = node->is_double;
 	/* change this sometime */
 	abs_node->sign = false;
 

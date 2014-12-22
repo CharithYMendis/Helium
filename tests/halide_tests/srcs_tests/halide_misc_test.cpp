@@ -13,10 +13,11 @@ extern "C" {
 
 Image<uint8_t> halide_function(Image<uint8_t> in) {
 
-	Image<uint8_t> out(in.width(), in.height());
+	Image<uint8_t> out(in.width() - 2, in.height() - 2);
+	
 
 	// Call it once to initialize the halide runtime stuff
-	halide_misc_gen(in, out);
+	halide_misc_gen(20.0,5e-3, in, out);
 
 	return out;
 }

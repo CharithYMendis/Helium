@@ -21,7 +21,6 @@ struct image_t{
 	uint32_t is_alpha;
 	byte * image_array; /* this is just a stream of bytes - no type information column major format */
 
-
 };
 
 ULONG_PTR initialize_image_subsystem();

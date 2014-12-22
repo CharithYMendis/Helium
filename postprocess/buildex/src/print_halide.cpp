@@ -26,8 +26,8 @@ string get_string_type(uint width, bool sign, bool is_float){
 
 	if (!is_float)
 		return sign_string + "Int(" + to_string(width * 8) + ")";
-	else
-		return "Float(" + to_string(width * 8) + ")";
+	else if (is_float)
+		return "Float";
 
 }
 
@@ -35,7 +35,7 @@ string get_string_type(uint width, bool sign, bool is_float){
 string get_input_definition_string(Abs_node * node){
 
 	return "ImageParam " + node->mem_info.associated_mem->name + "(" 
-		+ get_string_type(node->width, node->sign, node->type == IMMEDIATE_FLOAT) + ","
+		+ get_string_type(node->width, node->sign, node->type == IMMEDIATE_FLOAT || node->is_double) + ","
 		+ to_string(node->mem_info.dimensions) + ");" ;
 
 }
@@ -43,7 +43,7 @@ string get_input_definition_string(Abs_node * node){
 string get_parameter_definition_string(Abs_node * node){
 
 	return "ImageParam " + get_abs_node_string(node)  + "("
-		+ get_string_type(node->width, node->sign, node->type == IMMEDIATE_FLOAT)
+		+ get_string_type(node->width, node->sign, node->type == IMMEDIATE_FLOAT || node->is_double)
 		+  "1);";
 
 }
@@ -219,7 +219,12 @@ void Halide_program::print_abs_tree_in_halide(Abs_node* node, Abs_node * head, o
 			for (int i = 0; i < node->srcs.size(); i++){
 
 				if (node->srcs[i]->width < node->width){
-					out << get_cast_string(node->width, false) << "(";
+					if (!node->is_double){
+						out << get_cast_string(node->width, false) << "(";
+					}
+					else{
+						out << "cast<double>(";
+					}
 				}
 				print_abs_tree_in_halide(node->srcs[i], head, out);
 				if (node->srcs[i]->width < node->width){

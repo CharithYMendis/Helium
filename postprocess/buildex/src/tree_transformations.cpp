@@ -442,6 +442,23 @@ return true;
 
 }
 
+void remove_po_node(Node * node, Node * head,Node * prev, uint src){
+	
+	cout << "came here po";
+	if (node->operation == op_partial_overlap){
+		cout << "hooray po" << endl;
+		cout << node->srcs.size() << endl;
+		prev->srcs[src] = node->srcs[0];
+		
+		
+	}
+
+	for (int i = 0; i < node->srcs.size(); i++){
+		remove_po_node(node->srcs[i], head, node, i);
+	}
+
+}
+
 /* width wanted is from the end of the range */
 int remove_full_overlap_nodes_conservative(Node * node, Node * head){
 

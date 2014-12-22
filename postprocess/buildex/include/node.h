@@ -42,6 +42,8 @@ using namespace std;
 		int para_num; 
 		bool is_para;
 
+		/**/
+		bool is_double;
 		
 	public:
 		

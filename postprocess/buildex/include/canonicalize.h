@@ -68,6 +68,7 @@ enum {
 	uint num_srcs;
 	operand_t srcs[2];
 	bool sign;
+	bool is_floating;
 	
  
  } rinstr_t;
@@ -96,6 +97,8 @@ rinstr_t * cinstr_to_rinstrs (cinstr_t * cinstr, int &amount, std::string disasm
  bool is_jmp_conditional_affected(uint32_t opcode, uint32_t flags);
  bool is_branch_taken(uint32_t opcode, uint32_t flags);
  uint32_t dr_logical_to_operation(uint32_t opcode);
+
+ bool is_floating_point_reg(operand_t * opnd);
 
  
  #endif

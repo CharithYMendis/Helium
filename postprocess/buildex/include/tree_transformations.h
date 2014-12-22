@@ -15,4 +15,6 @@ void simplify_identity_mul(Node * node);
 void simplify_identity_add(Node * node);
 void order_tree(Node * node);
 
+void remove_po_node(Node * node, Node * head, Node * prev, uint src);
+
 #endif

@@ -99,6 +99,7 @@
 	 uint32_t mode = TREE_BUILD_STAGE;
 	 uint32_t dump = 1;
 	 uint32_t mem_region_addr = 0;
+	 uint32_t mem_region_addr_2 = 0;
 
 
 	 /***************************** command line args processing ************************/
@@ -166,6 +167,11 @@
 			 cout << "got it" << endl;
 			 mem_region_addr = stoul(args[i]->value.c_str());
 			 cout << mem_region_addr << endl;
+		 }
+		 else if (args[i]->name.compare("-mem_addr_2") == 0){
+			 cout << "got it" << endl;
+			 mem_region_addr_2 = stoul(args[i]->value.c_str());
+			 cout << mem_region_addr_2 << endl;
 		 }
 		 else{
 			 ASSERT_MSG(false, ("ERROR: unknown option\n"));
@@ -326,11 +332,13 @@
 	 /* analyzing mem dumps for input and output image locations */
 	 
 	 vector<mem_regions_t *> regions;
-	 if (dump){
+	 //if (dump){
 		 DEBUG_PRINT(("analyzing mem dumps\n"), 1);
 		 regions = get_image_regions_from_dump(memdump_files, in_image_filename, out_image_filename);
 		 DEBUG_PRINT(("analyzing instrace file - %s\n", instrace_filename.c_str()), 1);
-	 }
+	// }
+
+	 //exit(0);
 
 	 /* independently create the memory layout from the instrace */
 	 vector<mem_info_t *> mem_info;
@@ -349,8 +357,8 @@
 	 mem_info = extract_mem_regions(pc_mem_info);
 
 	 print_mem_layout(log_file, mem_info);
-
 	 //exit(0);
+	
 	 /* merge these two information - instrace mem info + mem dump info */
 	 vector<mem_regions_t *> total_mem_regions;
 	 vector<mem_regions_t *> image_regions = merge_instrace_and_dump_regions(total_mem_regions, mem_info, regions);
@@ -423,6 +431,41 @@
 	 vector<uint32_t> app_pc;
      vector<jump_info_t * > cond_app_pc;
 
+
+	 /* miniGMG output buffer selection */
+	 /* miniGMG output buffer selection */
+	 /*if (image_regions.empty()){
+		 for (int i = 0; i < total_mem_regions.size(); i++){
+			 if (total_mem_regions[i]->start <= mem_region_addr && total_mem_regions[i]->end >= mem_region_addr){
+				 image_regions.push_back(total_mem_regions[i]);
+				 total_mem_regions[i]->dimensions = 3;
+				 total_mem_regions[i]->strides[0] = 1;
+				 total_mem_regions[i]->extents[0] = 3;
+				 total_mem_regions[i]->strides[1] = 3;
+				 total_mem_regions[i]->extents[1] = 30;
+				 total_mem_regions[i]->strides[2] = 90;
+				 total_mem_regions[i]->extents[2] = 30;
+			 }
+		 }
+	 }
+
+	 if (image_regions.size() == 1){
+		 for (int i = 0; i < total_mem_regions.size(); i++){
+			 if (total_mem_regions[i]->start <= mem_region_addr_2 && total_mem_regions[i]->end >= mem_region_addr_2){
+				 image_regions.push_back(total_mem_regions[i]);
+				 total_mem_regions[i]->dimensions = 3;
+				 total_mem_regions[i]->strides[0] = 1;
+				 total_mem_regions[i]->extents[0] = 3;
+				 total_mem_regions[i]->strides[1] = 3;
+				 total_mem_regions[i]->extents[1] = 32;
+				 total_mem_regions[i]->strides[2] = 96;
+				 total_mem_regions[i]->extents[2] = 32;
+			 }
+		 }
+	 }*/
+
+
+
 	 if (dump){
 
 		 mem_regions_t * input_mem_region = (image_regions[0]->type == IMAGE_INPUT ? image_regions[0] : image_regions[1]);
@@ -488,7 +531,9 @@
 			}
 		}
 	}
-	 
+
+
+	
 
 
 	 /* data structures that will be passed to the next stage */
@@ -509,6 +554,7 @@
 
 
 	 if (tree_build == BUILD_RANDOM){
+
 
 		 if (start_trace == FILE_BEGINNING){
 			 mem_regions_t * random_mem_region = get_random_output_region(image_regions);
@@ -542,20 +588,9 @@
 	 }
 	 else if (tree_build == BUILD_RANDOM_SET){
 
-		 /* miniGMG output buffer selection */
-		 if (image_regions.empty()){
-			 for (int i = 0; i < total_mem_regions.size(); i++){
-				 if (total_mem_regions[i]->start <= mem_region_addr && total_mem_regions[i]->end >= mem_region_addr){
-					 image_regions.push_back(total_mem_regions[i]);
-				 }
-			 }
-		 }
-
-		 cout << hex << mem_region_addr << endl;
-		 cout << image_regions.size() << endl;
 
 		 /*ok we need find a set of random locations */
-		 vector<uint64_t> nbd_locations = get_nbd_of_random_points_2(image_regions, seed, &stride);
+		 vector<uint64_t> nbd_locations = get_nbd_of_random_points(image_regions, seed, &stride);
 		 //exit(0);
 
 		 /* ok now build trees for the set of locations */
@@ -564,6 +599,7 @@
 			 Expression_tree * tree = new Expression_tree();
 			 build_tree(nbd_locations[i], stride, start_points, FILE_BEGINNING, end_trace, tree, instrs_backward, disasm, instr_info);
 			 identify_parameters(tree->get_head(), pc_mem_info);
+			 //exit(0);
 			 conc_trees.push_back(tree);
 			 
 		 }

@@ -1600,6 +1600,10 @@ rinstr_t * cinstr_to_rinstrs (cinstr_t * cinstr, int &amount, std::string disasm
 		DEBUG_PRINT(("opcode reduced\n"),3);
 	}
 
+	for (int i = 0; i < amount; i++){
+		rinstr[i].is_floating = is_floating_point_ins(cinstr->opcode);
+	}
+
 	return rinstr;
 }
 

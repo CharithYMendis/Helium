@@ -15,6 +15,8 @@ N,E - embedded or not embedded colors
 */
 
 mem_regions_t * locate_image_CN2(char * values, uint32_t size, uint64_t * start, uint64_t * end, image_t * image);
+mem_regions_t * locate_image_CN2_backward(char * values, uint32_t size, uint64_t * start, uint64_t * end, image_t * image);
+mem_regions_t * locate_image_CN2_backward_write(char * values, uint32_t size, uint64_t * start, uint64_t * end, image_t * image);
 
 
 #endif

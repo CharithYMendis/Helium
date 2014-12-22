@@ -68,6 +68,7 @@ vector<uint64_t> get_nbd_of_random_points(vector<mem_regions_t *> image_regions,
 vector<uint64_t> get_nbd_of_random_points_2(vector<mem_regions_t *> image_regions, uint32_t seed, uint32_t * stride){
 
 	mem_regions_t * random_mem_region = get_random_output_region(image_regions);
+	cout << hex << random_mem_region->start << endl;
 	uint64_t mem_location = get_random_mem_location(random_mem_region, seed);
 	DEBUG_PRINT(("random mem location we got - %llx\n", mem_location), 1);
 	*stride = random_mem_region->bytes_per_pixel;
@@ -106,7 +107,13 @@ vector<uint64_t> get_nbd_of_random_points_2(vector<mem_regions_t *> image_region
 		for (int j = 0; j < base.size(); j++){
 			if (j == affected){
 				val[j]++;
-				offset.push_back(val[j]);
+				if (val[j] + base[j] < random_mem_region->extents[j] && val[j] + base[j] > 0){
+					offset.push_back(val[j]);
+				}
+				else{
+					offset.push_back(0);
+				}
+				
 			}
 			else offset.push_back(0);
 		}
@@ -162,18 +169,22 @@ uint64_t get_mem_location(vector<int> base, vector<int> offset, mem_regions_t * 
 
 	*success = true;
 
-	uint64_t ret_addr = mem_region->start;
-
+	//uint64_t ret_addr = mem_region->start;
+	uint64_t ret_addr = mem_region->end;
 	
 
 	for (int i = 0; i < base.size(); i++){
-		ret_addr += mem_region->strides[i] * base[i];
+		//ret_addr += mem_region->strides[i] * base[i];
+		ret_addr -= mem_region->strides[i] * base[i];
 	}
 
 	return ret_addr;
 
 
 }
+
+
+
 
 vector<int> get_mem_position(mem_regions_t * mem_region, uint64_t mem_value){
 
@@ -183,13 +194,17 @@ vector<int> get_mem_position(mem_regions_t * mem_region, uint64_t mem_value){
 	/* dimensions would always be width dir(x), height dir(y) */
 
 	/*get the row */
-	uint64_t offset = mem_value - mem_region->start;
+	//uint64_t offset = mem_value - mem_region->start;
+	uint64_t offset = mem_region->end - mem_value;
+	cout << dec << offset << endl;
+	cout << hex << mem_region->start << dec << endl;
 
 	for (int i = mem_region->dimensions - 1; i >= 0; i--){
 		int point_offset = offset / mem_region->strides[i];
 		if (point_offset >= mem_region->extents[i]){ point_offset = -1; }
 		r_pos.push_back(point_offset);
 		offset -= point_offset * mem_region->strides[i];
+		cout << offset << endl;
 	}
 
 	pos.assign(r_pos.rbegin(), r_pos.rend());
