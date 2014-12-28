@@ -87,6 +87,19 @@ public:
 	public:
 		
 		virtual void print_node(std::ostream &out) = 0;
+
+
+		/* (node -> ref) => (node) */
+		bool remove_forward_ref(Node *ref);
+		/* (ref -> node) => (node) */
+		void remove_backward_ref(Node *ref);
+		/* node => (node->ref) */
+		void add_forward_ref(Node * ref);
+
+		/* (dst -> node -> src)  => (dst -> src) */
+		void remove_intermediate_ref(Node * dst, Node *src);
+
+
 	
 };
 
@@ -254,6 +267,8 @@ public:
 
 	 bool update_depandancy_backward(rinstr_t * instr, uint32_t pc, std::string disasm, uint32_t line);
 	 bool update_dependancy_forward(rinstr_t * instr, uint32_t pc, std::string disasm, uint32_t line);
+
+	 //virtuals
 	 void print_tree(std::ostream &file);
 
  };
@@ -269,8 +284,11 @@ public:
 	 ~Abs_Tree();
 
 	 void build_abs_tree(Conc_Tree * tree, std::vector<mem_regions_t *> &mem_regions);
-	 void seperate_intermediate_buffers(Abs_Node * node);
-	 static bool are_abs_trees_similar(std::vector<Abs_Node *> abs_nodes);
+	 void seperate_intermediate_buffers();
+	 static bool are_abs_trees_similar(std::vector<Abs_Tree *> abs_trees);
+
+	 //virtuals
+	 void print_tree(std::ostream &file);
 
 
  };
