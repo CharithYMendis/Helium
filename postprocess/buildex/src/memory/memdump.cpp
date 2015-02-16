@@ -1,11 +1,12 @@
-#include "extract_memregions.h"
-#include "memregions.h"
-#include "common_defines.h"
+#include <sys\stat.h>
 #include <iostream>
+#include <string>
+#include <stdlib.h>
+
+#include "defines.h"
 #include "utilities.h"
-
-using namespace std;
-
+#include "imageinfo.h"
+#include "memory/memdump.h"
 
 /*
 * following are mem layout dependant functions which convert concrete mem layout into a abstracted D-dimensional strucuture
@@ -27,7 +28,7 @@ mem_regions_t * locate_image_CN2(char * values, uint32_t size, uint64_t * start,
 	for (i = 0; i < size; i++){
 
 		print_progress(&count, 100000);
-		
+
 
 		bool success = true;
 		for (int j = 0; j < image->width; j++){
@@ -99,16 +100,16 @@ mem_regions_t * locate_image_CN2(char * values, uint32_t size, uint64_t * start,
 					}
 					if (found){
 						mem_regions_t * region = new mem_regions_t();
-						
+
 						region->bytes_per_pixel = 1;
 						region->dimensions = 2;
-						
+
 						region->strides[0] = 1;
 						region->strides[1] = gaps[0];
 
 						region->padding_filled = 1;
 						region->padding[0] = gaps[0] - image->width;
-						
+
 						region->extents[0] = image->width;
 						region->extents[1] = image->height;
 
@@ -144,7 +145,7 @@ mem_regions_t * locate_image_CN2_backward_write(char * values, uint32_t size, ui
 
 
 		bool success = true;
-		for (int j = 2*image->width - 1; j >= image->width; j--){
+		for (int j = 2 * image->width - 1; j >= image->width; j--){
 			int val = 3 * (image->width - 1 - j);
 			if ((values[i - val] & 0xff) != image->image_array[j]){
 				success = false;
@@ -292,7 +293,7 @@ mem_regions_t * locate_image_CN2_backward(char * values, uint32_t size, uint64_t
 	uint32_t image_size = image->width * image->height;
 
 
-	for (i = size - 1 ; i >= 3*image_size; i--){
+	for (i = size - 1; i >= 3 * image_size; i--){
 
 		print_progress(&count, 100000);
 
@@ -315,14 +316,14 @@ mem_regions_t * locate_image_CN2_backward(char * values, uint32_t size, uint64_t
 
 		}
 
-		
+
 
 		if (success){
 			cout << "got it" << endl;
 			cout << endl;
- 		}
+		}
 
-		
+
 
 		if (success){ /* verify the region actually has the image */
 			vector<uint32_t> start_points;
@@ -334,7 +335,7 @@ mem_regions_t * locate_image_CN2_backward(char * values, uint32_t size, uint64_t
 				bool found = true;
 				for (int k = image->width - 1; k >= 0; k--){
 					int val = 3 * (image->width - 1 - k);
-					
+
 
 					if ((values[j - (val)] & 0xff) != (uint8_t)(image->image_array[last + k])){
 						found = false;
@@ -350,12 +351,12 @@ mem_regions_t * locate_image_CN2_backward(char * values, uint32_t size, uint64_t
 					}
 				}
 
-				
+
 
 				if (found){
 					start = j;
 					last += image->width;
-					j -= 3*(image->width) - 1;
+					j -= 3 * (image->width) - 1;
 					//cout << hex << "new j " <<  j << dec << endl;
 					start_points.push_back(start);
 					if (last == image->width * image->height) { break; }
@@ -411,7 +412,7 @@ mem_regions_t * locate_image_CN2_backward(char * values, uint32_t size, uint64_t
 						region->strides[1] = gaps[0];
 
 						region->padding_filled = 1;
-						region->padding[0] = gaps[0]/3 - image->width;
+						region->padding[0] = gaps[0] / 3 - image->width;
 
 						region->extents[0] = image->width;
 						region->extents[1] = image->height;
@@ -434,3 +435,80 @@ mem_regions_t * locate_image_CN2_backward(char * values, uint32_t size, uint64_t
 
 
 }
+
+vector<mem_regions_t *> get_image_regions_from_dump(vector<string> filenames, string in_image_filename, string out_image_filename){
+
+	DEBUG_PRINT(("get_image_regions_from_dump....\n"), 2);
+
+	image_t * in_image = populate_imageinfo(open_image(in_image_filename.c_str()));
+	image_t * out_image = populate_imageinfo(open_image(out_image_filename.c_str()));
+	vector<mem_regions_t *> regions;
+	
+	for (int i = 0; i < filenames.size(); i++){
+
+		DEBUG_PRINT(("analyzing file - %s\n", filenames[i].c_str()), 2);
+
+		vector<string> parts = split(filenames[i], '_');
+		uint32_t index = parts.size() - 2;
+		bool write = parts[index][0] - '0';
+		uint32_t size = strtoull(parts[index - 1].c_str(), NULL, 10);
+		uint64_t base_pc = strtoull(parts[index - 2].c_str(), NULL, 16);
+
+		DEBUG_PRINT(("analyzing - base_pc %llx, size %x, write %d\n", base_pc, size, write), 2);
+
+		uint64_t start;
+		uint64_t end;
+
+		mem_regions_t * mem = NULL;
+
+		/* read the file into a buffer */
+		struct stat results;
+		char *  file_values;
+
+		ASSERT_MSG(stat(filenames[i].c_str(), &results) == 0, ("file stat collection unsuccessful\n"));
+		ifstream file(filenames[i].c_str(), ios::in | ios::binary);
+		file_values = new char[results.st_size];
+		file.read(file_values, results.st_size);
+
+		/* locate the image */
+		if (write){
+			mem = locate_image_CN2(file_values, results.st_size, &start, &end, out_image);
+			//mem = locate_image_CN2_backward_write(file_values, results.st_size, &start, &end, out_image);
+		}
+		else{
+			mem = locate_image_CN2(file_values, results.st_size, &start, &end, in_image);
+			//mem = locate_image_CN2_backward(file_values, results.st_size, &start, &end, in_image);
+
+
+		}
+
+		if (mem != NULL){
+			mem->start += base_pc;
+			mem->end += base_pc;
+			DEBUG_PRINT(("region found(%u) - start %llx end %llx padding %u\n",write, mem->start, mem->end, mem->padding[0]), 2);
+			regions.push_back(mem);
+		}
+
+		delete file_values;
+		file.close();
+	}
+
+	/* remove duplicates */
+	for (int i = 0; i < regions.size(); i++){
+		for (int j = 0; j < i; j++){
+			mem_regions_t * candidate = regions[j];
+			mem_regions_t * check = regions[i];
+			if (check->start == candidate->start && check->end == candidate->end){
+				regions.erase(regions.begin() + i--);
+				break;
+			}
+		}
+	}
+
+	DEBUG_PRINT(("no of mem regions found - %d\n", regions.size()), 2);
+	DEBUG_PRINT(("get_image_regions_from_dump - done\n"), 2);
+
+	return regions;
+
+}
+

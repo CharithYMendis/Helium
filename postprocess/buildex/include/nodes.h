@@ -35,7 +35,6 @@ public:
 	class Jump_Info {
 
 		uint32_t cond_pc; // eflags set by this pc
-
 		uint32_t target_pc; // the target pc of this jump
 		uint32_t fall_pc;   // the fall-through pc 
 		uint32_t merge_pc;  // the merge point for the taken and not taken paths
@@ -47,7 +46,7 @@ public:
 	};
 
 	uint32_t module_no; // module for this instruction (we encode as integers)
-	uint32_t pc; // the program counter value for this instruction
+	uint32_t pc; // the program counter value for this instruction - for a jump instruction this is the jump pc
 	std::string disassembly; // disassembly string
 
 	Instr_type type; // type of the instruction
@@ -74,9 +73,9 @@ public:
 		std::vector<Node *> prev; // keep the backward references
 		std::vector<uint> pos;	 // position of the parent node's srcs list for this child 
 
-		/*variables for debugging*/
+		
 		uint32_t pc;
-		uint32_t line;
+		uint32_t line; /*variable for debugging*/
 
 		/*auxiliary variables*/
 		int order_num;
@@ -88,6 +87,8 @@ public:
 		
 		virtual void print_node(std::ostream &out) = 0;
 
+		/* following routines will have concrete implementations; but can be overloaded */
+		/* tree transformation routines */
 
 		/* (node -> ref) => (node) */
 		bool remove_forward_ref(Node *ref);
@@ -95,13 +96,27 @@ public:
 		void remove_backward_ref(Node *ref);
 		/* node => (node->ref) */
 		void add_forward_ref(Node * ref);
-
 		/* (dst -> node -> src)  => (dst -> src) */
 		void remove_intermediate_ref(Node * dst, Node *src);
+		/*safely delete*/
+		void safely_delete(Node * head);
+		/* removes all srcs */
+		void remove_forward_all_srcs();
 
+		/* node canonicalizing routines */
+ private:
+		/* congregate nodes with associative operations */
+		void congregate_node();
+		/* order the srcs of the node */
+		void order_node(); 
+		
+ public:
+		/* canonicalize node */
+		void canonicalize_node();
 
-	
 };
+
+ /* condensed list of rewrite rules */
 
  /* abs node types */
 
@@ -113,6 +128,7 @@ public:
 	 Conc_Node(uint32_t type, uint64_t value, uint32_t width, float float_value);
 	 Conc_Node();
 	 ~Conc_Node();
+
 	 void print_node();
  };
 
@@ -178,13 +194,10 @@ public:
 	} mem_info;
 	 
 
-	// add the copy constructor when needed
+	 //add the copy constructor when needed
 	 Abs_Node();
 	 ~Abs_Node();
 	 void print_node();
-
-
-
 
  };
 
@@ -197,12 +210,15 @@ public:
  };
 
 
+ /* trees and their routines */
+
  class Tree{
 
  private:
 	 Node * head;
 
-
+	 /* internal simplification routines */
+	 /* fill as they are written */
 
  public:
 	 
@@ -210,15 +226,16 @@ public:
 	 Node * get_head();
 
 	 //all the tree transformations goes here
+	 void canonicalize_tree();
 
+	 /* for tree simplification -> each type of tree will have its own serialization routines */
+	 virtual string serialize_tree() = 0;
+	 virtual void construct_tree(string stree) = 0;
+
+	 /* tree simplification routine */
+	 void simplify_tree();
 
  };
-
-
-
- 
-
-
 
 
  //this class has builds up the expression
@@ -250,6 +267,7 @@ public:
 
  public:
 	
+	 /* this governs which conditionals affect the tree -> needed for predicate tree generation */
 	struct conditional_t {
 
 		 jump_info_t * jumps;
@@ -270,6 +288,8 @@ public:
 
 	 //virtuals
 	 void print_tree(std::ostream &file);
+	 string serialize_tree();
+	 void construct_tree(string stree);
 
  };
 
@@ -289,7 +309,8 @@ public:
 
 	 //virtuals
 	 void print_tree(std::ostream &file);
-
+	 string serialize_tree();
+	 void construct_tree(string stree);
 
  };
 
@@ -309,6 +330,8 @@ public:
  private:
 
 	 static void abstract_buffer_indexes(Comp_Abs_node * head, Comp_Abs_node * node);
+	 string serialize_tree();
+	 void construct_tree(string stree);
 
  };
 

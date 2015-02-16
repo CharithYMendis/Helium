@@ -81,7 +81,6 @@ string dr_operation_to_string(uint operation){
 
 }
 
-
 /*printing abs nodes*/
 string abs_node_mem_to_string(Abs_node * node){
 
@@ -121,7 +120,6 @@ string abs_node_to_string(Abs_node* node){
 	return "";
 
 }
-
 
 /* print an expression tree to an expression */
 void print_tree(Node * node, std::ostream &file){

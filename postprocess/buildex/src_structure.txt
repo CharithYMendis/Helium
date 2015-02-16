@@ -1,0 +1,66 @@
+Memory
+
+abstract files - classes
+memregions - abstract memory regions with structures, buffer shapes (like dimensions, extent etc.)
+meminfo - concrete memory regions
+
+specialized files
+memdump - deals with extracting memory dump information
+memanalysis - does the actual memory analysis using the structures from above files
+
+halide
+
+halide - defines the halide class and its methods -> represents a Halide program
+(given a symbolic tree, the Halide program should be generated)
+
+
+trees
+
+These define all classes for the trees
+nodes
+trees
+
+
+analysis - all the preprocessing and mutating routines of data strucutures - vector of something
+
+staticinfo
+
+preprocess -> all the mutating preprocessing passes in this file
+expression_extraction -> backward analysis
+conditional_analysis -> forward analysis
+tree_analysis -> go get information from the trees
+static_analysis
+
+
+utility
+filterparser
+print_helpers
+imageparser
+//other common header files
+
+
+
+headers migrated
+
+nodes
+expression_tree
+build_abs_tree
+defines
+print_ops
+print_regs
+build_mem_instrace
+extract_memregions
+build_mem_dump
+memregions
+build_tree
+canonicalize
+fileparser
+
+Yet to
+
+forward_analysis
+print_common
+print_dot
+print_halide
+sympy
+tree_transformations
