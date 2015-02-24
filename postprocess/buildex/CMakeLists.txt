@@ -95,7 +95,7 @@ src/memory/memdump.cpp
 src/memory/meminstrace.cpp
 src/memory/memregions.cpp
 
-#src/halide/halide.cpp
+src/halide/halide.cpp
 
 src/analysis/conditional_analysis.cpp
 src/analysis/preprocess.cpp

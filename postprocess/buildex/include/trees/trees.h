@@ -8,16 +8,16 @@
  /* trees and their routines */
 
 typedef void *  (*node_mutator) (Node * node, void * value);
-typedef void *  (*return_mutator) (void * node_value, std::vector<void *> traverse_value);
+typedef void *  (*return_mutator) (void * node_value, std::vector<void *> traverse_value, void * value);
 typedef Node *  (*node_to_node)(void * node, void * peripheral_data);
 
-void * empty_ret_mutator(void * value, vector<void *> values);
+void * empty_ret_mutator(void * value, vector<void *> values, void * ori_value);
 
  class Tree{
 
  private:
 	 Node * head;
-
+	
 	 /* internal simplification routines */
 	 /* fill as they are written */
 
@@ -36,10 +36,13 @@ void * empty_ret_mutator(void * value, vector<void *> values);
 
  public:
 
+	 uint32_t num_nodes;
+	 int32_t tree_num; /* this is for numbering the tree (most porabably based on output location - used in tree clustering) */
+
+
 	 Tree();
 	 ~Tree();
 	 
-	 uint32_t num_nodes;
 	 Node * get_head();
 	 void set_head(Node * node);
 
@@ -86,9 +89,7 @@ void * empty_ret_mutator(void * value, vector<void *> values);
 	 frontier_t * frontier;  /*this is actually a hash table keeping pointers to the Nodes already allocated */
 	 std::vector<uint32_t> mem_in_frontier; /* memoization structures for partial mem and reg writes and reads */
 
-	 int generate_hash(operand_t * opnd);
 	 Node * search_node(operand_t * opnd);
-	 void add_to_frontier(int hash, Node * node);
 	 Node * create_or_get_node(operand_t * opnd);
 	 void remove_from_frontier(operand_t * opnd);
 
@@ -116,6 +117,9 @@ void * empty_ret_mutator(void * value, vector<void *> values);
 	 Conc_Tree();
 	 ~Conc_Tree();
 
+	 int generate_hash(operand_t * opnd);
+	 void add_to_frontier(int hash, Node * node);
+
 	 bool update_depandancy_backward(rinstr_t * instr, uint32_t pc, std::string disasm, uint32_t line);
 	 bool update_dependancy_forward(rinstr_t * instr, uint32_t pc, std::string disasm, uint32_t line);
 	 
@@ -128,20 +132,32 @@ void * empty_ret_mutator(void * value, vector<void *> values);
 
  /* Abs tree */
  class Abs_Tree : public Tree {
-
+ 
  public:
 
 	 Abs_Tree();
 	 ~Abs_Tree();
 
+	 static uint32_t num_paras;
+
+
+	 std::vector< std::pair<Abs_Tree *, bool > > conditional_trees;
 
 	 void build_abs_tree_exact(Conc_Tree * tree, std::vector<mem_regions_t *> &mem_regions);
 	 void build_abs_tree_unrolled(Conc_Tree * tree, std::vector<mem_regions_t *> &mem_regions);
 	 void seperate_intermediate_buffers();
-	
+
+	 bool is_tree_recursive();
+	 
+	 std::vector<Abs_Node *> collect_input_nodes();
+
 	 std::string serialize_tree();
 	 void construct_tree(std::string stree);
-	 
+
+	 void tag_parameters();
+	 vector<Abs_Node *> retrieve_input_nodes();
+	 vector<Abs_Node *> retrieve_parameters();
+
 
  };
 
@@ -163,7 +179,6 @@ void * empty_ret_mutator(void * value, vector<void *> values);
 	 void build_compound_tree_unrolled(std::vector<Abs_Tree *> abs_trees);
 	 void abstract_buffer_indexes();
 	 Abs_Tree * compound_to_abs_tree();
-
 
 	 std::string serialize_tree();
 	 void construct_tree(std::string stree);

@@ -15,6 +15,7 @@ Tree::Tree(){
 
 	head = NULL;
 	num_nodes = 0;
+	tree_num = -1;
 
 }
 
@@ -61,7 +62,7 @@ void * Tree::traverse_tree(Node * node, void * value, node_mutator mutator, retu
 		traverse_val.push_back(traverse_tree(node->srcs[i], value, mutator, ret_mutator));
 	}
 
-	return ret_mutator(node_val, traverse_val); 
+	return ret_mutator(node_val, traverse_val, value); 
 } 
 
 void Tree::canonicalize_tree()
@@ -211,7 +212,7 @@ void * node_numbering(Node * node, void * value){
 	return NULL;
 }
 
-void * empty_ret_mutator(void * value, vector<void *> values){
+void * empty_ret_mutator(void * value, vector<void *> values, void * ori_value){
 	return NULL;
 }
 

@@ -78,6 +78,7 @@ Abs_Node::~Abs_Node()
 
 }
 
+/* input(10,10) */
 string Abs_Node::get_mem_string(){
 
 	string ret = this->mem_info.associated_mem->name + "(";
@@ -95,6 +96,7 @@ string Abs_Node::get_mem_string(){
 
 }
 
+/* input(x,y) */
 string Abs_Node::get_mem_string(vector<string> vars){
 
 	string ret = this->mem_info.associated_mem->name + "(";
@@ -176,7 +178,6 @@ string Abs_Node::get_symbolic_string(vector<string> vars){
 	}
 
 }
-
 
 bool Abs_Node::are_nodes_similar(Node * node){
 

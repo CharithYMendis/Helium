@@ -1,339 +1,129 @@
- #ifndef _NODE_H
- #define _NODE_H
+ #ifndef _HALIDEBACKEND_H
+ #define _HALIDEBACKEND_H
  
-#include  "..\..\..\dr_clients\include\output.h"
-#include <vector>
 #include <stdint.h>
+#include <vector>
+#include <ostream>
 
-#define NODE_RIGHT	1
-#define NODE_LEFT	2
-#define NODE_NONE   3
-
-#define MAX_REFERENCES 10
-
-//using namespace std;
+#include "halide/halide.h"
+#include "trees/trees.h"
+#include "memory/memregions.h"
 
 
-/* static information storage for dynamically executed instructions - this data structure will summarize 
-all the static information found about dynamically executed instructions */
+/* main halide program for generation Halide code - we also need a helper halide module to setup buffer_t for patching */
+class Halide_Program {
 
-class Static_Info {
+	/* need to model the Halide constructs that we are using */
 
 public:
 
-	enum Instr_type {
+	/* RDoms are not supported as of yet */
 
-		INPUT = 1 << 0,
-		INPUT_DEPENDENT_DIRECT = 1 << 1,
-		INPUT_DEPENDENT_INDIRECT = 1 << 2,
-		CONDITIONAL = 1 << 3,
-		LOOP = 1 << 4,
-		OUTPUT = 1 << 5,
-
+	/* only pure parameters entering the function */
+	struct Param{
+		bool sign;
+		uint32_t width;
+		uint32_t dimension;
 	};
 
-	class Jump_Info {
-
-		uint32_t cond_pc; // eflags set by this pc
-		uint32_t target_pc; // the target pc of this jump
-		uint32_t fall_pc;   // the fall-through pc 
-		uint32_t merge_pc;  // the merge point for the taken and not taken paths
-
-		// example lines in the instruction trace for taken and notTaken jump conditionals
-		uint32_t taken; 
-		uint32_t not_taken;
-
+	/* input, output and intermediate states that can be modelled as a Halide function*/
+	/* when ever there are reduction trees, then pure definitions will act as the initial updates of the function */
+	enum RDom_type {
+		INDIRECT_REF,
+		EXTENTS,
 	};
-
-	uint32_t module_no; // module for this instruction (we encode as integers)
-	uint32_t pc; // the program counter value for this instruction - for a jump instruction this is the jump pc
-	std::string disassembly; // disassembly string
-
-	Instr_type type; // type of the instruction
-	Jump_Info * jump_info; // for loop and conditional constructs
 	
+	
+	struct RDom{
+		std::string name;
+		RDom_type type;
+		union{
+			Abs_Node * red_node;
+			std::vector< std::pair<int32_t, int32_t> > extents;
+		} indexes;
+		std::vector< std::vector<int32_t> > abstract_indexes;
+	};
 
-	Static_Info();
-	~Static_Info();
+
+
+	struct Func {
+		std::vector< std::pair< RDom *, std::vector<Abs_Tree *> > > reduction_trees;
+		std::vector<Abs_Tree *> pure_trees; /* for each conditional branch */
+		uint32_t variations;
+	};
+
+	/* select expressions for input dependent conditionals */
+	struct Select_Expr {
+		std::string name;
+		std::string condition;
+		std::string truth_value;
+	};
+
+	
+	std::vector<Abs_Node *> inputs;
+	std::vector<Abs_Node *> params;
+	std::vector<std::string> vars;
+	std::vector<std::string> rvars;
+
+	std::vector<Func *> funcs;
+	std::vector<Abs_Node *> output; /* this is used to populate the arguments string */
+
+	
+public:
+
+	/* methods to manipulate and fill the Halide program */
+	Halide_Program();
+
+	/* Halide program population */
+	void populate_vars(uint32_t dim);
+	
+	void populate_pure_funcs(Abs_Tree * tree);
+	void populate_pure_funcs(std::vector<Abs_Tree *> trees); 
+	void populate_red_funcs(Abs_Tree * tree,
+		std::vector< std::pair<int32_t, int32_t > > boundaries, Abs_Node * node);
+	
+	void populate_input_params();
+	void populate_params();
+	
+	void populate_outputs(Abs_Node * node);
+
+	void populate_halide_program();
+
+	/* Main halide program printing function */
+	void print_halide_program(std::ostream &file, std::vector<std::string> red_variables);
+
+
+private:
+
+	/* private populating functions */
+	void populate_paras_input_paras(bool which);
+
+	/* printing functions */
+	std::string print_function(Func * func, std::vector<std::string> red_variables);
+	std::string print_pure_trees(Func * func);
+	std::string print_red_trees(Func * func, std::vector<std::string> red_variables);
+	std::string print_predicated_tree(std::vector<Abs_Tree *> trees, std::string expr_tag, std::vector<std::string> vars);
+
+	/* print out sub parts of the Halide function */
+	std::string print_abs_tree(Node * node, Node * head, std::vector<string> vars);
+	std::string print_conditional_trees(std::vector< std::pair<Abs_Tree *, bool > > conditions,
+		std::vector<string> vars);
+
+	/* printing full and partial overlap nodes */
+	std::string print_full_overlap_node(Abs_Node * node, Node * head, std::vector<string> vars);
+	std::string print_partial_overlap_node(Abs_Node * node, Node * head, std::vector<string> vars);
+
+	/* auxiliary functions */
+	Func *check_function(mem_regions_t * mem);
+	void sort_functions();
+	void populate_input_params(Abs_Node * node);
+	std::string print_rdom(RDom * rdom, std::vector<std::string> variables);
+	int32_t get_rdom_location(Func *func, RDom *rdom);
+
 
 
 
 };
- 
- class Node{
-
-	public:
-
-		/* the main identification material for the node */
-		int operation;
-		bool sign; // indicates whether the operation is signed
-		operand_t * symbol;  // operand information for this node - this is concrete
-
-		std::vector<Node *> srcs; // forward references also srcs of the destination
-		std::vector<Node *> prev; // keep the backward references
-		std::vector<uint> pos;	 // position of the parent node's srcs list for this child 
-
-		
-		uint32_t pc;
-		uint32_t line; /*variable for debugging*/
-
-		/*auxiliary variables*/
-		int order_num;
-		int para_num; 
-		bool is_para;
-		bool is_double;
-		
-	public:
-		
-		virtual void print_node(std::ostream &out) = 0;
-
-		/* following routines will have concrete implementations; but can be overloaded */
-		/* tree transformation routines */
-
-		/* (node -> ref) => (node) */
-		bool remove_forward_ref(Node *ref);
-		/* (ref -> node) => (node) */
-		void remove_backward_ref(Node *ref);
-		/* node => (node->ref) */
-		void add_forward_ref(Node * ref);
-		/* (dst -> node -> src)  => (dst -> src) */
-		void remove_intermediate_ref(Node * dst, Node *src);
-		/*safely delete*/
-		void safely_delete(Node * head);
-		/* removes all srcs */
-		void remove_forward_all_srcs();
-
-		/* node canonicalizing routines */
- private:
-		/* congregate nodes with associative operations */
-		void congregate_node();
-		/* order the srcs of the node */
-		void order_node(); 
-		
- public:
-		/* canonicalize node */
-		void canonicalize_node();
-
-};
-
- /* condensed list of rewrite rules */
-
- /* abs node types */
-
-
- class Conc_Node : public Node {
-
- public:
-	 Conc_Node(operand_t * symbol);
-	 Conc_Node(uint32_t type, uint64_t value, uint32_t width, float float_value);
-	 Conc_Node();
-	 ~Conc_Node();
-
-	 void print_node();
- };
-
-
-
- /* type and processing explanation
-
- abs_nodes types and processing are determined by the Node symbol types and the mem_regions types, therefore, we can see as building the abs tree
- as a unification of the information extracted by the instrace(building the concrete tree) and memdump(locating image locations and properties). Further
- abstraction can be performed on this tree.
-
- type(Abs_node) <- unify ( type(Node->symbol) , type(mem_region) )
-
- Next, we assume that the bottom of the tree should be Heap Nodes (image dependancies), Stack or Regs(parameters) or immediate ints, immediate floats
-
- if (Node->symbol) is heap
- *check for associated memory region -> this should be non null
- *get the x,y,c co-ordinates of the symbol value and store in the struct mem_info
- *mem_info struct
- -> associated mem  - mem_region
- -> dimensions - the dimensionality of the mem_region -> this depends on the image layout
- -> indexes - this carries the final abstracted out index coefficients when we express the filter algebrically
- -> pos - this lifts the flat memory address into coordinates in the dimensional space
- *type will depend on whether the associated mem region is input, output or intermediate
-
- if (Node->symbol is reg or stack)
- *parameter? Need to identify statically
- *operation_only? If not parameter
-
- if(Node->symbol immed int or float)
-
- subtree boundary - check for similar subtrees that assign to intermediate nodes
-
- */
-
- class Abs_Node : public Node {
-
- public:
-
-	 enum Abs_Type {
-
-		OPERATION_ONLY,
-		INPUT_NODE,
-		OUTPUT_NODE,
-		INTERMEDIATE_NODE,
-		IMMEDIATE_INT,
-		IMMEDIATE_FLOAT,
-		PARAMETER,
-		UNRESOLVED_SYMBOL,
-		SUBTREE_BOUNDARY,
-	 
-	 };
-
-
-	 /* some type information about the node - what type of node is this */
-	 uint type;
-	 
-	struct {
-		mem_regions_t * associated_mem;
-		uint32_t dimensions;
-		int ** indexes; /* 2-dimensional array */
-		int * pos;
-	} mem_info;
-	 
-
-	 //add the copy constructor when needed
-	 Abs_Node();
-	 ~Abs_Node();
-	 void print_node();
-
- };
-
- class Comp_Abs_Node : public Node {
-
- public:
-	 std::vector<Abs_Node *> nodes;
-	 void print_node();
-
- };
-
-
- /* trees and their routines */
-
- class Tree{
-
- private:
-	 Node * head;
-
-	 /* internal simplification routines */
-	 /* fill as they are written */
-
- public:
-	 
-	 virtual void print_tree(std::ostream &file);
-	 Node * get_head();
-
-	 //all the tree transformations goes here
-	 void canonicalize_tree();
-
-	 /* for tree simplification -> each type of tree will have its own serialization routines */
-	 virtual string serialize_tree() = 0;
-	 virtual void construct_tree(string stree) = 0;
-
-	 /* tree simplification routine */
-	 void simplify_tree();
-
- };
-
-
- //this class has builds up the expression
- class Conc_Tree : public Tree {
-
- private:
-
-	 // data structure for keeping the hash table bins
-	 struct frontier_t {   
-		 Node ** bucket;
-		 int amount;
-	 };
-	 
-
-	 frontier_t * frontier;  //this is actually a hash table keeping pointers to the Nodes already allocated
-	 vector<uint> mem_in_frontier; // memoization structures for partial mem and reg writes and reads 
-
-	 int generate_hash(operand_t * opnd);
-	 Node * search_node(operand_t * opnd);
-	 void add_to_frontier(int hash, Node * node);
-	 Node * create_or_get_node(operand_t * opnd);
-	 void remove_from_frontier(operand_t * opnd);
-
-
-	 void get_full_overlap_nodes(std::vector<Conc_Node *> &nodes, operand_t * opnd);
-	 void split_partial_overlaps(std::vector < std::pair <Conc_Node *, std::vector<Conc_Node *> > > &nodes, operand_t * opnd, uint32_t hash);
-	 void get_partial_overlap_nodes(std::vector< std::pair<Conc_Node *, std::vector<Conc_Node *> > > &nodes, operand_t * opnd);
-
-
- public:
-	
-	 /* this governs which conditionals affect the tree -> needed for predicate tree generation */
-	struct conditional_t {
-
-		 jump_info_t * jumps;
-		 uint32_t line_cond; // this is the cond_pc location 
-		 uint32_t line_jump;
-		 Conc_Tree * tree; // we need to have two expressions for a single conditional
-		 bool taken;
-
-	 };
-
-	 vector<conditional_t *> conditionals;
-
-	 Conc_Tree();
-	 ~Conc_Tree();
-
-	 bool update_depandancy_backward(rinstr_t * instr, uint32_t pc, std::string disasm, uint32_t line);
-	 bool update_dependancy_forward(rinstr_t * instr, uint32_t pc, std::string disasm, uint32_t line);
-
-	 //virtuals
-	 void print_tree(std::ostream &file);
-	 string serialize_tree();
-	 void construct_tree(string stree);
-
- };
-
-
-
- /* Abs tree */
- class Abs_Tree : public Tree {
-
- public:
-
-	 Abs_Tree();
-	 ~Abs_Tree();
-
-	 void build_abs_tree(Conc_Tree * tree, std::vector<mem_regions_t *> &mem_regions);
-	 void seperate_intermediate_buffers();
-	 static bool are_abs_trees_similar(std::vector<Abs_Tree *> abs_trees);
-
-	 //virtuals
-	 void print_tree(std::ostream &file);
-	 string serialize_tree();
-	 void construct_tree(string stree);
-
- };
-
- /* compound abs tree */
- class Comp_Abs_tree{
-
- public:
-	 Comp_Abs_node * head;
-
-	 Comp_Abs_tree();
-
-	 /* all are static methods actually */
-	 void build_compound_tree(Comp_Abs_node * comp_node, vector<Abs_node *> abs_nodes);
-	 static void abstract_buffer_indexes(Comp_Abs_node * comp_node);
-	 Abs_node * compound_to_abs_tree();
-
- private:
-
-	 static void abstract_buffer_indexes(Comp_Abs_node * head, Comp_Abs_node * node);
-	 string serialize_tree();
-	 void construct_tree(string stree);
-
- };
 
 
 

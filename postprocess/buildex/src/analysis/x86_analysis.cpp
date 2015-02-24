@@ -747,6 +747,20 @@ rinstr_t * cinstr_to_rinstrs(cinstr_t * cinstr, int &amount, std::string disasm,
 	return rinstr;
 }
 
+void cinstr_convert_reg(cinstr_t * instr){
+
+	for (int i = 0; i < instr->num_srcs; i++){
+		if ((instr->srcs[i].type == REG_TYPE) && (instr->srcs[i].value > DR_REG_ST7)) instr->srcs[i].value += 8;
+		reg_to_mem_range(&instr->srcs[i]);
+	}
+
+	for (int i = 0; i < instr->num_dsts; i++){
+		if (instr->dsts[i].type == REG_TYPE && (instr->dsts[i].value > DR_REG_ST7)) instr->dsts[i].value += 8;
+		reg_to_mem_range(&instr->dsts[i]);
+	}
+
+}
+
 /*********************************** mapping registers to memory **************************************************/
 
 void reg_to_mem_range(operand_t * opnd){

@@ -286,8 +286,7 @@ void build_conc_tree(uint64_t destination,
 void build_conc_trees_for_conditionals(
 	std::vector<uint32_t> start_points,
 	Conc_Tree * tree,
-	vec_cinstr &instrs,
-	std::vector<Static_Info *> static_info){
+	vec_cinstr &instrs){
 
 
 	for (int i = 0; i < tree->conditionals.size(); i++){
@@ -394,4 +393,315 @@ void build_conc_trees_for_conditionals(
 /*  Tree clustering routines				                            */
 /************************************************************************/
 
+std::vector<Conc_Tree *> get_similar_trees(
+	std::vector<mem_regions_t *> image_regions,
+	uint32_t seed,
+	uint32_t * stride,
+	std::vector<uint32_t> start_points,
+	int32_t start_trace,
+	int32_t end_trace,
+	vec_cinstr &instrs){
 
+
+	vector<Conc_Tree *> nodes;
+
+	/*ok we need find a set of random locations */
+	mem_regions_t * random_mem_region = get_random_output_region(image_regions);
+	uint64_t mem_location = get_random_mem_location(random_mem_region, seed);
+	DEBUG_PRINT(("random mem location we got - %llx\n", mem_location), 1);
+	*stride = random_mem_region->bytes_per_pixel;
+
+	vector<uint64_t> nbd_locations;
+	vector<int> base = get_mem_position(random_mem_region, mem_location);
+	nbd_locations.push_back(mem_location);
+
+	cout << "base : " << endl;
+	for (int j = 0; j < base.size(); j++){
+		cout << base[j] << ",";
+	}
+	cout << endl;
+
+	/* build the expression tree for this node */
+	Conc_Tree * main_tree = new Conc_Tree();
+	build_conc_tree(mem_location, *stride, start_points, FILE_BEGINNING, end_trace, main_tree, instrs);
+	nodes.push_back(main_tree);
+
+	uint32_t nodes_needed = random_mem_region->dimensions + 2;
+	int32_t sign = 1;
+	int i = 0;
+
+	vector<uint32_t> dims;
+	for (int i = 0; i < random_mem_region->dimensions; i++){
+		dims.push_back(0);
+	}
+
+	while (true) {
+
+		vector<int> offset;
+		uint32_t affected_dim = i % random_mem_region->dimensions;
+		i++;
+
+		if (nodes.size() >= nodes_needed) break;
+
+		bool cont = false;
+		for (int j = 0; j < affected_dim; j++){
+			if (dims[j] < dims[affected_dim]){
+				cont = true;
+				break;
+			}
+		}
+
+		for (int j = 0; j < dims.size(); j++){
+			cout << dims[j] << ",";
+		}
+		cout << endl;
+
+		if (cont){
+			continue;
+		}
+
+
+		uint32_t next_value = 0;
+
+		while (true){
+			vector<int32_t> offset;
+			for (int j = 0; j < base.size(); j++){
+				if (j == affected_dim) { offset.push_back(sign); }
+				else { offset.push_back(next_value++); }
+			}
+
+			cout << "searching for tree: " << nodes.size() + 1 << endl;
+			for (int j = 0; j < base.size(); j++){
+				cout << dec << (base[j] + offset[j]) << ",";
+			}
+			cout << endl;
+
+			bool success;
+			mem_location = get_mem_location(base, offset, random_mem_region, &success);
+
+			if (success){
+				Conc_Tree * created_tree = new Conc_Tree();
+				build_conc_tree(mem_location, random_mem_region->bytes_per_pixel, start_points, FILE_BEGINNING, end_trace, created_tree, instrs);
+
+				created_tree->print_tree(cout);
+				cout << endl;
+				main_tree->print_tree(cout);
+				cout << endl;
+
+				if (main_tree->are_trees_similar(created_tree)){
+					nodes.push_back(created_tree);
+					dims[affected_dim]++;
+					sign = -1 * sign * (int)ceil((i + 1) / (double)random_mem_region->dimensions);
+					cout << ceil((i + 1) / (double)random_mem_region->dimensions) << endl;
+					cout << sign << endl;
+					cout << i << endl;
+					break;
+				}
+				else{
+					delete created_tree;
+				}
+			}
+			else{
+				sign = -1 * sign * (int)ceil((i + 1) / (double)random_mem_region->dimensions);
+				cout << sign << endl;
+				break;
+			}
+
+		}
+
+
+	}
+
+	return nodes;
+
+
+}
+
+
+std::vector< std::vector <Conc_Tree *> > cluster_trees
+		(std::vector<mem_regions_t *> mem_regions,
+		std::vector<uint32_t> start_points,
+		vec_cinstr &instrs,
+		std::string output_folder){
+
+
+	mem_regions_t * mem = get_random_output_region(mem_regions);
+
+	vector<Conc_Tree *> trees;
+
+	for (uint64 i = mem->start; i < mem->end; i++){
+		DEBUG_PRINT(("building tree for location %llx - %u\n", i, i - mem->start), 2);
+		Conc_Tree * tree = new Conc_Tree();
+		tree->tree_num = i - mem->start;
+		build_conc_tree(i, mem->bytes_per_pixel, start_points, FILE_BEGINNING, FILE_ENDING, tree, instrs);
+		build_conc_trees_for_conditionals(start_points, tree, instrs);			
+		trees.push_back(tree);
+	}
+
+	DEBUG_PRINT(("clustering trees\n"), 2);
+	
+	/* cluster based on the similarity */
+	vector< vector<Conc_Tree *> > clustered_trees = categorize_trees(trees);
+	
+	/* cluster results */
+	cout << "number of tree clusters : " << clustered_trees.size() << endl;
+
+	/*for (int i = 0; i < clustered_trees.size(); i++){
+	uint no_nodes = number_tree_nodes(clustered_trees[i][1]->get_head());
+	DEBUG_PRINT(("printing to dot file...\n"), 2);
+	ofstream conc_file(output_folder + "_conctree_" + to_string(i) + ".dot", ofstream::out);
+	print_to_dotfile(conc_file, clustered_trees[i][1]->get_head(), no_nodes, 0);
+	}*/
+
+	/* get the divergence points */
+
+	return clustered_trees;
+
+
+}
+
+/* categorize the trees based on */
+vector< vector<Conc_Tree *> >  categorize_trees(vector<Conc_Tree * > trees){
+
+	vector< vector<Conc_Tree * > > categorized_trees;
+
+	while (!trees.empty()){
+		vector<Conc_Tree* > similar_trees;
+		similar_trees.push_back(trees[0]);
+		trees.erase(trees.begin());
+		for (int i = 0; i < trees.size(); i++){
+			if (similar_trees[0]->are_trees_similar(trees[i])){
+				similar_trees.push_back(trees[i]);
+				trees.erase(trees.begin() + i--);
+			}
+		}
+		categorized_trees.push_back(similar_trees);
+	}
+
+	return categorized_trees;
+
+}
+
+/************************************************************************/
+/*  Building Abs_Trees                                                  */
+/************************************************************************/
+
+Abs_Tree* abstract_the_trees(vector<Conc_Tree *> cluster, uint32_t no_trees, 
+	vector<mem_regions_t *> &total_regions, vector<pc_mem_region_t *> &pc_mem){
+
+	/* build the abs trees for the main computational tree and abstract it */
+	vector<Abs_Tree *> abs_trees;
+	vector<Tree *> trees;
+
+	for (int j = 0; j < no_trees; j++){
+		Abs_Tree  * abs_tree = new Abs_Tree();
+		/* parameter identification here -> please check */
+		//identify_parameters(cluster[j]->head, pc_mem);
+		abs_tree->build_abs_tree_exact(cluster[j], total_regions);
+		abs_trees.push_back(abs_tree);
+		trees.push_back(abs_tree);
+	}
+
+	bool similar = Tree::are_trees_similar(trees);
+	if (similar){
+
+		DEBUG_PRINT(("the trees are similar, now getting the algebric filter....\n"), 1);
+		Comp_Abs_Tree * comp_tree = new Comp_Abs_Tree();
+		comp_tree->build_compound_tree_exact(abs_trees);
+		comp_tree->abstract_buffer_indexes();
+		Abs_Tree * final_tree = comp_tree->compound_to_abs_tree();
+		return final_tree;
+	}
+	else{
+		DEBUG_PRINT(("the trees are not similar; please check\n"), 1);
+		return NULL;
+	}
+
+
+}
+
+
+
+
+vector< pair<Abs_Tree *, bool > > get_conditional_trees(vector<Conc_Tree *> clusters, 
+										uint32_t no_trees, 
+										vector<mem_regions_t * > total_regions, 
+										uint32_t skip, 
+										vector<pc_mem_region_t * > &pc_mem){
+
+	vector< pair<Abs_Tree *, bool > > cond_abs_trees;
+	uint32_t number_conditionals = clusters[0]->conditionals.size();
+
+	for (int i = 1; i < no_trees; i++){
+		Conc_Tree * tree = clusters[i];
+		ASSERT_MSG((tree->conditionals.size() == number_conditionals), ("ERROR: number of conditionals in similar trees different\n"));
+	}
+
+	for (int i = 0; i < clusters[0]->conditionals.size(); i++){
+		Abs_Tree *  per_cond_tree;
+		vector<Conc_Tree *> trees;
+		for (int k = 0; k < skip * no_trees; k += skip){
+			/* add the computational tree head (computational node should have been already put out) */
+			trees.push_back(clusters[k]->conditionals[i]->tree);
+		}
+
+		Abs_Tree * cond_abs_tree = abstract_the_trees(trees, no_trees, total_regions, pc_mem);
+		
+		cond_abs_trees.push_back(make_pair(cond_abs_tree,clusters[0]->conditionals[i]->taken));
+	}
+
+	return cond_abs_trees;
+
+}
+
+vector<Abs_Tree *> build_abs_trees(
+	std::vector< std::vector< Conc_Tree *> > clusters,
+	std::string folder,
+	uint32_t no_trees,
+	std::vector<mem_regions_t *> total_regions,
+	uint32_t skip,
+	std::ostream &halide_file,
+	std::vector<pc_mem_region_t *> &pc_mem){
+
+
+	/* sanity print */
+	for (int i = 0; i < clusters.size(); i++){
+
+		Conc_Tree * tree = clusters[i][0];
+		ofstream conc_file(folder + "_conc_comp_" + to_string(i) + ".dot", ofstream::out);
+		tree->print_dot(conc_file);
+		
+		for (int j = 0; j < tree->conditionals.size(); j++){
+
+			Conc_Tree * cond_tree = tree->conditionals[j]->tree;
+			ofstream conc_file(folder + "_conc_cond_" + to_string(i) + " " + to_string(j) + ".dot", ofstream::out);
+			cond_tree->print_dot(conc_file);
+			
+		}
+	}
+
+	
+
+	/* for each cluster */
+	for (int i = 0; i < clusters.size(); i++){
+
+		/* get the abstract tree for the computational path */
+		Abs_Tree * abs_tree = abstract_the_trees(clusters[i], no_trees, total_regions, pc_mem);
+		/* get the conditional trees*/
+		abs_tree->conditional_trees = get_conditional_trees(clusters[i], no_trees, total_regions, skip, pc_mem);
+
+
+		/* check if the trees are recursive*/
+		/* if yes, then try to get the reduction domain */
+
+
+		/* if no, then populate pure functions */
+
+
+	}
+
+
+
+	
+
+}
