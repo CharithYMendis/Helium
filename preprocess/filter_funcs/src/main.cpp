@@ -26,7 +26,7 @@ void print_usage(){
 	printf("\t debug - 1,0 which turns debug mode on/off \n");
 	printf("\t debug_level - the level of debugging (higher means more debug info) \n");
 	printf("\t mode - mode of filtering \n");
-	printf("\t -total_size - size of the buffer\n");
+	printf("\t total_size - size of the buffer\n");
 	printf("\t threshold - continuous chunck % of image\n");
 }
 
