@@ -24,5 +24,6 @@ void print_app_pc_info(std::ofstream &file, func_composition_t * &funcs);
 void print_filter_file(std::ofstream &file, func_composition_t * &funcs);
 
 void print_app_pc_file(std::ofstream &file, std::vector<pc_mem_region_t *> &pc_mems);
+void print_app_pc_file(std::ofstream &file, std::vector<uint32_t> instrs, std::string module);
 
 #endif

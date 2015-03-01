@@ -58,9 +58,19 @@ std::vector< std::vector <Conc_Tree *> > cluster_trees
 				vec_cinstr &instrs, 
 				std::string output_folder);
 
-/* abs tree building */				
+/* abs tree building */	
 
-void build_abs_trees(
+struct Abs_Tree_Charac{
+
+	Abs_Tree * tree;
+	bool is_recursive;
+	std::vector< std::pair< int32_t, int32_t > > extents;
+	Abs_Node * red_node;
+
+
+};
+
+std::vector<Abs_Tree_Charac *> build_abs_trees(
 			std::vector< std::vector< Conc_Tree *> > clusters, 
 			std::string folder, 
 			uint32_t no_trees, 

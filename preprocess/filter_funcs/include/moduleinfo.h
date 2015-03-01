@@ -90,7 +90,7 @@ void print_bbinfo(std::ofstream &file, moduleinfo_t * module);
 
 /* filter file printing */
 void print_filter_file(std::ofstream &file, moduleinfo_t * head);
-void print_funcs_filter_file(std::ofstream &file, const char * name, uint32_t func_addr);
+void print_funcs_filter_file(std::ofstream &file, std::string name, uint32_t func_addr);
 void print_bb_filter_file(std::ofstream &file, moduleinfo_t * head);
 
 

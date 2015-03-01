@@ -6,6 +6,7 @@
 #include "filter_logic.h"
 #include "common_defines.h"
 #include "memlayout.h"
+#include <algorithm>
 
 using namespace std;
 
@@ -29,6 +30,7 @@ void print_usage(){
 	printf("\t total_size - size of the buffer\n");
 	printf("\t threshold - continuous chunck % of image\n");
 }
+
 
 int main(int argc, char **argv){
 
@@ -181,18 +183,12 @@ int main(int argc, char **argv){
 
 		/* get the highest executed basic block */
 		DEBUG_PRINT(("getting the highest executed basic block\n"), 1);
+		
 		moduleinfo_t * max_module = NULL;
 		uint32_t max_start_addr;
+		uint32_t max_addr;
 		uint32_t max_freq = 0;
-
-
-		/* my inserted */
-		/*moduleinfo_t * md = find_module(module, string("C:\\Program Files (x86)\\Adobe\\Adobe Photoshop CS6\\Required\\Plug-Ins\\Filters\\Standard MultiPlugin.8BF"));
-		bbinfo_t * bbinfo = find_bb(md, 0x2cfca);
-		DEBUG_PRINT(("finding func start in bb %x of size %d\n", bbinfo->start_addr, bbinfo->size), 1);
-		uint32_t func_start = get_probable_func(module, md, bbinfo->start_addr);
-		DEBUG_PRINT(("found func - %x\n", func_start), 1);*/
-		
+		uint32_t max_func = 0;
 
 		moduleinfo_t * temp_module = module;
 		while (temp_module != NULL){
@@ -211,17 +207,18 @@ int main(int argc, char **argv){
 		DEBUG_PRINT(("max module - %s, max start addr - %x\n", max_module->name, max_start_addr), 1);
 
 
+
 		/* getting the func information for the highest executed bb */
 		DEBUG_PRINT(("trying hard to get the probable func information\n"), 1);
-		uint32_t func = get_probable_func(module, max_module, max_start_addr);
-		DEBUG_PRINT(("func - %x\n", func), 1);
+		max_func = get_probable_func(module, max_module, max_start_addr);
+		DEBUG_PRINT(("func - %x\n", max_func), 1);
 
-
+		max_addr = max_start_addr;
 		/* printing out the call stack */
 		DEBUG_PRINT(("probable call stack information (upto 10 calls) for the given app_pc - %x\n", max_start_addr), 1);
 		for (int i = 0; i < 5; i++){
 			uint32_t func = get_probable_func(module, max_module, max_start_addr);
-			DEBUG_PRINT(("func - %x %d", func, i), 1);
+			DEBUG_PRINT(("func - %x %d\n", func, i), 1);
 			if (func == 0) break;
 			bbinfo_t * bbinfo = find_bb(max_module, func);
 			DEBUG_PRINT((" - %d\n", bbinfo->freq), 1);
@@ -261,13 +258,12 @@ int main(int argc, char **argv){
 			string name;
 			uint32_t addr;
 			uint32_t freq;
+			std::vector<uint32_t> candidate_instructions;
+			std::vector<uint32_t> bb_start;
 
 		};
 
 		vector<internal_func_info_t *> func_info;
-
-		print_app_pc_file(app_pc_file, pc_mems);
-		print_funcs_filter_file(filter_file, max_module->name, func);
 		
 		/* get the pc_mems and there functional info as well as filter the pc_mems which are not in the func */
 		for (int i = 0; i < pc_mems.size(); i++){
@@ -295,18 +291,62 @@ int main(int argc, char **argv){
 				new_func->name = md->name;
 				new_func->addr = func_start;
 				new_func->freq = 1;
+				new_func->candidate_instructions.push_back(pc_mems[i]->pc);
+				new_func->bb_start.push_back(bbinfo->start_addr);
 				func_info.push_back(new_func);
 			}
 			else{
 				func_info[index]->freq++;
+				bool found = false;
+				for (int j = 0; j < func_info[index]->candidate_instructions.size(); j++){
+					if (pc_mems[i]->pc == func_info[index]->candidate_instructions[j]){
+						found = true;
+						break;
+					}
+				}
+				if (!found){
+					func_info[index]->candidate_instructions.push_back(pc_mems[i]->pc);
+					func_info[index]->bb_start.push_back(bbinfo->start_addr);
+				}
 			}
-
-			if ((func_start != func) || (md != max_module)){
-				pc_mems.erase(pc_mems.begin() + i--);
-			}
-
 		}
 
+		/* sort the probable function locations */
+		sort(func_info.rbegin(), func_info.rend(), 
+			[](internal_func_info_t * first, internal_func_info_t * second)->bool{
+
+			return first->freq < second->freq;
+
+		});
+
+
+
+		/* print out the output files - heristic we are taking the function with the most amount of candidate instructions */
+		print_app_pc_file(app_pc_file, func_info[0]->candidate_instructions, func_info[0]->name);
+		print_funcs_filter_file(filter_file, func_info[0]->name, func_info[0]->addr);
+
+		/* print out the summary */
+		cout << "**********************Summary of localization**************************************" << endl;
+
+		/* print out the maximum executed basic block summary */
+		cout << "1. maximum executed basic block summary" << endl;
+		cout << " module name - " << max_module->name << endl;
+		cout << " bb start addr - " << max_addr << endl;
+		cout << " bb freq - " << max_freq << endl;
+		cout << " enclosed function - " << max_func << endl;
+
+		cout << "2. functions accessing candidate instructions " << endl;
+		/*print out the function with the most number of candidate instructions */
+		for (int i = 0; i < func_info.size(); i++){
+			cout << i + 1 << " - function" << endl;
+			cout << " func addr - " << func_info[i]->addr << endl;
+			cout << " module name - " << func_info[i]->name << endl;
+			cout << " amount of candidate instructions - " << func_info[i]->freq << endl;
+			cout << " candidate instructions - " << endl;
+			for (int j = 0; j < func_info[i]->candidate_instructions.size(); j++){
+				cout << "\t" << func_info[i]->candidate_instructions[j] << " - " << func_info[i]->bb_start[j] << endl;
+			}
+		}
 		
 
 		

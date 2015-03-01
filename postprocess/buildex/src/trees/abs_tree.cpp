@@ -120,11 +120,38 @@ vector<Abs_Node *> Abs_Tree::retrieve_input_nodes(){
 				}
 			}
 			(*nodes).push_back(abs_node);
-			return NULL;
 		}
 
+		return NULL;
 
 	}, empty_ret_mutator);
 
+	return nodes;
+
+}
+
+vector<Abs_Node *> Abs_Tree::retrieve_parameters(){
+
+	vector<Abs_Node *> nodes;
+	traverse_tree(get_head(), &nodes,
+		[](Node * node, void * value)->void*{
+
+		Abs_Node * abs_node = static_cast<Abs_Node *>(node);
+		if (abs_node->type == Abs_Node::PARAMETER){
+			vector<Abs_Node *> *nodes = (vector<Abs_Node *> *)value;
+			for (int i = 0; i < (*nodes).size(); i++){
+				if ((*nodes)[i]->para_num
+					== abs_node->para_num){
+					return NULL;
+				}
+			}
+			(*nodes).push_back(abs_node);
+		}
+
+		return NULL;
+
+	}, empty_ret_mutator);
+
+	return nodes;
 }
 

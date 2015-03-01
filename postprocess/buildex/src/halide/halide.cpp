@@ -30,7 +30,7 @@ string print_Halide_type(uint width, bool sign, bool is_float){
 
 	if (!is_float)
 		return sign_string + "Int(" + to_string(width * 8) + ")";
-	else if (is_float)
+	else
 		return "Float";
 
 }
@@ -77,6 +77,8 @@ string print_Halide_parameter_declaration(Abs_Node * node){
 	ret += "> ";
 
 	ret += "p_" + to_string(node->para_num) + "(\"p_" + to_string(node->para_num) + "\");";
+
+	return ret;
 
 }
 
@@ -177,14 +179,14 @@ int32_t Halide_Program::get_rdom_location(Func *func, RDom *rdom){
 		RDom * cur_rdom = func->reduction_trees[i].first;
 		if (rdom->type == cur_rdom->type){
 			if (rdom->type == INDIRECT_REF){
-				if (rdom->indexes.red_node->mem_info.associated_mem ==
-					cur_rdom->indexes.red_node->mem_info.associated_mem){
+				if (rdom->red_node->mem_info.associated_mem ==
+					cur_rdom->red_node->mem_info.associated_mem){
 					return i;
 				}
 			}
 			else{
-				vector< pair<uint32_t, uint32_t> > first = cur_rdom->indexes.extents;
-				vector< pair<uint32_t, uint32_t> > second = rdom->indexes.extents;
+				vector< pair<int32_t, int32_t> > first = cur_rdom->extents;
+				vector< pair<int32_t, int32_t> > second = rdom->extents;
 
 				ASSERT_MSG((first.size() == second.size()), ("ERROR: reduction domain dimensions for the same buffer should be the same"));
 
@@ -216,16 +218,16 @@ void Halide_Program::populate_red_funcs(Abs_Tree * tree,
 
 	RDom * rdom = new RDom();
 	if (node == NULL){
-		rdom->indexes.red_node = node;
+		rdom->red_node = node;
 		rdom->type = INDIRECT_REF;
 	}
 	else{
-		rdom->indexes.extents = boundaries;
+		rdom->extents = boundaries;
 		rdom->type = EXTENTS;
 	}
 
-	Abs_Node * node = static_cast<Abs_Node *>(tree->get_head());
-	Func * func = check_function(node->mem_info.associated_mem);
+	Abs_Node * head = static_cast<Abs_Node *>(tree->get_head());
+	Func * func = check_function(head->mem_info.associated_mem);
 	if (func == NULL){
 		func = new Func();
 		funcs.push_back(func);
@@ -326,8 +328,8 @@ string Halide_Program::print_full_overlap_node(Abs_Node * node, Node * head, vec
 	/* here, we will some times we need to use shifting and anding */
 	Abs_Node * overlap = static_cast<Abs_Node *>(node->srcs[0]);
 
-	uint overlap_end = overlap->symbol->value + overlap->symbol->width;
-	uint node_end = node->symbol->value + node->symbol->value;
+	uint32_t overlap_end = overlap->symbol->value + overlap->symbol->width;
+	uint32_t node_end = node->symbol->value + node->symbol->value;
 
 	string ret = "";
 
@@ -355,8 +357,8 @@ string Halide_Program::print_partial_overlap_node(Abs_Node * node, Node * head, 
 	{
 		Abs_Node * overlap = static_cast<Abs_Node *>(node->srcs[i]);
 
-		uint overlap_end = overlap->symbol->value + overlap->symbol->width;
-		uint node_end = node->symbol->value + node->symbol->width;
+		uint32_t overlap_end = overlap->symbol->value + overlap->symbol->width;
+		uint32_t node_end = node->symbol->value + node->symbol->width;
 
 		
 		ret += "(";
@@ -527,7 +529,7 @@ string Halide_Program::print_rdom(RDom * rdom, vector<string> variables){
 	string name = rvars[rvars.size() - 1];
 	string ret = "RDom " + name + "(";
 	if (rdom->type == INDIRECT_REF){
-		ret += rdom->indexes.red_node->mem_info.associated_mem->name;
+		ret += rdom->red_node->mem_info.associated_mem->name;
 	}
 	else{
 		for (int i = 0; i < rdom->abstract_indexes.size(); i++){
@@ -554,7 +556,7 @@ std::string Halide_Program::print_red_trees(Func * func, vector<string> red_vari
 	
 	ASSERT_MSG((func->pure_trees.size() > 0), ("ERROR: reduction updates should have initial pure definitions\n"));
 
-	if (func->reduction_trees.size() == 0) return;
+	if (func->reduction_trees.size() == 0) return "";
 
 	string ret = "";
 	for (int i = 0; i < func->reduction_trees.size(); i++){
@@ -565,6 +567,8 @@ std::string Halide_Program::print_red_trees(Func * func, vector<string> red_vari
 	
 	}
 
+	return ret;
+
 }
 
 std::string Halide_Program::print_function(Func * func, vector<string> red_variables){
@@ -574,8 +578,12 @@ std::string Halide_Program::print_function(Func * func, vector<string> red_varia
 
 	/* anyway print the pure trees first; 
 	even for reductions these would be initial definitions */
-	print_pure_trees(func);
-	print_red_trees(func, red_variables);
+	string ret = "";
+
+	ret += print_pure_trees(func);
+	ret += print_red_trees(func, red_variables);
+
+	return ret;
 	
 }
 
@@ -629,7 +637,7 @@ std::string Halide_Program::print_abs_tree(Node * nnode, Node * head ,vector<str
 		}
 	}
 	else if (node->type == Abs_Node::SUBTREE_BOUNDARY){
-		return;
+	
 	}
 	else {
 		ret += node->get_symbolic_string(vars) + " ";
@@ -643,9 +651,10 @@ std::string Halide_Program::print_abs_tree(Node * nnode, Node * head ,vector<str
 			print_abs_tree(node, head, vars);
 			node->type = ori_type;
 		}
+		
 
 	}
-
+	return ret;
 }
 
 std::string Halide_Program::print_conditional_trees(std::vector< std::pair<Abs_Tree *, bool > > conditions, vector<string> vars){

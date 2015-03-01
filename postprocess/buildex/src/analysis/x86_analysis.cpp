@@ -1444,6 +1444,7 @@ bool is_branch_taken(uint32_t opcode, uint32_t flags){
 
 	ASSERT_MSG((!unhandled), ("ERROR: is brach taken opcode %d not handled in canonicalization\n", opcode));
 
+	return false;
 
 }
 
@@ -1507,6 +1508,8 @@ bool is_jmp_conditional_affected(uint32_t opcode, uint32_t flags){
 	}
 
 	ASSERT_MSG((!unhandled), ("ERROR: jmp affected opcode %d not handled in canonicalization\n", opcode));
+
+	return false;
 
 }
 

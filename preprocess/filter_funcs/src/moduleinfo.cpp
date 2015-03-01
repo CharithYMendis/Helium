@@ -644,7 +644,7 @@ void print_funcs_filter_file(ofstream &file, moduleinfo_t * head){
 }
 
 /* prints func entry points for a single module and func_addr */
-void print_funcs_filter_file(ofstream &file, const char * name, uint32_t func_addr){
+void print_funcs_filter_file(ofstream &file, string name, uint32_t func_addr){
 
 	file << 1 << endl;
 	file << "\"" << name << "\"" << endl;

@@ -145,7 +145,7 @@ void abstract_buffer_indexes_traversal(Comp_Abs_Node * head, Comp_Abs_Node * nod
 		node->visited = true;
 	}
 
-	if ((first->type == INPUT_NODE) || (first->type == INTERMEDIATE_NODE)){
+	if ((first->type == Abs_Node::INPUT_NODE) || (first->type == Abs_Node::INTERMEDIATE_NODE)){
 		/*make a system of linear equations and solve them*/
 		vector<vector<double> > A;
 		//for (int i = 0; i < head->nodes.size(); i++){
@@ -186,7 +186,7 @@ void abstract_buffer_indexes_traversal(Comp_Abs_Node * head, Comp_Abs_Node * nod
 		}
 
 	}
-	else if ((first->type == SUBTREE_BOUNDARY)){
+	else if ((first->type == Abs_Node::SUBTREE_BOUNDARY)){
 		return;
 	}
 
@@ -219,10 +219,10 @@ Abs_Tree * Comp_Abs_Tree::compound_to_abs_tree()
 
 std::string Comp_Abs_Tree::serialize_tree()
 {
-
+	throw "not implemented!";
 }
 
 void Comp_Abs_Tree::construct_tree(std::string stree)
 {
-
+	throw "not implemented!";
 }

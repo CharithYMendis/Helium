@@ -171,6 +171,7 @@
 	 std::string get_symbolic_string(std::vector<std::string> vars);
 	 std::string get_node_string();
 	 std::string get_dot_string();
+	 std::string get_dot_string(std::vector<std::string> vars);
 	 std::string get_simpl_string();
 
 	 bool are_nodes_similar(Node * node);

@@ -61,7 +61,7 @@ def run_filter_funcs():
                 '-in_image low.png',
                 '-out_image low.png',
                 '-debug 1',
-                '-debug_level 2',
+                '-debug_level 3',
                 '-mode 1',
                 '-total_size 0',
                 '-threshold 80']
@@ -73,10 +73,10 @@ def run_filter_funcs():
         
         
 if __name__ == '__main__':
-        #run_code_coverage()
-        #files = get_coverage_files()
-        #run_code_diff(files)
-        #run_profiling()
+        run_code_coverage()
+        files = get_coverage_files()
+        run_code_diff(files)
+        run_profiling()
         run_filter_funcs()
         
     

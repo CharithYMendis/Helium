@@ -37,10 +37,9 @@ public:
 	struct RDom{
 		std::string name;
 		RDom_type type;
-		union{
-			Abs_Node * red_node;
-			std::vector< std::pair<int32_t, int32_t> > extents;
-		} indexes;
+		Abs_Node * red_node;
+		std::vector< std::pair<int32_t, int32_t> > extents;
+
 		std::vector< std::vector<int32_t> > abstract_indexes;
 	};
 

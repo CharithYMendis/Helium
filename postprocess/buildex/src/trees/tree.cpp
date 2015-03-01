@@ -254,6 +254,7 @@ void Tree::copy_exact_tree_structure(Tree * tree, void * peripheral_data, node_t
 				(*map)[node->order_num].second.push_back(node->srcs[i]->order_num);
 			}
 		}
+		return NULL;
 
 	}, empty_ret_mutator);
 
@@ -340,7 +341,7 @@ bool Tree::are_trees_similar(std::vector<Tree *> trees)
 
 bool Tree::are_trees_similar(std::vector<Node *> node)
 {
-	if (!are_trees_similar(node)) return false;
+	if (!Node::are_nodes_similar(node)) return false;
 	
 
 	if (node.size() > 0){

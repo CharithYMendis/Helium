@@ -105,3 +105,11 @@ bool Conc_Node::are_nodes_similar(Node * node){
 
 }
 
+string Conc_Node::get_dot_string(){
+	return get_node_string();
+}
+
+string Conc_Node::get_simpl_string(){
+	throw "not implemented!";
+}
+

@@ -33,6 +33,10 @@ order_num(-1)
 
 }
 
+Node::~Node(){
+
+}
+
 /* tree transformations */
 /* (src -> ref) => (src) */
 bool Node::remove_forward_ref_single(Node *ref)

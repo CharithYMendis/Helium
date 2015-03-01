@@ -12,6 +12,10 @@
 
 using namespace std;
 
+void update_jump_conditionals(Conc_Tree * tree,
+	vec_cinstr &instrs,
+	uint32_t pos);
+
 /************************************************************************/
 /*  Tree building routines                                              */
 /************************************************************************/
@@ -201,8 +205,8 @@ void build_conc_tree(uint64_t destination,
 
 	DEBUG_PRINT(("build_tree(concrete) - done\n"), 2);
 	//print_vector(lines,disasm);
-	remove_po_node(tree->get_head(), tree->get_head(), NULL, 0);
-	order_tree(tree->get_head());
+	//remove_po_node(tree->get_head(), tree->get_head(), NULL, 0);
+	//order_tree(tree->get_head());
 
 }
 
@@ -349,8 +353,8 @@ void build_conc_trees_for_conditionals(
 			Conc_Node * node = new Conc_Node(REG_TYPE, 150, 4, 0.0);
 			node->operation = dr_logical_to_operation(instrs[line_jump].first->opcode);
 
-			for (int i = 0; i < cond_trees.size(); i++){
-				cond_trees[i]->change_head_node();
+			for (int j = 0; j < cond_trees.size(); j++){
+				cond_trees[j]->change_head_node();
 			}
 
 			/* merge the trees together */
@@ -654,7 +658,7 @@ vector< pair<Abs_Tree *, bool > > get_conditional_trees(vector<Conc_Tree *> clus
 
 }
 
-vector<Abs_Tree *> build_abs_trees(
+vector<Abs_Tree_Charac *> build_abs_trees(
 	std::vector< std::vector< Conc_Tree *> > clusters,
 	std::string folder,
 	uint32_t no_trees,
@@ -674,13 +678,14 @@ vector<Abs_Tree *> build_abs_trees(
 		for (int j = 0; j < tree->conditionals.size(); j++){
 
 			Conc_Tree * cond_tree = tree->conditionals[j]->tree;
-			ofstream conc_file(folder + "_conc_cond_" + to_string(i) + " " + to_string(j) + ".dot", ofstream::out);
+			ofstream conc_file(folder + "_conc_cond_" + to_string(i) + "_" + to_string(j) + ".dot", ofstream::out);
 			cond_tree->print_dot(conc_file);
 			
 		}
 	}
 
 	
+	vector<Abs_Tree_Charac *> tree_characs;
 
 	/* for each cluster */
 	for (int i = 0; i < clusters.size(); i++){
@@ -692,16 +697,23 @@ vector<Abs_Tree *> build_abs_trees(
 
 
 		/* check if the trees are recursive*/
-		/* if yes, then try to get the reduction domain */
+		if (abs_tree->is_tree_recursive()){  /* if yes, then try to get the reduction domain */
 
+			ASSERT_MSG(false, ("build_abs_tree: not yet implemented\n"));
+		}
+		else{ /* if no, then populate pure functions */
 
-		/* if no, then populate pure functions */
+			Abs_Tree_Charac * charac = new Abs_Tree_Charac();
+			charac->tree = abs_tree;
+			charac->is_recursive = false;
+			tree_characs.push_back(charac);
 
-
+		}
+	
 	}
 
 
+	return tree_characs;
 
-	
 
 }

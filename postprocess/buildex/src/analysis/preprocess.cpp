@@ -50,3 +50,31 @@ std::vector<uint32_t> get_instrace_startpoints(vec_cinstr &instrs, uint32_t pc){
 	return start_points;
 
 }
+
+vec_cinstr filter_instr_trace(uint32_t start_pc, uint32_t end_pc, vec_cinstr &unfiltered_instrs){
+
+
+	vec_cinstr instrs;
+	bool start = false;
+
+	for (int i = 0; i < unfiltered_instrs.size(); i++){
+		if (unfiltered_instrs[i].first->pc == start_pc){
+			start = true;
+		}
+		if (start) instrs.push_back(unfiltered_instrs[i]);
+		if (unfiltered_instrs[i].first->pc == end_pc){
+			start = false;
+		}
+	}
+
+	return instrs;
+
+
+}
+
+
+
+
+
+
+

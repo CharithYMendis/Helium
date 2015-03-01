@@ -49,3 +49,11 @@ bool Comp_Abs_Node::are_nodes_similar(Node * node){
 
 
 }
+
+string Comp_Abs_Node::get_dot_string(){
+	return get_node_string();
+}
+
+string Comp_Abs_Node::get_simpl_string(){
+	throw "not implemented!";
+}

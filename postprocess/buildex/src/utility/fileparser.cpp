@@ -12,6 +12,7 @@
 
 #include "utility\fileparser.h"
 #include "utility\defines.h"
+#include "analysis\staticinfo.h"
 
 #include "utilities.h"
 #include "common_defines.h"
@@ -22,7 +23,6 @@ void go_forward_line(std::ifstream &file);
 bool go_backward_line(std::ifstream &file);
 void go_to_line(uint32_t line_no, std::ifstream &file);
 uint32_t go_to_line_dest(std::ifstream &file, uint64_t dest, uint32_t stride);
-Static_Info * get_static_info(vector<Static_Info *> &static_info, uint32_t app_pc);
 
 /* main file parsing functions */
 cinstr_t * get_next_from_ascii_file(ifstream &file){
@@ -215,17 +215,6 @@ vector<cinstr_t * > get_all_instructions(ifstream &file){
 
 }
 
-Static_Info * get_static_info(vector<Static_Info *> &static_info, uint32_t app_pc){
-
-	for (int i = 0; i < static_info.size(); i++){
-		if (static_info[i]->pc == app_pc){
-			return static_info[i];
-		}
-	}
-
-	return NULL;
-
-}
 
 vec_cinstr walk_file_and_get_instructions(ifstream &file, vector<Static_Info *> &static_info){
 

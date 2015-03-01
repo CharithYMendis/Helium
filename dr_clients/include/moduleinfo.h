@@ -5,7 +5,7 @@
 #include "functrace.h"
 
 #define MAX_TARGETS	100
-#define MAX_BBS_PER_MODULE 10000
+#define MAX_BBS_PER_MODULE 30000
 
 /* containers for bb storage - not optimized */
 

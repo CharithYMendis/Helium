@@ -478,6 +478,24 @@ call_target_info(app_pc instr_addr, app_pc target_addr){
 
 }
 
+void add_to_module_list(app_pc instr_addr,app_pc target_addr){
+
+	module_data_t * module_data = dr_lookup_module(target_addr);
+	uint offset;
+	bbinfo_t * bb;
+
+	if (module_data != NULL){
+		offset = target_addr - module_data->start;
+		dr_mutex_lock(stats_mutex);
+		bb = md_lookup_bb_in_module(call_target_head, module_data->full_path, offset);
+		if (bb == NULL){
+			md_add_bb_to_module(call_target_head, module_data->full_path, offset, MAX_BBS_PER_MODULE, false);
+		}
+		dr_mutex_unlock(stats_mutex);
+	}
+	dr_free_module_data(module_data);
+}
+
 dr_emit_flags_t
 bbinfo_bb_instrumentation(void *drcontext, void *tag, instrlist_t *bb,
                 instr_t *instr_current, bool for_trace, bool translating,
@@ -498,6 +516,11 @@ bbinfo_bb_instrumentation(void *drcontext, void *tag, instrlist_t *bb,
 
 		uint bb_size = 0;
 		int i = 0;
+
+		uint filtered = true;
+
+
+		uint srcs;
 
 
 		//DR_ASSERT(instr_ok_to_mangle(instr_current));
@@ -545,9 +568,7 @@ bbinfo_bb_instrumentation(void *drcontext, void *tag, instrlist_t *bb,
 				DR_ASSERT(bbinfo != NULL);
 			}
 			else{
-				dr_free_module_data(module_data);
-				dr_global_free(module_name,sizeof(char)*MAX_STRING_LENGTH);
-				return DR_EMIT_DEFAULT;
+				filtered = false;
 			}
 			
 		}
@@ -560,9 +581,7 @@ bbinfo_bb_instrumentation(void *drcontext, void *tag, instrlist_t *bb,
 				DR_ASSERT(bbinfo != NULL);
 			}
 			else{
-				dr_free_module_data(module_data);
-				dr_global_free(module_name, sizeof(char)*MAX_STRING_LENGTH);
-				return DR_EMIT_DEFAULT;
+				filtered = false;
 			}
 			
 		}
@@ -580,9 +599,7 @@ bbinfo_bb_instrumentation(void *drcontext, void *tag, instrlist_t *bb,
 				DR_ASSERT(bbinfo != NULL);
 			}
 			else{
-				dr_free_module_data(module_data);
-				dr_global_free(module_name, sizeof(char)*MAX_STRING_LENGTH);
-				return DR_EMIT_DEFAULT;
+				filtered = false;
 			}
 		}
 		else if (client_arg->filter_mode == FILTER_FUNCTION){
@@ -592,9 +609,7 @@ bbinfo_bb_instrumentation(void *drcontext, void *tag, instrlist_t *bb,
 				}
 			}
 			else{
-				dr_free_module_data(module_data);
-				dr_global_free(module_name, sizeof(char)*MAX_STRING_LENGTH);
-				return DR_EMIT_DEFAULT;
+				filtered = false;
 			}
 		}
 		else if (client_arg->filter_mode == FILTER_NUDGE){
@@ -605,14 +620,38 @@ bbinfo_bb_instrumentation(void *drcontext, void *tag, instrlist_t *bb,
 				}
 			}
 			else{
-				dr_free_module_data(module_data);
-				dr_global_free(module_name, sizeof(char)*MAX_STRING_LENGTH);
-				return DR_EMIT_DEFAULT;
+				filtered = false;
 			}
 		}
 
 
+		if (!filtered){
+
+			/* we still need to handle calls */
+			
+			if (instr_is_call_direct(last)){
+
+				srcs = instr_num_srcs(last);
+				if (srcs < 1){
+					dr_printf("%d\n", srcs);
+				}
+				DR_ASSERT(instr_num_srcs(last) >= 1);
+				add_to_module_list(instr_get_app_pc(last), opnd_get_addr(instr_get_src(last, 0)));
+			}
+			else if (instr_is_call_indirect(last)){
+				dr_insert_mbr_instrumentation(drcontext, bb, last, (app_pc)add_to_module_list, SPILL_SLOT_1);
+			}
+
+
+			dr_free_module_data(module_data);
+			dr_global_free(module_name, sizeof(char)*MAX_STRING_LENGTH);
+			return DR_EMIT_DEFAULT;
+		}
+
+
 		if (log_mode && (instr_current == first) ){
+
+			dr_fprintf(logfile, "%s %d\n", module_name, offset);
 			instrlist_disassemble(drcontext, instr_get_app_pc(first), bb, logfile);
 		}
 

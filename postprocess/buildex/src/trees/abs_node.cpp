@@ -209,3 +209,15 @@ bool Abs_Node::are_nodes_similar(Node * node){
 
 }
 
+string Abs_Node::get_dot_string(){
+	return get_node_string();
+}
+
+string Abs_Node::get_dot_string(vector<string> vars){
+	return get_symbolic_string(vars);
+}
+
+string Abs_Node::get_simpl_string(){
+	throw "not implemented!";
+}
+

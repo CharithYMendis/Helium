@@ -511,19 +511,16 @@ bool Conc_Tree::update_dependancy_forward(rinstr_t * instr, uint32_t pc, std::st
 
 /* to be implemented */
 
-bool Conc_Tree::are_trees_similar(Conc_Tree * tree)
-{
 
-}
 
 std::string Conc_Tree::serialize_tree()
 {
-
+	throw "not implemented!";
 }
 
 void Conc_Tree::construct_tree(std::string stree)
 {
-
+	throw "not implemented!";
 }
 
 
