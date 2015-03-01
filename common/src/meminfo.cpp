@@ -55,6 +55,15 @@ static void update_stride(vector<pair<uint, uint> > &strides, uint stride){
 	}
 }
 
+void sort_mem_info(vector<mem_info_t *> &mem_info){
+
+	sort(mem_info.begin(), mem_info.end(), [](mem_info_t * first, mem_info_t *second)->bool{
+
+		return first->start < second->start;
+
+	});
+
+}
 
 static bool compare_pc_mem_regions(pc_mem_region_t * first, pc_mem_region_t * second){
 
@@ -383,7 +392,7 @@ void print_mem_layout(ostream &file, vector<pc_mem_region_t *> &pc_mems){
 		if (!pc_mems[i]->module.empty()){
 			file << "module name - " << pc_mems[i]->module.c_str() << endl;
 		}
-		file << "app_pc - " << hex << pc_mems[i]->pc << " mem regions - " << pc_mems[i]->regions.size() << endl;
+		file << "app_pc - " << dec << pc_mems[i]->pc << " mem regions - " << pc_mems[i]->regions.size() << endl;
 		print_mem_layout(file,pc_mems[i]->regions); /* print mem layout has the seperation line */
 	}
 
@@ -418,7 +427,7 @@ void postprocess_mem_regions(vector<pc_mem_region_t *> &pc_mem){
 }
 
 
-void link_mem_regions_2(vector<pc_mem_region_t *> &pc_mems, uint32_t mode){
+void link_mem_regions_dim(vector<pc_mem_region_t *> &pc_mems, uint32_t mode){
 
 	for (int i = 0; i < pc_mems.size(); i++){
 
@@ -426,7 +435,7 @@ void link_mem_regions_2(vector<pc_mem_region_t *> &pc_mems, uint32_t mode){
 			link_mem_regions(pc_mems[i]->regions, pc_mems[i]->pc);
 		}
 		else if (mode == GREEDY){
-			link_mem_regions_greedy_2(pc_mems[i]->regions, pc_mems[i]->pc);
+			link_mem_regions_greedy_dim(pc_mems[i]->regions, pc_mems[i]->pc);
 		}
 
 	}
@@ -512,8 +521,8 @@ void print_mem_layout(ostream &file, vector<mem_info_t *> &mem_info){
 		if ((info->direction & MEM_INPUT) == MEM_INPUT) file << "dir - input" << endl;
 		if ((info->direction & MEM_OUTPUT) == MEM_OUTPUT) file << "dir - output\n" << endl;
 
-		file << "start - " << hex << info->start << endl;
-		file << "end - " << hex << info->end << endl;
+		file << "start - " << dec << info->start << endl;
+		file << "end - " << dec << info->end << endl;
 
 		uint stride = get_most_probable_stride(info->stride_freqs);
 
@@ -608,7 +617,8 @@ uint32_t get_number_dimensions(mem_info_t * mem){
 	return dim;
 }
 
-bool link_mem_regions_greedy_2(vector<mem_info_t *> &mem, uint32_t app_pc){
+/* app_pc is needed when you are merging the regions of a particular pc_mem_region value*/
+bool link_mem_regions_greedy_dim(vector<mem_info_t *> &mem, uint32_t app_pc){
 
 	DEBUG_PRINT(("link_mem_regions_greedy...\n"), 4);
 
@@ -625,7 +635,13 @@ bool link_mem_regions_greedy_2(vector<mem_info_t *> &mem, uint32_t app_pc){
 			int32_t gap_first = mem[i + 1]->start - mem[i]->end;
 			int32_t gap_second = mem[i + 2]->start - mem[i + 1]->end;
 
-			if (gap_first == gap_second){ /* ok we can now merge the regions */
+			int32_t size_first = mem[i]->end - mem[i]->start;
+			int32_t size_middle = mem[i + 1]->end - mem[i + 1]->start;
+			int32_t size_last = mem[i + 2]->end - mem[i + 2]->start;
+
+			bool size_match = (size_first == size_middle && size_middle == size_last);
+
+			if (gap_first == gap_second && size_match){ /* ok we can now merge the regions */
 
 				mem_info_t * new_mem_info = new mem_info_t;
 
@@ -652,12 +668,13 @@ bool link_mem_regions_greedy_2(vector<mem_info_t *> &mem, uint32_t app_pc){
 				uint32_t index = i + 2;
 				for (int j = i + 3; j < mem.size(); j++){
 					int32_t gap_now = mem[j]->start - new_mem_info->end;
+					int32_t size_now = mem[j]->end - mem[j]->start;
 					//cout << gap << " " << gap_now << endl;
 					if (mem[j]->start == 0x80067a08){
 						cout << "gap:" << gap_now << " g : " << gap << endl;
 						cout << hex << app_pc << dec << endl;
 					}
-					if (gap_now == gap){
+					if (gap_now == gap && size_now == size_last){
 						//mem[i]->end = mem[j]->end;
 						//merge_info_to_first(mem[i], mem[j]);
 						new_mem_info->mem_infos.push_back(mem[j]);
@@ -666,6 +683,7 @@ bool link_mem_regions_greedy_2(vector<mem_info_t *> &mem, uint32_t app_pc){
 						index = j;
 					}
 					else{
+						
 						break;
 					}
 				}
@@ -677,7 +695,11 @@ bool link_mem_regions_greedy_2(vector<mem_info_t *> &mem, uint32_t app_pc){
 				}
 
 				mem.insert(mem.begin() + i, new_mem_info);
-
+				
+				cout << new_mem_info->start << endl;
+				cout << new_mem_info->end << endl;
+				cout << "dims : " << get_number_dimensions(new_mem_info) << endl;
+				cout << "merged amount : " << new_mem_info->mem_infos.size() << endl;
 				ret = true;
 
 

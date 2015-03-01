@@ -289,11 +289,10 @@
 		 DEBUG_PRINT(("%s\n", memdump_files[i].c_str()), 3);
 	 }
 
-	 /****************************************algorithm******************************************/
-
+	 /************************************************************************/
+	 /*						MEMORY ANALYSIS                                  */
+	 /************************************************************************/
 		
-	 /********************************MEMORY INFORMATION***************************************/
-
 	 /****need tests******
 		1. Extraction from the pc_mems and mem_info raw should be the same.
 	 */
@@ -308,25 +307,55 @@
 	 if (dump){
 		 DEBUG_PRINT(("analyzing mem dumps\n"), 1);
 		 dump_regions = get_image_regions_from_dump(memdump_files, in_image_filename, out_image_filename);
-		 DEBUG_PRINT(("analyzing instrace file - %s\n", instrace_filename.c_str()), 1);
 	 }
 	 
 
 	 /* independently create the memory layout from the instrace */
+	 DEBUG_PRINT(("analyzing instrace file - %s\n", instrace_filename.c_str()), 1);
 
 	 /* problems pc mem extraction and mem region is not getting the same results? why? */
 
 	 vector<mem_info_t *> mem_info;
+	 vector<mem_info_t *> extracted_mem_info;
 	 vector<pc_mem_region_t *> pc_mem_info;
+
 	 create_mem_layout(instrace_file, mem_info);
 	 create_mem_layout(instrace_file, pc_mem_info);
-	 link_mem_regions_greedy_2(mem_info, 0); /* what is the difference between 1 and 2? */
-	 link_mem_regions_2(pc_mem_info, 1);
+	 extracted_mem_info = extract_mem_regions(pc_mem_info);
 
-	 mem_info = extract_mem_regions(pc_mem_info);
+	 sort_mem_info(mem_info);
+	 //sort_mem_info(extracted_mem_info);
+
+	 link_mem_regions_greedy_dim(mem_info, 0);
+	 //link_mem_regions_greedy_dim(extracted_mem_info, 0);
+
+	 //print_mem_layout(log_file, pc_mem_info);
+	 log_file << "*********** mem_info *************" << endl;
+	 print_mem_layout(log_file, mem_info);
+	 log_file << "*********** extracted meminfo ***********" << endl;
+	 print_mem_layout(log_file, extracted_mem_info);
+
+	
+	 exit(0);
+
+	 link_mem_regions_greedy_dim(mem_info, 0); /* what is the difference between dim and non-dim? dim does the dimensionality inference */
+	 link_mem_regions_dim(pc_mem_info, 1);  /* second argument is to select greedy or not */
+
+	 print_mem_layout(log_file, pc_mem_info);
+
+	 log_file << "********* pc_mem_info **********" << endl;
 
 	 print_mem_layout(log_file, mem_info);
-	 print_mem_layout(log_file, pc_mem_info);
+
+	 
+	 log_file << "********* after extraction **********" << endl;
+
+	 print_mem_layout(log_file, mem_info);
+
+	 //print_mem_layout(log_file, mem_info);
+	 //print_mem_layout(log_file, pc_mem_info);
+
+
 	
 	 /* if dump is false, we should use the candidate instructions to come with the output buffers */
 
@@ -400,18 +429,18 @@
 		cout << app_pc[i] << " " << disasm_string << endl;
 	}
 
-	cond_app_pc = find_depedant_conditionals(app_pc, instrs_forward, static_info);
+	cond_app_pc = find_dependant_conditionals(app_pc, instrs_forward, static_info);
 
 	cout << "dependant conditionals" << endl;
 	for (int i = 0; i < cond_app_pc.size(); i++){
-		vector<string> dis_jmp_string = get_disasm_string(disasm, cond_app_pc[i]->jump_pc);
-		vector<string> dis_cond_string = get_disasm_string(disasm, cond_app_pc[i]->cond_pc);
+		string dis_jmp_string = get_disasm_string(static_info, cond_app_pc[i]->jump_pc);
+		string dis_cond_string = get_disasm_string(static_info, cond_app_pc[i]->cond_pc);
 
 		cout << i + 1 << " - conditional " << endl;
 		cout << "jump ";
-		cout << cond_app_pc[i]->jump_pc << " " << dis_jmp_string[0] << endl;
+		cout << cond_app_pc[i]->jump_pc << " " << dis_jmp_string << endl;
 		cout << "cond_pc ";
-		cout << cond_app_pc[i]->cond_pc << " " << dis_cond_string[0] << endl;
+		cout << cond_app_pc[i]->cond_pc << " " << dis_cond_string << endl;
 		cout << "target_pc ";
 		cout << cond_app_pc[i]->target_pc << endl;
 		cout << "fall_pc ";
@@ -439,165 +468,7 @@
 	 /********************************* tree construction *******************************************************************/
 
 
-	 /* data structures that will be passed to the next stage */
-	 vector<Conc_Tree *> conc_trees;
-
-	 /* capture the function start points if the end trace is not given specifically */
-	 vector<uint32_t> start_points;
-	 vector<uint32_t> start_points_forward;
-
-	 if (end_trace == FILE_ENDING){
-		 start_points = get_instrace_startpoints(instrs_backward, start_pc);
-		 start_points_forward = get_instrace_startpoints(instrs_forward, start_pc);
-		 DEBUG_PRINT(("no of funcs captured - %d\n start points : \n", start_points.size()), 1);
-		 for (int i = 0; i < start_points.size(); i++){
-			 DEBUG_PRINT(("%d-", start_points[i]), 1);
-		 }
-		 DEBUG_PRINT(("\n"), 1);
-	 }
-
-
-	 if (tree_build == BUILD_RANDOM){
-
-
-		 if (start_trace == FILE_BEGINNING){
-			 mem_regions_t * random_mem_region = get_random_output_region(image_regions);
-			 uint64 mem_location = get_random_mem_location(random_mem_region, seed);
-			 DEBUG_PRINT(("random mem location we got - %llx\n", mem_location), 1);
-			 dest = mem_location;
-			 stride = random_mem_region->bytes_per_pixel;
-		 }
-		 else{
-			 /* else I assume that the stride and the dest are set properly */
-			 ASSERT_MSG((stride != 0 && dest != 0), ("ERROR: if the starting point is given please specify the dest and stride\n"));
-		 }
-		 DEBUG_PRINT(("func pc entry - %x\n", start_pc), 1);
-
-		 //Node * node = create_tree_for_dest(dest, stride, instrace_file, start_points, start_trace, end_trace, disasm)->get_head();
-		 Expression_tree * tree = new Expression_tree();
-		 build_tree(dest, stride, start_points, start_trace, end_trace, tree, instrs_backward, disasm, instr_info);
-		 cout << "printing conditionals" << endl;
-		 tree->print_conditionals();
-		 cout << "creating conditional trees" << endl;
-		 create_trees_for_conditionals(tree, instrs_backward, start_points, disasm, instr_info);
-		 for (int i = 0; i < tree->conditionals.size(); i++){
-			 conc_trees.push_back(tree->conditionals[i]->tree);
-
-		 }
-		 conc_trees.push_back(tree);
-
-
-		 //exit(0);
-
-	 }
-	 else if (tree_build == BUILD_RANDOM_SET){
-
-
-		 /*ok we need find a set of random locations */
-		 vector<uint64_t> nbd_locations = get_nbd_of_random_points(image_regions, seed, &stride);
-		 //exit(0);
-
-		 /* ok now build trees for the set of locations */
-		 for (int i = 0; i < nbd_locations.size(); i++){
-
-			 Expression_tree * tree = new Expression_tree();
-			 build_tree(nbd_locations[i], stride, start_points, FILE_BEGINNING, end_trace, tree, instrs_backward, disasm, instr_info);
-			 identify_parameters(tree->get_head(), pc_mem_info);
-			 //exit(0);
-			 conc_trees.push_back(tree);
-
-		 }
-
-		 /* checking similarity of the trees and if not repeat?? */
-
-		 vector< vector< Expression_tree * > > cat_trees = categorize_trees(conc_trees);
-
-	 }
-	 else if (tree_build == BUILD_SIMILAR){
-		 conc_trees = get_similar_trees(image_regions, seed, &stride, instrs_backward, start_points, end_trace, disasm, instr_info);
-	 }
-	 else if (tree_build == BUILD_CLUSTERS){
-		 vector< vector< Expression_tree *> > clustered_trees = cluster_trees(image_regions, start_points, instrs_backward, disasm, output_folder + file_substr, instr_info);
-		 build_abs_trees(clustered_trees, output_folder + file_substr, 4, total_mem_regions, 30, halide_file, pc_mem_info);
-
-
-		 /* build abs_trees for a sub section of each cluster  + their conditionals */
-
-	 }
-
-	 /*debug printing - need to change the branches*/
-	 for (int i = 0; i < conc_trees.size(); i++){
-
-		 DEBUG_PRINT(("printing out the expression\n"), 2);
-		 ofstream expression_file(output_folder + file_substr + "_expression_" + to_string(i) + ".txt", ofstream::out);
-		 //print_node_tree(conc_trees[i]->get_head(), expression_file);
-		 //print_node_tree(conc_trees[i]->get_head(), cout);
-		 uint no_nodes = number_tree_nodes(conc_trees[i]->get_head());
-		 DEBUG_PRINT(("printing to dot file...\n"), 2);
-		 ofstream conc_file(output_folder + file_substr + "_conctree_" + to_string(i) + ".dot", ofstream::out);
-		 print_to_dotfile(conc_file, conc_trees[i]->get_head(), no_nodes, 0);
-
-	 }
-
-	 if (mode == TREE_BUILD_STAGE){
-		 exit(0);
-	 }
-
-
-	 /***************************************ABSTRACTION*********************************************************/
-
-	 vector<Abs_node *> abs_nodes;
-	 for (int i = 0; i < conc_trees.size(); i++){
-		 Abs_tree  * abs_tree = new Abs_tree();
-		 abs_tree->build_abs_tree(NULL, conc_trees[i]->get_head(), total_mem_regions);
-		 abs_nodes.push_back(abs_tree->head);
-	 }
-
-
-	 /* debug printing */
-	 for (int i = 0; i < abs_nodes.size(); i++){
-		 uint32_t nodes = number_tree_nodes(abs_nodes[i]);
-		 ofstream abs_file(output_folder + file_substr + "_abstree_" + to_string(i) + ".dot", ofstream::out);
-		 print_to_dotfile(abs_file, abs_nodes[i], nodes, 0, false);
-	 }
-
-
-	 if (mode == ABSTRACTION_STAGE){
-		 exit(0);
-	 }
-
-
-	 /**************************************HALIDE OUTPUT + ALGEBRIC FILTERS********************************************************/
-
-	 bool similar = Abs_tree::are_abs_trees_similar(abs_nodes);
-	 if (similar){
-
-		 DEBUG_PRINT(("the trees are similar, now getting the algebric filter....\n"), 1);
-		 Comp_Abs_tree * comp_tree = new Comp_Abs_tree();
-		 comp_tree->build_compound_tree(comp_tree->head, abs_nodes);
-		 uint nodes = number_tree_nodes(comp_tree->head);
-		 print_to_dotfile(compound_tree_file, comp_tree->head, nodes, 0);
-
-
-		 Comp_Abs_tree::abstract_buffer_indexes(comp_tree->head);
-
-		 Abs_node * final_tree = comp_tree->compound_to_abs_tree();
-		 //nodes = number_tree_nodes(final_tree);
-		 print_to_dotfile(algebric_tree_file, final_tree, nodes, 0, true);
-
-
-		 Halide_program * program = new Halide_program(final_tree);
-
-		 vector<Abs_node *> stack;
-		 program->seperate_to_Funcs(program->head, stack);
-		 program->print_seperated_funcs();
-		 program->print_halide(halide_file);
-
-	 }
-	 else{
-		 DEBUG_PRINT(("the trees are not similar; please check\n"), 1);
-	 }
-
+	 
 	 shutdown_image_subsystem(token);
 	 return 0;
  }

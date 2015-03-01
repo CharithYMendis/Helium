@@ -79,8 +79,8 @@ bool				 link_mem_regions_greedy(std::vector<mem_info_t *> &mem, uint32_t app_pc
 uint32_t get_stride(mem_info_t * mem, uint32_t dim, uint32_t total_dims);
 uint32_t get_extents(mem_info_t * mem, uint32_t dim, uint32_t total_dims);
 uint32_t get_number_dimensions(mem_info_t * mem);
-void link_mem_regions_2(std::vector<pc_mem_region_t *> &pc_mems, uint32_t mode);
-bool link_mem_regions_greedy_2(std::vector<mem_info_t *> &mem, uint32_t app_pc);
-
+void link_mem_regions_dim(std::vector<pc_mem_region_t *> &pc_mems, uint32_t mode);
+bool link_mem_regions_greedy_dim(std::vector<mem_info_t *> &mem, uint32_t app_pc);
+void sort_mem_info(std::vector<mem_info_t *> &mem_info);
 
 #endif

@@ -73,7 +73,7 @@ void update_merge_points(vec_cinstr &instrs, vector<Jump_Info *> &jumps){
 
 }
 
-vector<Jump_Info*> find_depedant_conditionals(vector<uint32_t> dep_instrs, vec_cinstr &instrs, vector<Static_Info *> &static_info){
+vector<Jump_Info*> find_dependant_conditionals(vector<uint32_t> dep_instrs, vec_cinstr &instrs, vector<Static_Info *> &static_info){
 
 
 	vector<Jump_Info *> jumps;
