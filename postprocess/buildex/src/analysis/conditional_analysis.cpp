@@ -8,6 +8,9 @@
 #include "trees/nodes.h"
 #include "common_defines.h"
 
+#include "utilities.h"
+#include "utility/fileparser.h"
+
 using namespace std;
 
 /* here instrs are the forward instructions */
@@ -133,7 +136,10 @@ vector<Jump_Info*> find_dependant_conditionals(vector<uint32_t> dep_instrs, vec_
 									jump_cinstr->taken = i;
 								}
 								else{
-									ASSERT_MSG((jump_cinstr->target_pc == instrs[i+1].first->pc), ("ERROR: inconsistency target %d\n", i+ 1));
+									string disasm = get_disasm_string(static_info, instrs[i + 1].first->pc);
+									cout << "target : " << jump_cinstr->cond_pc << endl;
+									cout << jump_cinstr->jump_pc << " " << instrs[i + 1].first->pc << " " << jump_cinstr->target_pc << " " << disasm << endl;
+									ASSERT_MSG((jump_cinstr->target_pc == instrs[i + 1].first->pc), ("ERROR: inconsistency target %d\n", i + 1));
 								}
 							}
 							else{
@@ -142,6 +148,9 @@ vector<Jump_Info*> find_dependant_conditionals(vector<uint32_t> dep_instrs, vec_
 									jump_cinstr->not_taken = i;
 								}
 								else{
+									string disasm = get_disasm_string(static_info, instrs[i + 1].first->pc);
+									cout << "fall : " << jump_cinstr->cond_pc << endl;
+									cout << jump_cinstr->jump_pc << " " << instrs[i+1].first->pc << " " << jump_cinstr->fall_pc << " " << disasm << endl;
 									ASSERT_MSG((jump_cinstr->fall_pc == instrs[i + 1].first->pc), ("ERROR: inconsistency fall %d\n", i + 1 ));
 								}
 							}

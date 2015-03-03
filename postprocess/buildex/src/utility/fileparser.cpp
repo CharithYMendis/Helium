@@ -43,6 +43,7 @@ cinstr_t * get_next_from_ascii_file(ifstream &file){
 
 	instr = NULL;
 
+
 	if (string_cpp.size() > 0){
 
 		instr = new cinstr_t;
@@ -224,6 +225,7 @@ vec_cinstr walk_file_and_get_instructions(ifstream &file, vector<Static_Info *> 
 
 	while (!file.eof()){
 		instr = get_next_from_ascii_file(file);
+		
 		if (instr != NULL){
 			info = get_static_info(static_info, instr->pc);
 			instrs.push_back(make_pair(instr, info));

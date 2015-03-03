@@ -8,6 +8,24 @@
 
 using namespace std;
 
+mem_info_t * get_the_deepest_enclosing(mem_regions_t * region, mem_info_t * info){
+
+
+	mem_info_t * mem = NULL;
+	if (info->start <= region->start && info->end >= region->end){
+		mem = info;
+	}
+
+	for (int i = 0; i < info->mem_infos.size(); i++){
+		mem_info_t * ret = get_the_deepest_enclosing(region, info->mem_infos[i]);
+		if (ret != NULL) mem = ret;
+	}
+
+	return mem;
+
+
+}
+
 /* this is the intersection of mem_regions */
 vector<mem_regions_t *> merge_instrace_and_dump_regions(vector<mem_regions_t *> &total_regions,
 	vector<mem_info_t *> mem_info, vector<mem_regions_t *> mem_regions){
@@ -45,15 +63,15 @@ vector<mem_regions_t *> merge_instrace_and_dump_regions(vector<mem_regions_t *> 
 
 				}
 
+				mem_info_t * info = get_the_deepest_enclosing(mem_regions[i], mem_info[j]);
 
 				/* ok if the memory region is completely contained in the region constructed by meminfo */
-				if ((mem_regions[i]->start >= mem_info[j]->start) && (mem_regions[i]->end <= mem_info[j]->end)){
-
+				if (info != NULL){
 					/* how much to the left of start is the meminfo spread? */
 					uint64_t start = mem_regions[i]->start;
 					vector<uint32_t> left_spread;
 					for (int k = mem_regions[i]->dimensions - 1; k >= 0; k--){
-						uint32_t spread = (start - mem_info[j]->start) / mem_regions[i]->strides[k];
+						uint32_t spread = (start - info->start) / mem_regions[i]->strides[k];
 						start = mem_regions[i]->start - spread * mem_regions[i]->strides[k];
 						left_spread.push_back(spread);
 					}
@@ -69,7 +87,7 @@ vector<mem_regions_t *> merge_instrace_and_dump_regions(vector<mem_regions_t *> 
 					uint64_t end = mem_regions[i]->end;
 					vector<uint32_t> right_spread;
 					for (int k = mem_regions[i]->dimensions - 1; k >= 0; k--){
-						uint32_t spread = (mem_info[j]->end - end) / mem_regions[i]->strides[k];
+						uint32_t spread = (info->end - end) / mem_regions[i]->strides[k];
 						end = mem_regions[i]->end + spread * mem_regions[i]->strides[k];
 						right_spread.push_back(spread);
 					}
@@ -83,14 +101,32 @@ vector<mem_regions_t *> merge_instrace_and_dump_regions(vector<mem_regions_t *> 
 
 					cout << "--------------------------" << endl;
 
-					mem_regions[i]->start = mem_info[j]->start;
-					mem_regions[i]->end = mem_info[j]->end;
+					mem_regions[i]->start = info->start;
+					mem_regions[i]->end = info->end;
+
+					cout << "dims : " << get_number_dimensions(info) << endl;
+					cout << mem_info[i]->start << endl;
+					cout << mem_info[i]->end << endl;
+ 
+
+					if (mem_regions[i]->dimensions == get_number_dimensions(info)){
+
+						/* if we get the dimensionality correct on our memory analysis we should
+						   use it instead of the memory dump information.
+						*/
+						for (int k = 0; k < mem_regions[i]->dimensions; k++){
+							mem_regions[i]->extents[k] = get_extents(info, k + 1, get_number_dimensions(info));
+						}
+
+					}
+
+					final_regions.push_back(mem_regions[i]);
+					total_regions.push_back(mem_regions[i]);
+					break;
 
 				}
 
-				final_regions.push_back(mem_regions[i]);
-				total_regions.push_back(mem_regions[i]);
-				break;
+				
 
 			}
 		}

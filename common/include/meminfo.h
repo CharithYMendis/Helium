@@ -4,6 +4,7 @@
 #include "../../dr_clients/include/output.h"
 #include <stdint.h>
 #include <vector>
+#include <set>
 
 //directions
 #define MEM_INPUT		0x1
@@ -41,6 +42,7 @@ struct mem_info_t {
 	std::vector<std::pair<uint32_t, uint32_t> > stride_freqs;
 
 	std::vector < mem_info_t * > mem_infos; // if merged this would be filled
+	bool padding_merge; /* heuristic merging of padded regions with non-rectangular windows */
 
 };
 
@@ -82,5 +84,8 @@ uint32_t get_number_dimensions(mem_info_t * mem);
 void link_mem_regions_dim(std::vector<pc_mem_region_t *> &pc_mems, uint32_t mode);
 bool link_mem_regions_greedy_dim(std::vector<mem_info_t *> &mem, uint32_t app_pc);
 void sort_mem_info(std::vector<mem_info_t *> &mem_info);
+
+std::vector< std::vector< mem_info_t * > > get_merge_opportunities(std::vector<mem_info_t *> mem_info, std::vector<pc_mem_region_t *> pc_mems);
+void merge_mem_regions_pc(std::vector < std::vector< mem_info_t *> > mergable, std::vector<mem_info_t *> total_regions);
 
 #endif

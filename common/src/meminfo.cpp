@@ -8,6 +8,7 @@
 #include "meminfo.h"
 #include "utilities.h"
 #include <algorithm>
+#include <set>
 
 
 using namespace std;
@@ -617,6 +618,166 @@ uint32_t get_number_dimensions(mem_info_t * mem){
 	return dim;
 }
 
+/*
+Here, we check whether a particular pc accesses two coalesced memory regions -> if yes we can merge these two memory regions.
+*/
+vector< vector< mem_info_t * > > get_merge_opportunities(vector<mem_info_t *> mem_info, vector<pc_mem_region_t *> pc_mems){
+
+	vector< vector<mem_info_t *> > ret;
+	sort_mem_info(mem_info);
+
+	for (int i = 0; i < pc_mems.size(); i++){
+
+		set<mem_info_t *> overlapped_set;
+
+		for (int j = 0; j < mem_info.size(); j++){
+			vector<mem_info_t *> pc_mem_info = pc_mems[i]->regions;
+			for (int k = 0; k < pc_mem_info.size(); k++){
+				if (is_overlapped(pc_mem_info[k]->start, pc_mem_info[k]->end, mem_info[j]->start, mem_info[j]->end)){
+					overlapped_set.insert(mem_info[j]);
+				}
+			}
+		}
+
+		
+
+
+
+		vector<mem_info_t *> overlapped(overlapped_set.begin(),overlapped_set.end());
+		
+
+		log_file << pc_mems[i]->pc << " - " << endl;
+
+		for (int j = 0; j < overlapped.size(); j++){
+			log_file << overlapped[j]->start << ",";
+		}
+		log_file << endl;
+
+
+
+		if (overlapped_set.size() >= 2){
+
+			bool added = false;
+
+			for (int j = 0; j < ret.size(); j++){
+
+				/* 1000 is just a heuristic value of the set size() -> make it dynamic for more resilience*/
+				vector<mem_info_t *> temp(1000);
+				vector<mem_info_t *>::iterator it;
+				
+
+
+				it = set_intersection(overlapped.begin(), overlapped.end(), ret[j].begin(), ret[j].end(), temp.begin());
+				if (it != temp.begin()){
+
+					it = set_union(overlapped.begin(), overlapped.end(), ret[j].begin(), ret[j].end(), temp.begin());
+					temp.resize(it - temp.begin());
+					ret[j] = temp;
+					added = true;
+					break;
+				}
+
+			}
+
+			if (!added){
+				ret.push_back(overlapped);
+			}
+		}
+
+	}
+
+
+	for (int i = 0; i < ret.size(); i++){
+		for (int j = 0; j < ret[i].size(); j++){
+			cout << ret[i][j]->start << ",";
+		}
+		cout << endl;
+	}
+
+	return ret;
+
+}
+
+
+/* this is for merging regions which may have not coalesced in buffer structure reconstruction; but found through pc analysis */
+void merge_mem_regions_pc(vector < vector< mem_info_t *> > mergable, vector<mem_info_t *> total_regions){
+
+	/* take the biggest region and expand - assume that the ghost zones would be minimal compared to the actual buffer sizes accessed */
+	for (int i = 0; i < mergable.size(); i++){
+
+		vector< mem_info_t *> region_set = mergable[i];
+		sort_mem_info(region_set);
+		uint32_t max_val = 0; 
+		uint32_t index = 0;
+
+		for (int j = 0; j < region_set.size(); j++){
+			if ( (region_set[j]->end - region_set[j]->start) > max_val ){
+				max_val = region_set[j]->end - region_set[j]->start;
+				index = j;
+			}
+		}
+
+
+		int dims = get_number_dimensions(region_set[index]);
+		mem_info_t * merged = region_set[index];
+
+		/* check neighbours and if faraway do not merge; for now if not input do not merge */
+		if (merged->direction == MEM_OUTPUT) continue;
+
+
+		if (index != 0){
+
+			if (dims == 1){
+				merged->start = region_set[0]->start;
+			}
+			else{
+
+				int stride = get_stride(merged, dims, dims);
+				while (merged->start > region_set[0]->start){
+					mem_info_t * new_region = new mem_info_t;
+					new_region->type = merged->type;
+					new_region->direction = merged->direction;
+					new_region->start = merged->start - stride;
+					new_region->end = new_region->start + get_extents(merged, dims - 1, dims);
+					new_region->prob_stride = merged->mem_infos[0]->prob_stride;
+					merged->mem_infos.insert(merged->mem_infos.begin(), new_region);
+					merged->start -= stride;
+				}
+			}
+
+		}
+
+		if (index != region_set.size() - 1){
+
+			if (dims == 1){
+				merged->end = region_set[region_set.size() - 1]->end;
+			}
+			else{
+
+				int stride = get_stride(merged, dims, dims);
+				while (merged->end < region_set[region_set.size() - 1]->end){
+					mem_info_t * new_region = new mem_info_t;
+					new_region->type = merged->type;
+					new_region->direction = merged->direction;
+					new_region->end = merged->end + get_extents(merged, dims - 1, dims);
+					new_region->start = merged->end;
+					new_region->prob_stride = merged->mem_infos[0]->prob_stride;
+					merged->mem_infos.push_back(new_region);
+					merged->end += stride;
+				}
+			}
+
+		}
+
+
+	}
+
+	
+
+}
+
+
+
 /* app_pc is needed when you are merging the regions of a particular pc_mem_region value*/
 bool link_mem_regions_greedy_dim(vector<mem_info_t *> &mem, uint32_t app_pc){
 
@@ -687,6 +848,8 @@ bool link_mem_regions_greedy_dim(vector<mem_info_t *> &mem, uint32_t app_pc){
 						break;
 					}
 				}
+
+				new_mem_info->end += gap;
 
 				DEBUG_PRINT(("app_pc %x merged indexes from %d to %d\n", app_pc, i, index), 5);
 				for (int j = i; j <= index; j++){

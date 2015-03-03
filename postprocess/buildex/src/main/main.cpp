@@ -73,9 +73,10 @@
 
  /* stage to stop */
 #define MEM_INFO_STAGE			1	
-#define TREE_BUILD_STAGE		2
-#define ABSTRACTION_STAGE		3
-#define HALIDE_OUTPUT_STAGE		4
+#define CONDITIONAL_ANALYSIS	2
+#define TREE_BUILD_STAGE		3
+#define ABSTRACTION_STAGE		4
+#define HALIDE_OUTPUT_STAGE		5
 
  int main(int argc, char ** argv){
 
@@ -316,46 +317,23 @@
 	 /* problems pc mem extraction and mem region is not getting the same results? why? */
 
 	 vector<mem_info_t *> mem_info;
-	 vector<mem_info_t *> extracted_mem_info;
 	 vector<pc_mem_region_t *> pc_mem_info;
 
 	 create_mem_layout(instrace_file, mem_info);
 	 create_mem_layout(instrace_file, pc_mem_info);
-	 extracted_mem_info = extract_mem_regions(pc_mem_info);
-
 	 sort_mem_info(mem_info);
-	 //sort_mem_info(extracted_mem_info);
 
 	 link_mem_regions_greedy_dim(mem_info, 0);
-	 //link_mem_regions_greedy_dim(extracted_mem_info, 0);
-
-	 //print_mem_layout(log_file, pc_mem_info);
-	 log_file << "*********** mem_info *************" << endl;
-	 print_mem_layout(log_file, mem_info);
-	 log_file << "*********** extracted meminfo ***********" << endl;
-	 print_mem_layout(log_file, extracted_mem_info);
-
-	
-	 exit(0);
-
-	 link_mem_regions_greedy_dim(mem_info, 0); /* what is the difference between dim and non-dim? dim does the dimensionality inference */
-	 link_mem_regions_dim(pc_mem_info, 1);  /* second argument is to select greedy or not */
+	 
 
 	 print_mem_layout(log_file, pc_mem_info);
-
-	 log_file << "********* pc_mem_info **********" << endl;
-
+	 log_file << "*********** mem_info *************" << endl;
 	 print_mem_layout(log_file, mem_info);
 
-	 
-	 log_file << "********* after extraction **********" << endl;
+	 vector<vector<mem_info_t *> > mergable = get_merge_opportunities(mem_info, pc_mem_info);
+	 merge_mem_regions_pc(mergable, mem_info);
 
-	 print_mem_layout(log_file, mem_info);
-
-	 //print_mem_layout(log_file, mem_info);
-	 //print_mem_layout(log_file, pc_mem_info);
-
-
+	 //exit(0);
 	
 	 /* if dump is false, we should use the candidate instructions to come with the output buffers */
 
@@ -363,7 +341,7 @@
 	 vector<mem_regions_t *> total_mem_regions;
 	 vector<mem_regions_t *> image_regions = merge_instrace_and_dump_regions(total_mem_regions, mem_info, dump_regions);
 
-	 print_mem_regions(total_mem_regions);
+	 print_mem_regions(image_regions);
 
 	 if (mode == MEM_INFO_STAGE){
 		 exit(0);
@@ -377,7 +355,7 @@
 	 vector<Static_Info *> static_info;
 	 parse_debug_disasm(static_info, disasm_file);
 
-	 if (debug_level >= 4){
+	 if (debug_level >= 2){
 		 print_disasm(static_info);
 	 }
 
@@ -461,6 +439,10 @@
 				 cout << info->conditionals[j].first->cond_pc << " " << info->conditionals[j].second << endl;
 			 }
 		 }
+	 }
+
+	 if (mode == CONDITIONAL_ANALYSIS){
+		 exit(0);
 	 }
 
 
