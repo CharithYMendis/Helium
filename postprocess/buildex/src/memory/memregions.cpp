@@ -217,13 +217,13 @@ uint64_t get_mem_location(vector<int> base, vector<int> offset, mem_regions_t * 
 
 	*success = true;
 
-	//uint64_t ret_addr = mem_region->start;
-	uint64_t ret_addr = mem_region->end;
+	uint64_t ret_addr = mem_region->start;
+	//uint64_t ret_addr = mem_region->end;
 	
 
 	for (int i = 0; i < base.size(); i++){
-		//ret_addr += mem_region->strides[i] * base[i];
-		ret_addr -= mem_region->strides[i] * base[i];
+		ret_addr += mem_region->strides[i] * base[i];
+		//ret_addr -= mem_region->strides[i] * base[i];
 	}
 
 	return ret_addr;
@@ -239,10 +239,11 @@ vector<int> get_mem_position(mem_regions_t * mem_region, uint64_t mem_value){
 	/* dimensions would always be width dir(x), height dir(y) */
 
 	/*get the row */
-	//uint64_t offset = mem_value - mem_region->start;
-	uint64_t offset = mem_region->end - mem_value;
-	cout << dec << offset << endl;
-	cout << hex << mem_region->start << dec << endl;
+	uint64_t offset = mem_value - mem_region->start;
+	//uint64_t offset = mem_region->end - mem_value;
+
+	cout << dec << offset << " " << mem_region->start << " " << mem_region->end << " " << mem_value << endl;
+ 
 
 	for (int i = mem_region->dimensions - 1; i >= 0; i--){
 		int point_offset = offset / mem_region->strides[i];

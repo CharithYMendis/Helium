@@ -5,6 +5,7 @@
 #include "defines.h"
 #include "analysis\x86_analysis.h"
 #include "trees\trees.h"
+#include "utility\print_helper.h"
 
 
 Abs_Tree::Abs_Tree() : Tree()
@@ -70,7 +71,7 @@ bool check_node_repitition(vector<Abs_Node *> &stack, Abs_Node* node){
 /* will check for recursion at all levels; including intermediate buffers */
 bool check_recursive_tree(vector<Abs_Node *> &stack, Abs_Node * node){
 
-	bool inserted = true;
+	bool inserted = false;
 
 	if (node->type == Abs_Node::OUTPUT_NODE || node->type == Abs_Node::INTERMEDIATE_NODE){
 		if (check_node_repitition(stack, node)){
@@ -154,4 +155,133 @@ vector<Abs_Node *> Abs_Tree::retrieve_parameters(){
 
 	return nodes;
 }
+
+
+uint32_t Abs_Tree::get_maximum_dimensions(){
+
+
+	uint32_t ret = 0;
+
+	traverse_tree(head, &ret, 
+		[](Node * node, void * value)->void*{
+		uint32_t * max_dim = static_cast<uint32_t *>(value);
+		Abs_Node * abs_node = static_cast<Abs_Node *>(node);
+
+		if (abs_node->type == Abs_Node::INPUT_NODE || abs_node->type == Abs_Node::OUTPUT_NODE || abs_node->type == Abs_Node::INTERMEDIATE_NODE){
+			if (abs_node->mem_info.dimensions > *max_dim) *max_dim = abs_node->mem_info.dimensions;
+		}
+
+		return NULL;
+
+
+	}, empty_ret_mutator);
+
+	return ret;
+
+}
+
+
+void Abs_Tree::print_dot_algebraic(std::ostream &file, std::string name, uint32_t number, std::vector<std::string> vars){
+
+
+	/* make sure the head node indexes are zeroed */
+	Abs_Node * node = static_cast<Abs_Node *>(head);
+	
+	uint ** indexes = new uint32_t *[node->mem_info.dimensions];
+	for (int i = 0; i < node->mem_info.dimensions; i++){
+		indexes[i] = new uint32_t[node->mem_info.dimensions + 1];
+	}
+
+	for (int i = 0; i < node->mem_info.dimensions; i++){
+		for (int j = 0; j < node->mem_info.dimensions + 1; j++){
+			indexes[i][j] = node->mem_info.indexes[i][j];
+			if (i == j){
+				node->mem_info.indexes[i][j] = 1;
+			}
+			else{
+				node->mem_info.indexes[i][j] = 0;
+			}
+
+		}
+	}
+
+
+	ASSERT_MSG((vars.size() > 0), ("ERROR: please use the non-var version for printing\n"));
+
+	/* print the nodes */
+	string nodes = "";
+	vars.insert(vars.begin(), nodes);
+
+	file << "digraph G_" << name << "_" << number << " {" << endl;
+
+	cleanup_visit();
+
+	traverse_tree(head, &vars,
+		[](Node * node, void * value)->void* {
+
+
+		if (node->visited == false){
+
+			vector<string> * vec_string = static_cast<vector<string> *>(value);
+			Abs_Node * abs_node = static_cast<Abs_Node *>(node);
+			vector<string> vec_vars((*vec_string).begin() + 1, (*vec_string).end());
+
+			(*vec_string)[0] += dot_get_node_string(abs_node->order_num, abs_node->get_dot_string(vec_vars)) + "\n";
+			node->visited = true;
+		}
+
+		return NULL;
+
+	}, empty_ret_mutator);
+
+
+	nodes = vars[0];
+
+	file << nodes << endl;
+
+	cleanup_visit();
+
+	/* print the edges */
+	string edges = "";
+
+	traverse_tree(head, &edges,
+		[](Node * node, void * value)->void* {
+
+
+		if (node->visited == false){
+			string * edge_string = static_cast<string *>(value);
+			for (int i = 0; i < node->srcs.size(); i++){
+				*edge_string += dot_get_edge_string(node->order_num, node->srcs[i]->order_num) + "\n";
+			}
+			node->visited = true;
+
+		}
+
+		return NULL;
+
+	}, empty_ret_mutator);
+
+	cleanup_visit();
+
+	file << edges << endl;
+
+	file << "}" << endl;
+
+	/* restore back the indexes */
+	for (int i = 0; i < node->mem_info.dimensions; i++){
+		for (int j = 0; j < node->mem_info.dimensions + 1; j++){
+			node->mem_info.indexes[i][j] = indexes[i][j];
+		}
+	}
+
+	/* clean up */
+	for (int i = 0; i < node->mem_info.dimensions; i++){
+		delete[] indexes[i];
+	}
+	delete indexes;
+
+
+
+}
+
 

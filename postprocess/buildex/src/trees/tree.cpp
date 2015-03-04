@@ -93,11 +93,15 @@ void Tree::simplify_tree() /* simplification routines are not written at the mom
 }
 
 
-void Tree::print_dot(std::ostream &file)
+void Tree::print_dot(std::ostream &file, string name, uint32_t number)
 {
 
 	/* print the nodes */
 	string nodes = "";
+
+	file << "digraph G_" << name << "_" << number << " {" << endl;
+
+	cleanup_visit();
 
 	traverse_tree(head, &nodes,
 		[](Node * node, void * value)->void* {
@@ -113,6 +117,7 @@ void Tree::print_dot(std::ostream &file)
 
 	}, empty_ret_mutator);
 
+	file << nodes << endl;
 
 	cleanup_visit();
 
@@ -137,6 +142,10 @@ void Tree::print_dot(std::ostream &file)
 	}, empty_ret_mutator);
 
 	cleanup_visit();
+
+	file << edges << endl;
+
+	file << "}" << endl;
 
 }
 

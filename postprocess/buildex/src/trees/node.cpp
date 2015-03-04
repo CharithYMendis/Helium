@@ -72,7 +72,8 @@ bool Node::remove_forward_ref_single(Node *ref)
 			uint32_t count = 0;
 			for (int j = 0; j < node_counts.size(); j++){
 				if (node_counts[j].first == this->srcs[i]){
-					count = node_counts[j].second++;
+					count = node_counts[j].second;
+					node_counts[j].second++;
 					break;
 				}
 			}
@@ -94,6 +95,16 @@ bool Node::remove_forward_ref_single(Node *ref)
 		}
 	}
 
+	for (int i = 0; i < this->srcs.size(); i++){
+		Node * src = this->srcs[i];
+		bool found = false;
+		for (int j = 0; j < src->prev.size(); j++){
+			if ((src->prev[j] == this) && (src->pos[j] == i)){
+				found = true;
+			}
+		}
+		ASSERT_MSG((found),("ERROR: remove forward ref wrong\n"));
+	}
 
 	return erase;
 }
@@ -101,7 +112,7 @@ bool Node::remove_forward_ref_single(Node *ref)
 uint32_t Node::remove_forward_ref(Node * ref){
 
 	int count = 0;
-	while (remove_backward_ref_single(ref)){
+	while (remove_forward_ref_single(ref)){
 		count++;
 	}
 
@@ -177,7 +188,7 @@ void Node::safely_delete(Node * head)
 		/* remove any backward references to this node if existing ; we are assuming that there can only be one head node for the tree */
 		/* no need to remove the forward reference as it is only within the deletable node */
 		for (int i = 0; i < this->srcs.size(); i++){
-			this->remove_backward_ref(this->srcs[i]);
+			this->srcs[i]->remove_backward_ref(this);
 		}
 		delete this;
 	}
@@ -217,6 +228,7 @@ void Node::congregate_node(Node * head)
 	for (int i = 0; i < (int)this->prev.size(); i++){
 		//cout << node->prev[i]->operation << " " << node->operation << endl;
 		if ((is_operation_associative(this->operation)) && (this->operation == this->prev[i]->operation)){
+			DEBUG_PRINT(("canc. opportunity \n"), 4);
 			Node * prev_node = this->prev[i];
 
 			uint32_t rem = prev_node->remove_forward_ref(this);

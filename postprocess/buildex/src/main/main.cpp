@@ -27,6 +27,8 @@
 #include "memory/meminstrace.h"
 #include "memory/memanalysis.h"
 
+#include "halide/halide.h"
+
 #include "utilities.h"
 #include "meminfo.h"
 #include "imageinfo.h"
@@ -263,6 +265,7 @@
 	 config_file.open(config_filename, ifstream::in);
 
 	 /* outputs */
+	 ofstream halide_file;
 
 	 /*check whether process name has .exe or not*/
 	 size_t find = process_name.find(".exe");
@@ -276,6 +279,8 @@
 		 /* get the log file */
 		 log_file.open(get_standard_folder("log") + file_substr + ".log", ofstream::out);
 	 }
+
+	 halide_file.open(get_standard_folder("halide") + file_substr + "_halide.cpp", ofstream::out);
 
 	 /* debugging printfs */
 
@@ -355,7 +360,7 @@
 	 vector<Static_Info *> static_info;
 	 parse_debug_disasm(static_info, disasm_file);
 
-	 if (debug_level >= 2){
+	 if (debug_level >= 4){
 		 print_disasm(static_info);
 	 }
 
@@ -402,9 +407,11 @@
 	app_pc = find_dependant_statements(instrs_forward, input_mem_region, static_info);
 
 	cout << "dependant statements" << endl;
-	for (int i = 0; i < app_pc.size(); i++){
-		string disasm_string = get_disasm_string(static_info, app_pc[i]);
-		cout << app_pc[i] << " " << disasm_string << endl;
+	if (debug_level >= 4){
+		for (int i = 0; i < app_pc.size(); i++){
+			string disasm_string = get_disasm_string(static_info, app_pc[i]);
+			cout << app_pc[i] << " " << disasm_string << endl;
+		}
 	}
 
 	cond_app_pc = find_dependant_conditionals(app_pc, instrs_forward, static_info);
@@ -449,8 +456,193 @@
 
 	 /********************************* tree construction *******************************************************************/
 
+	 vector<Conc_Tree *> conc_trees;
+	 vector< vector< Conc_Tree *> > clustered_trees;
 
-	 
+	 /* capture the function start points if the end trace is not given specifically */
+	 vector<uint32_t> start_points;
+	 vector<uint32_t> start_points_forward;
+	 if (end_trace == FILE_ENDING){
+		 start_points = get_instrace_startpoints(instrs_backward, start_pc);
+		 start_points_forward = get_instrace_startpoints(instrs_forward, start_pc);
+		 DEBUG_PRINT(("no of funcs captured - %d\n start points : \n", start_points.size()), 1);
+		 for (int i = 0; i < start_points.size(); i++){
+			 DEBUG_PRINT(("%d-", start_points[i]), 1);
+		 }
+		 DEBUG_PRINT(("\n"), 1);
+	 }
+
+
+	 if (tree_build == BUILD_RANDOM){
+
+
+		 if (start_trace == FILE_BEGINNING){
+			 mem_regions_t * random_mem_region = get_random_output_region(image_regions);
+			 uint64 mem_location = get_random_mem_location(random_mem_region, seed);
+			 DEBUG_PRINT(("random mem location we got - %llx\n", mem_location), 1);
+			 dest = mem_location;
+			 stride = random_mem_region->bytes_per_pixel;
+		 }
+		 else{
+			 /* else I assume that the stride and the dest are set properly */
+			 ASSERT_MSG((stride != 0 && dest != 0), ("ERROR: if the starting point is given please specify the dest and stride\n"));
+		 }
+		 DEBUG_PRINT(("func pc entry - %x\n", start_pc), 1);
+
+		 //Node * node = create_tree_for_dest(dest, stride, instrace_file, start_points, start_trace, end_trace, disasm)->get_head();
+		 Conc_Tree * tree = new Conc_Tree();
+		 build_conc_tree(dest, stride, start_points, start_trace, end_trace, tree, instrs_backward);
+		 tree->print_conditionals();
+		 cout << "creating conditional trees" << endl;
+		 build_conc_trees_for_conditionals(start_points, tree, instrs_backward);
+		 for (int i = 0; i < tree->conditionals.size(); i++){
+			 conc_trees.push_back(tree->conditionals[i]->tree);
+
+		 }
+		 conc_trees.push_back(tree);
+
+	 }
+	 else if (tree_build == BUILD_RANDOM_SET){
+
+
+		 /*ok we need find a set of random locations */
+		 vector<uint64_t> nbd_locations = get_nbd_of_random_points(image_regions, seed, &stride);
+		 //exit(0);
+
+		 /* ok now build trees for the set of locations */
+		 for (int i = 0; i < nbd_locations.size(); i++){
+
+			 Conc_Tree * tree = new Conc_Tree();
+			 build_conc_tree(nbd_locations[i], stride, start_points, FILE_BEGINNING, end_trace, tree, instrs_backward);
+			 //identify_parameters(tree->get_head(), pc_mem_info);
+			 //exit(0);
+			 conc_trees.push_back(tree);
+
+		 }
+
+		 /* checking similarity of the trees and if not repeat?? */
+		 vector<vector<Conc_Tree *> > clustered_conc_trees = categorize_trees(conc_trees);
+		 ASSERT_MSG((clustered_conc_trees.size() == 1), ("ERROR: The trees should be similar\n"));
+
+	 }
+	 else if (tree_build == BUILD_SIMILAR){
+		 conc_trees = get_similar_trees(image_regions, seed, &stride, start_points, start_trace, end_trace, instrs_backward);
+	 }
+	 else if (tree_build == BUILD_CLUSTERS){
+		 clustered_trees = cluster_trees(image_regions, start_points, instrs_backward, output_folder + file_substr);
+	 }
+
+
+	 /* number the trees - for all the conc trees built */
+	 if (tree_build == BUILD_CLUSTERS){
+		 for (int i = 0; i < clustered_trees.size(); i++){
+			 for (int j = 0; j < clustered_trees[i].size(); j++){
+				 clustered_trees[i][j]->number_tree_nodes();
+			 }
+		 }
+		 cout << "numbering done" << endl;
+
+	 }
+	 else{
+		 for (int i = 0; i < conc_trees.size(); i++){
+			 conc_trees[i]->number_tree_nodes();
+			 cout << "number of nodes : " << conc_trees[i]->num_nodes << endl;
+		 }
+	 }
+
+
+
+	 /* debug printing - need to change the branches */
+	 for (int i = 0; i < conc_trees.size(); i++){
+
+		 /* Expression printing */
+		 DEBUG_PRINT(("printing out the expression\n"), 2);
+		 ofstream expression_file(output_folder + file_substr + "_expression_" + to_string(i) + ".txt", ofstream::out);
+		 
+		 DEBUG_PRINT(("printing to dot file...\n"), 2);
+		 ofstream conc_file(output_folder + file_substr + "_conctree_" + to_string(i) + ".dot", ofstream::out);
+		 conc_trees[i]->print_dot(conc_file,"conc",i);
+		 
+	 }
+
+	 if (mode == TREE_BUILD_STAGE){
+		 exit(0);
+	 }
+
+
+	 /***************************************ABSTRACTION*********************************************************/
+
+	 vector<Abs_Tree_Charac *> abs_trees;
+	 Abs_Tree * final_abs_tree;
+
+
+	 if (clustered_trees.size() > 0){
+		 abs_trees = build_abs_trees(clustered_trees, output_folder, 4, total_mem_regions, 30, pc_mem_info);
+		 cout << "building abstract trees done" << endl;
+
+	 }
+
+
+	 if (conc_trees.size() > 0){
+		 vector<Abs_Tree *> abs_trees;
+		 for (int i = 0; i < conc_trees.size(); i++){
+			 Abs_Tree * abs_tree = new Abs_Tree();
+			 abs_tree->build_abs_tree_unrolled(conc_trees[i], total_mem_regions);
+			 abs_tree->number_tree_nodes();
+			 abs_trees.push_back(abs_tree);
+		 }
+
+
+		 /* debug printing */
+		 for (int i = 0; i < abs_trees.size(); i++){
+			 ofstream abs_file(output_folder + file_substr + "_abstree_" + to_string(i) + ".dot", ofstream::out);
+			 abs_trees[i]->print_dot(abs_file,"abs",i);
+		 }
+
+		 Comp_Abs_Tree * comp_tree = new Comp_Abs_Tree();
+		 comp_tree->build_compound_tree_unrolled(abs_trees);
+		 comp_tree->number_tree_nodes();
+		 ofstream comp_file(output_folder + file_substr + "_comp_tree.dot", ofstream::out);
+		 comp_tree->print_dot(comp_file,"comp",0);
+		 comp_tree->abstract_buffer_indexes();
+		 final_abs_tree = comp_tree->compound_to_abs_tree();
+
+		 ofstream alg_file(output_folder + file_substr + "_algebraic.dot", ofstream::out);
+		 uint32_t max_dimensions = final_abs_tree->get_maximum_dimensions();
+		 final_abs_tree->print_dot_algebraic(alg_file, "alg", 0, get_vars("x",max_dimensions));
+
+	 }
+
+	 if (mode == ABSTRACTION_STAGE){
+		 exit(0);
+	 }
+
+
+	 /**************************************HALIDE OUTPUT + ALGEBRIC FILTERS********************************************************/
+
+	 Halide_Program * halide = new Halide_Program(); 
+
+	 if (abs_trees.size() == 0){
+		 halide->populate_pure_funcs(final_abs_tree);
+	 }
+	 else{
+		 for (int i = 0; i < abs_trees.size(); i++){
+			 if (abs_trees[i]->is_recursive){
+				 halide->populate_red_funcs(abs_trees[i]->tree, abs_trees[i]->extents, abs_trees[i]->red_node);
+			 }
+			 else{
+				 halide->populate_pure_funcs(abs_trees[i]->tree); 
+			 }
+		 }
+	 }
+
+	 halide->populate_vars(4);
+	 halide->populate_input_params();
+	 halide->populate_params();
+
+	 vector<string> red_variables;
+	 halide->print_halide_program(halide_file, red_variables);
+
 	 shutdown_image_subsystem(token);
 	 return 0;
  }

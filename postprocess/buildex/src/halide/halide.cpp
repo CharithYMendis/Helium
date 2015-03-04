@@ -9,6 +9,14 @@
 #include "common_defines.h"
 
 
+
+Halide_Program::Halide_Program()
+{
+
+}
+
+
+
 /************************************************************************/
 /* printing helpers                                                     */
 /************************************************************************/
@@ -329,8 +337,11 @@ string Halide_Program::print_full_overlap_node(Abs_Node * node, Node * head, vec
 	Abs_Node * overlap = static_cast<Abs_Node *>(node->srcs[0]);
 
 	uint32_t overlap_end = overlap->symbol->value + overlap->symbol->width;
-	uint32_t node_end = node->symbol->value + node->symbol->value;
+	uint32_t node_end = node->symbol->value + node->symbol->width;
 
+	/* BUG - overlap_end == node_end ? this is not always true if mem and reg values are*/
+
+	
 	string ret = "";
 
 	if (overlap_end == node_end){
@@ -454,10 +465,10 @@ string print_expression_name(string expr_name, uint32_t conditional){
 string print_select_statement(Halide_Program::Select_Expr * current_expr,Halide_Program::Select_Expr * next_expr){
 
 	if (next_expr != NULL){ /* we have a false value*/
-		return "Expr " + current_expr->name + " = select(" + current_expr->condition + "," + current_expr->truth_value + "," + next_expr->name + ");";
+		return "Expr " + current_expr->name + " = select(" + current_expr->condition + "," + current_expr->truth_value + "," + next_expr->name + ");\n";
 	}
 	else{
-		return "Expr " + current_expr->name + " = " + current_expr->truth_value + ";";
+		return "Expr " + current_expr->name + " = " + current_expr->truth_value + ";\n";
 	}
 
 	
@@ -466,9 +477,9 @@ string print_select_statement(Halide_Program::Select_Expr * current_expr,Halide_
 string print_output_func_def(Abs_Node * head, vector<string> vars){
 	mem_regions_t * mem = head->mem_info.associated_mem;
 	string ret = mem->name + "(";
-	for (int i = 0; i < vars.size(); i++){
+	for (int i = 0; i < head->mem_info.dimensions; i++){
 		ret += vars[i];
-		if (i == vars.size() - 1){
+		if (i == head->mem_info.dimensions - 1){
 			ret += ")";
 		}
 		else{
@@ -615,7 +626,7 @@ std::string Halide_Program::print_abs_tree(Node * nnode, Node * head ,vector<str
 		}
 		else if (node->srcs.size() == 1){
 			ret += " " + node->get_symbolic_string(vars) + " ";
-			print_abs_tree(node->srcs[0],head, vars);
+			ret += print_abs_tree(node->srcs[0],head, vars);
 		}
 		else{
 
@@ -625,7 +636,7 @@ std::string Halide_Program::print_abs_tree(Node * nnode, Node * head ,vector<str
 				if (node->srcs[i]->symbol->width != node->symbol->width){
 						ret += get_cast_string(node, false) + "(";
 				}
-				print_abs_tree(node->srcs[i],head, vars);
+				ret += print_abs_tree(node->srcs[i],head, vars);
 				if (node->srcs[i]->symbol->width != node->symbol->width){
 					ret += ")";
 				}
@@ -640,18 +651,22 @@ std::string Halide_Program::print_abs_tree(Node * nnode, Node * head ,vector<str
 	
 	}
 	else {
-		ret += node->get_symbolic_string(vars) + " ";
-		/* head node is special and this should be printed out in a special manner */
-		if (node == head){
-			if (node->operation != op_assign){  /* the node contains some other operation */
-				ret += " = ";
-			}
-			uint32_t ori_type = node->type;
-			node->type = Abs_Node::OPERATION_ONLY;
-			print_abs_tree(node, head, vars);
-			node->type = ori_type;
+
+		if (node != head){
+			ret += node->get_symbolic_string(vars) + " ";
 		}
-		
+		else{
+			if (node->operation != op_assign){  /* the node contains some other operation */
+				uint32_t ori_type = node->type;
+				node->type = Abs_Node::OPERATION_ONLY;
+				ret += print_abs_tree(node, head, vars);
+				node->type = ori_type;
+			}
+			else{
+				ret += print_abs_tree(node->srcs[0], head, vars);
+			}
+			
+		}
 
 	}
 	return ret;
@@ -686,6 +701,7 @@ std::string Halide_Program::print_conditional_trees(std::vector< std::pair<Abs_T
 
 
 }
+
 
 /************************************************************************/
 /*     Reduction domain abstraction                                     */

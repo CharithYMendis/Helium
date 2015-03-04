@@ -207,6 +207,7 @@ void build_conc_tree(uint64_t destination,
 	//print_vector(lines,disasm);
 	//remove_po_node(tree->get_head(), tree->get_head(), NULL, 0);
 	//order_tree(tree->get_head());
+	tree->canonicalize_tree();
 
 }
 
@@ -219,7 +220,7 @@ void update_jump_conditionals(Conc_Tree * tree,
 	Static_Info *  static_info = instrs[pos].second;
 	vector< pair<Jump_Info *, bool> > input_dep_conditionals = static_info->conditionals;
 	
-	DEBUG_PRINT(("checking for conditionals attached - instr %d\n", instr->pc), 2);
+	DEBUG_PRINT(("checking for conditionals attached - instr %d\n", instr->pc), 3);
 
 	for (int i = 0; i < input_dep_conditionals.size(); i++){
 
@@ -533,6 +534,7 @@ std::vector< std::vector <Conc_Tree *> > cluster_trees
 
 	vector<Conc_Tree *> trees;
 
+	/*BUG - incrementing by +1 is not general; should increment by the stride */
 	for (uint64 i = mem->start; i < mem->end; i++){
 		DEBUG_PRINT(("building tree for location %llx - %u\n", i, i - mem->start), 2);
 		Conc_Tree * tree = new Conc_Tree();
@@ -590,18 +592,18 @@ vector< vector<Conc_Tree *> >  categorize_trees(vector<Conc_Tree * > trees){
 /*  Building Abs_Trees                                                  */
 /************************************************************************/
 
-Abs_Tree* abstract_the_trees(vector<Conc_Tree *> cluster, uint32_t no_trees, 
+Abs_Tree* abstract_the_trees(vector<Conc_Tree *> cluster, uint32_t no_trees, uint32_t skip,
 	vector<mem_regions_t *> &total_regions, vector<pc_mem_region_t *> &pc_mem){
 
 	/* build the abs trees for the main computational tree and abstract it */
 	vector<Abs_Tree *> abs_trees;
 	vector<Tree *> trees;
 
-	for (int j = 0; j < no_trees; j++){
+	for (int j = 0; j < skip * no_trees; j+= skip){
 		Abs_Tree  * abs_tree = new Abs_Tree();
 		/* parameter identification here -> please check */
 		//identify_parameters(cluster[j]->head, pc_mem);
-		abs_tree->build_abs_tree_exact(cluster[j], total_regions);
+		abs_tree->build_abs_tree_unrolled(cluster[j], total_regions);
 		abs_trees.push_back(abs_tree);
 		trees.push_back(abs_tree);
 	}
@@ -611,7 +613,7 @@ Abs_Tree* abstract_the_trees(vector<Conc_Tree *> cluster, uint32_t no_trees,
 
 		DEBUG_PRINT(("the trees are similar, now getting the algebric filter....\n"), 1);
 		Comp_Abs_Tree * comp_tree = new Comp_Abs_Tree();
-		comp_tree->build_compound_tree_exact(abs_trees);
+		comp_tree->build_compound_tree_unrolled(abs_trees);
 		comp_tree->abstract_buffer_indexes();
 		Abs_Tree * final_tree = comp_tree->compound_to_abs_tree();
 		return final_tree;
@@ -649,7 +651,7 @@ vector< pair<Abs_Tree *, bool > > get_conditional_trees(vector<Conc_Tree *> clus
 			trees.push_back(clusters[k]->conditionals[i]->tree);
 		}
 
-		Abs_Tree * cond_abs_tree = abstract_the_trees(trees, no_trees, total_regions, pc_mem);
+		Abs_Tree * cond_abs_tree = abstract_the_trees(trees, no_trees, 1, total_regions, pc_mem);
 		
 		cond_abs_trees.push_back(make_pair(cond_abs_tree,clusters[0]->conditionals[i]->taken));
 	}
@@ -664,22 +666,20 @@ vector<Abs_Tree_Charac *> build_abs_trees(
 	uint32_t no_trees,
 	std::vector<mem_regions_t *> total_regions,
 	uint32_t skip,
-	std::ostream &halide_file,
 	std::vector<pc_mem_region_t *> &pc_mem){
-
 
 	/* sanity print */
 	for (int i = 0; i < clusters.size(); i++){
 
 		Conc_Tree * tree = clusters[i][0];
 		ofstream conc_file(folder + "_conc_comp_" + to_string(i) + ".dot", ofstream::out);
-		tree->print_dot(conc_file);
+		tree->print_dot(conc_file,"cluster_conc",i);
 		
 		for (int j = 0; j < tree->conditionals.size(); j++){
 
 			Conc_Tree * cond_tree = tree->conditionals[j]->tree;
 			ofstream conc_file(folder + "_conc_cond_" + to_string(i) + "_" + to_string(j) + ".dot", ofstream::out);
-			cond_tree->print_dot(conc_file);
+			cond_tree->print_dot(conc_file,"cluster_conc_cond",j);
 			
 		}
 	}
@@ -691,7 +691,7 @@ vector<Abs_Tree_Charac *> build_abs_trees(
 	for (int i = 0; i < clusters.size(); i++){
 
 		/* get the abstract tree for the computational path */
-		Abs_Tree * abs_tree = abstract_the_trees(clusters[i], no_trees, total_regions, pc_mem);
+		Abs_Tree * abs_tree = abstract_the_trees(clusters[i], no_trees, skip, total_regions, pc_mem);
 		/* get the conditional trees*/
 		abs_tree->conditional_trees = get_conditional_trees(clusters[i], no_trees, total_regions, skip, pc_mem);
 

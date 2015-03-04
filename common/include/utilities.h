@@ -34,5 +34,7 @@ void printout_matrices(std::vector<std::vector<double> >  values);
 void printout_vector(std::vector<double> values);
 int double_to_int(double value);
 
+std::vector<std::string> get_vars(std::string name, uint32_t amount);
+
 
 #endif

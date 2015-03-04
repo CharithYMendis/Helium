@@ -303,3 +303,14 @@ int double_to_int(double value){
 		return (int)(value - 0.5);
 	}
 }
+
+vector<string> get_vars(string name, uint32_t amount){
+
+	vector<string> vars;
+	for (int i = 0; i < amount; i++){
+		vars.push_back(name + "_" + to_string(i));
+	}
+
+	return vars;
+
+}

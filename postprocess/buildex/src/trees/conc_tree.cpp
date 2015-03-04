@@ -277,9 +277,10 @@ bool Conc_Tree::update_depandancy_backward(rinstr_t * instr, uint32_t pc, std::s
 {
 	//TODO: have precomputed nodes for immediate integers -> can we do it for floats as well? -> just need to point to them in future (space optimization)
 	Node * head = get_head();
-
+	
 	if (head == NULL){
 		head = new Conc_Node(&instr->dst);
+		set_head(head);
 		//head->operation = op_assign;
 		int hash = generate_hash(&instr->dst);
 
@@ -400,14 +401,14 @@ bool Conc_Tree::update_depandancy_backward(rinstr_t * instr, uint32_t pc, std::s
 
 			uint num_references = dst->prev.size();
 
-			for (int i = 0; i < num_references; i++){
+			for (int j = 0; j < num_references; j++){
 
 				//cout << dst << endl;
 				//cout << dst->prev[i] << " " << dst->pos[i] << " " << dst->prev[i]->srcs[dst->pos[i]] << endl;
 
-				src->prev.push_back(dst->prev[i]);
-				src->pos.push_back(dst->pos[i]);
-				dst->prev[i]->srcs[dst->pos[i]] = src;
+				src->prev.push_back(dst->prev[j]);
+				src->pos.push_back(dst->pos[j]);
+				dst->prev[j]->srcs[dst->pos[j]] = src;
 				src->line = line;
 				src->pc = pc;
 
@@ -508,6 +509,18 @@ bool Conc_Tree::update_dependancy_forward(rinstr_t * instr, uint32_t pc, std::st
 
 	return false;
 }
+
+
+void Conc_Tree::print_conditionals(){
+	
+	cout << "printing conditionals" << endl;
+	cout << conditionals.size() << endl;
+	for (int i = 0; i < conditionals.size(); i++){
+		cout << conditionals[i]->jump_info->cond_pc << " " << conditionals[i]->line_cond << endl;
+	}
+
+}
+
 
 /* to be implemented */
 

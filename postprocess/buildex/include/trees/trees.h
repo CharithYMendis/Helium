@@ -15,7 +15,7 @@ void * empty_ret_mutator(void * value, vector<void *> values, void * ori_value);
 
  class Tree{
 
- private:
+ protected:
 	 Node * head;
 	
 	 /* internal simplification routines */
@@ -59,7 +59,7 @@ void * empty_ret_mutator(void * value, vector<void *> values, void * ori_value);
 	 /* for printing purposes */
 	 void number_tree_nodes();
 	 void print_tree(std::ostream &file);
-	 void print_dot(std::ostream &file);
+	 void print_dot(std::ostream &file, std::string name, uint32_t number);
 
 	 bool are_trees_similar(Tree * tree);
 	 static bool are_trees_similar(std::vector<Tree *> trees);
@@ -125,7 +125,7 @@ void * empty_ret_mutator(void * value, vector<void *> values, void * ori_value);
 	 
 	 std::string serialize_tree();
 	 void construct_tree(std::string stree);
-
+	 void print_conditionals();
  };
 
 
@@ -157,7 +157,9 @@ void * empty_ret_mutator(void * value, vector<void *> values, void * ori_value);
 	 void tag_parameters();
 	 vector<Abs_Node *> retrieve_input_nodes();
 	 vector<Abs_Node *> retrieve_parameters();
+	 uint32_t get_maximum_dimensions();
 
+	 void print_dot_algebraic(std::ostream &file, std::string name, uint32_t number, std::vector<std::string> vars);
 
  };
 

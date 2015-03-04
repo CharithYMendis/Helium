@@ -62,6 +62,8 @@ void update_merge_points(vec_cinstr &instrs, vector<Jump_Info *> &jumps){
 		uint32_t true_line = jumps[i]->taken;
 		uint32_t false_line = jumps[i]->not_taken;
 
+		if (true_line == 0 || false_line == 0) continue;
+
 		int j = 1;
 		while (true){
 			cinstr_t * true_c = instrs[true_line + j].first;
@@ -137,9 +139,11 @@ vector<Jump_Info*> find_dependant_conditionals(vector<uint32_t> dep_instrs, vec_
 								}
 								else{
 									string disasm = get_disasm_string(static_info, instrs[i + 1].first->pc);
-									cout << "target : " << jump_cinstr->cond_pc << endl;
-									cout << jump_cinstr->jump_pc << " " << instrs[i + 1].first->pc << " " << jump_cinstr->target_pc << " " << disasm << endl;
-									ASSERT_MSG((jump_cinstr->target_pc == instrs[i + 1].first->pc), ("ERROR: inconsistency target %d\n", i + 1));
+									if (jump_cinstr->target_pc != instrs[i + 1].first->pc){
+										cout << "target : " << jump_cinstr->cond_pc << endl;
+										cout << jump_cinstr->jump_pc << " " << instrs[i + 1].first->pc << " " << jump_cinstr->target_pc << " " << disasm << endl;
+									}
+									//ASSERT_MSG((jump_cinstr->target_pc == instrs[i + 1].first->pc), ("ERROR: inconsistency target %d\n", i + 1));
 								}
 							}
 							else{
@@ -149,9 +153,11 @@ vector<Jump_Info*> find_dependant_conditionals(vector<uint32_t> dep_instrs, vec_
 								}
 								else{
 									string disasm = get_disasm_string(static_info, instrs[i + 1].first->pc);
-									cout << "fall : " << jump_cinstr->cond_pc << endl;
-									cout << jump_cinstr->jump_pc << " " << instrs[i+1].first->pc << " " << jump_cinstr->fall_pc << " " << disasm << endl;
-									ASSERT_MSG((jump_cinstr->fall_pc == instrs[i + 1].first->pc), ("ERROR: inconsistency fall %d\n", i + 1 ));
+									if (jump_cinstr->fall_pc != instrs[i + 1].first->pc){
+										cout << "fall : " << jump_cinstr->cond_pc << endl;
+										cout << jump_cinstr->jump_pc << " " << instrs[i + 1].first->pc << " " << jump_cinstr->fall_pc << " " << disasm << endl;
+									}
+									//ASSERT_MSG((jump_cinstr->fall_pc == instrs[i + 1].first->pc), ("ERROR: inconsistency fall %d\n", i + 1 ));
 								}
 							}
 

@@ -99,7 +99,7 @@ cinstr_t * get_next_from_ascii_file(ifstream &file){
 			}
 		}
 
-		instr->eflags = atoi(tokens[i++].c_str());
+		instr->eflags = (uint32_t)stoull(tokens[i++].c_str());
 		instr->pc = atoi(tokens[i].c_str());
 
 	}

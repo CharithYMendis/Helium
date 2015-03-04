@@ -75,8 +75,7 @@ std::vector<Abs_Tree_Charac *> build_abs_trees(
 			std::string folder, 
 			uint32_t no_trees, 
 			std::vector<mem_regions_t *> total_regions, 
-			uint32_t skip, 
-			std::ostream &halide_file, 
+			uint32_t skip,
 			std::vector<pc_mem_region_t *> &pc_mem);
 
 
