@@ -1034,6 +1034,7 @@ static void ins_trace(void *drcontext)
 		for(j=0; j<instr_num_dsts(instr); j++){
 			get_address(instr_trace, j, DST_TYPE, &mem_type, &mem_addr);
 			output_populator_printer(drcontext, instr_get_dst(instr, j), instr, mem_addr, mem_type, NULL);
+			opnd = instr_get_dst(instr, j);
 			if (opnd_is_memory_reference(opnd)){
 				DR_ASSERT(opnd_is_base_disp(opnd) || opnd_is_abs_addr(opnd));
 				output_populator_printer(drcontext, opnd_create_reg(opnd_get_base(opnd)), instr, mem_addr, mem_type, NULL);
