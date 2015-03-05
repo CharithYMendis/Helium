@@ -24,7 +24,7 @@ typedef struct _operand_t {
 		uint64 value;
 		float float_value;
 	};
-	_operand_t * addr;
+	struct _operand_t * addr;
 } operand_t;
 
 
