@@ -58,14 +58,7 @@ enum {
 };
 
 
-//typedef output_t cinstr_t;
-
- struct cinstr_t : public output_t{
-
-	 std::vector< std::vector< operand_t > > dst_memory;
-	 std::vector< std::vector< operand_t > > src_memory;
-
- };
+ typedef output_t cinstr_t;
 
  typedef std::vector< std::pair<cinstr_t *, Static_Info * > >  vec_cinstr;
  

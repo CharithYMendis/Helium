@@ -24,6 +24,48 @@ bool go_backward_line(std::ifstream &file);
 void go_to_line(uint32_t line_no, std::ifstream &file);
 uint32_t go_to_line_dest(std::ifstream &file, uint64_t dest, uint32_t stride);
 
+uint32_t fill_operand(operand_t * operand, vector<string> &tokens, uint32_t start, uint32_t version){
+
+	uint32_t i = start;
+
+	operand->type = atoi(tokens[i++].c_str());
+	operand->width = atoi(tokens[i++].c_str());
+	if (operand->type == IMM_FLOAT_TYPE){
+		operand->float_value = atof(tokens[i++].c_str());
+
+	}
+	else{
+#ifndef __GNUG__
+		operand->value = stoull(tokens[i++].c_str());
+#else
+		operand->value = strtoull(tokens[i++].c_str(), NULL, 10);
+#endif
+	}
+
+	if (version == VER_WITH_ADDR_OPND){
+		if (operand->type == MEM_STACK_TYPE || operand->type == MEM_HEAP_TYPE){
+			/* we need to collect the addr operands */
+			operand->addr = new operand_t[4];
+			for (int j = 0; j < 4; j++){
+				operand->addr[j].type == atoi(tokens[i++].c_str());
+				operand->addr[j].width = atoi(tokens[i++].c_str());
+#ifndef __GNUG__
+				operand->addr[j].value = stoull(tokens[i++].c_str());
+#else
+				operand->addr[j].value = strtoull(tokens[i++].c_str(), NULL, 10);
+#endif
+			}
+
+		}
+	}
+	else if(version == VER_NO_ADDR_OPND){
+		operand->addr = NULL;
+	}
+
+	return i;
+
+}
+
 /* main file parsing functions */
 cinstr_t * get_next_from_ascii_file(ifstream &file, uint32_t version){
 
@@ -57,50 +99,20 @@ cinstr_t * get_next_from_ascii_file(ifstream &file, uint32_t version){
 		//get the number of destinations
 		instr->num_dsts = atoi(tokens[1].c_str());
 
-		int index_op = 0;
-		int i;
-		for (i = 2; i< 3 * instr->num_dsts + 2; i += 3){
-			instr->dsts[index_op].type = atoi(tokens[i].c_str());
-
-			instr->dsts[index_op].width = atoi(tokens[i + 1].c_str());
-
-			if (instr->dsts[index_op].type == IMM_FLOAT_TYPE){
-				instr->dsts[index_op++].float_value = atof(tokens[i + 2].c_str());
-
-			}
-			else{
-#ifndef __GNUG__
-				instr->dsts[index_op++].value = stoull(tokens[i + 2].c_str());
-#else
-				instr->dsts[index_op++].value = strtoull(tokens[i + 2].c_str(), NULL, 10);
-#endif
-			}
+		int index = 2;
+		for (int i = 0; i < instr->num_dsts; i++){
+			index = fill_operand(&instr->dsts[i], tokens, index, version);
 		}
 
 		//get the number of sources
-		instr->num_srcs = atoi(tokens[i++].c_str());
+		instr->num_srcs = atoi(tokens[index++].c_str());
 
-		index_op = 0;
-		int current = i;
-
-		for (; i< 3 * instr->num_srcs + current; i += 3){
-			instr->srcs[index_op].type = atoi(tokens[i].c_str());
-			instr->srcs[index_op].width = atoi(tokens[i + 1].c_str());
-			if (instr->srcs[index_op].type == IMM_FLOAT_TYPE){
-				instr->srcs[index_op++].float_value = atof(tokens[i + 2].c_str());
-				//cout << tokens[i + 2] << endl;
-			}
-			else{
-#ifndef __GNUG__
-				instr->srcs[index_op++].value = stoull(tokens[i + 2].c_str());
-#else
-				instr->srcs[index_op++].value = strtoull(tokens[i + 2].c_str(), NULL, 10);
-#endif
-			}
+		for (int i = 0; i < instr->num_srcs; i++){
+			index = fill_operand(&instr->srcs[i], tokens, index, version);
 		}
 
-		instr->eflags = (uint32_t)stoull(tokens[i++].c_str());
-		instr->pc = atoi(tokens[i].c_str());
+		instr->eflags = (uint32_t)stoull(tokens[index++].c_str());
+		instr->pc = atoi(tokens[index++].c_str());
 
 	}
 
