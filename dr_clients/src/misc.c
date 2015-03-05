@@ -124,9 +124,30 @@ misc_bb_instrumentation(void *drcontext, void *tag, instrlist_t *bb,
 instr_t *instr, bool for_trace, bool translating,
 void *user_data)
 {
-	if (instr == instrlist_first(bb)){
+	/*if (instr == instrlist_first(bb)){
 		instrlist_disassemble(drcontext, instr_get_app_pc(instrlist_first(bb)), bb, logfile);
-	}
+	}*/
+
+	/*int i = 0;
+	opnd_t opnd;
+
+	for (i = 0; i < instr_num_srcs(instr); i++){
+		opnd = instr_get_src(instr, i);
+		if (opnd_is_memory_reference(opnd)){
+			if (opnd_is_abs_addr(opnd)){
+				//LOG_PRINT(logfile, "abs_addr,%d,%d,%d,%d,%d\n", opnd_get_addr(opnd), opnd_get_base(opnd), opnd_get_index(opnd), opnd_get_scale(opnd), opnd_get_disp(opnd));
+			}
+			else if (opnd_is_base_disp(opnd)){
+				//LOG_PRINT(logfile, "base_disp,%d,%d,%d,%d\n", opnd_get_base(opnd), opnd_get_index(opnd), opnd_get_scale(opnd), opnd_get_disp(opnd));
+			}
+			else{
+				DR_ASSERT(false);
+				//LOG_PRINT(logfile, "may be relative addr, %d,%d,%d,%d\n", opnd_get_base(opnd), opnd_get_index(opnd), opnd_get_scale(opnd), opnd_get_disp(opnd));
+			}
+		}
+		
+	}*/
+
 	
 	return DR_EMIT_DEFAULT;
 }

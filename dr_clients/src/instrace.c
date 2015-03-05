@@ -1033,18 +1033,34 @@ static void ins_trace(void *drcontext)
 		dr_fprintf(data->outfile,",%u",calculate_operands(instr,DST_TYPE));
 		for(j=0; j<instr_num_dsts(instr); j++){
 			get_address(instr_trace, j, DST_TYPE, &mem_type, &mem_addr);
-			output_populator_printer(drcontext,instr_get_dst(instr,j),instr,mem_addr,mem_type,NULL);
+			output_populator_printer(drcontext, instr_get_dst(instr, j), instr, mem_addr, mem_type, NULL);
+			if (opnd_is_memory_reference(opnd)){
+				DR_ASSERT(opnd_is_base_disp(opnd) || opnd_is_abs_addr(opnd));
+				output_populator_printer(drcontext, opnd_create_reg(opnd_get_base(opnd)), instr, mem_addr, mem_type, NULL);
+				output_populator_printer(drcontext, opnd_create_reg(opnd_get_index(opnd)), instr, mem_addr, mem_type, NULL);
+				output_populator_printer(drcontext, opnd_create_immed_int(opnd_get_scale(opnd), OPSZ_PTR), instr, mem_addr, mem_type, NULL);
+				output_populator_printer(drcontext, opnd_create_immed_int(opnd_get_disp(opnd), OPSZ_PTR), instr, mem_addr, mem_type, NULL);
+			}
 		}
 
 		dr_fprintf(data->outfile,",%u",calculate_operands(instr,SRC_TYPE));
 		for(j=0; j<instr_num_srcs(instr); j++){
 			get_address(instr_trace, j, SRC_TYPE, &mem_type, &mem_addr);
 			opnd = instr_get_src(instr, j);
+
 			if (instr_get_opcode(instr) == OP_lea && opnd_is_base_disp(opnd)){
 				/* four operands here for [base + index * scale + disp] */
 				output_populator_printer(drcontext, opnd_create_reg(opnd_get_base(opnd)), instr, mem_addr, mem_type, NULL);
 				output_populator_printer(drcontext, opnd_create_reg(opnd_get_index(opnd)), instr, mem_addr, mem_type, NULL);
 				output_populator_printer(drcontext, opnd_create_immed_int(opnd_get_scale(opnd),OPSZ_PTR), instr, mem_addr, mem_type, NULL);
+				output_populator_printer(drcontext, opnd_create_immed_int(opnd_get_disp(opnd), OPSZ_PTR), instr, mem_addr, mem_type, NULL);
+			}
+			else if(opnd_is_memory_reference(opnd)){
+				DR_ASSERT(opnd_is_base_disp(opnd) || opnd_is_abs_addr(opnd));
+				output_populator_printer(drcontext, opnd, instr, mem_addr, mem_type, NULL);
+				output_populator_printer(drcontext, opnd_create_reg(opnd_get_base(opnd)), instr, mem_addr, mem_type, NULL);
+				output_populator_printer(drcontext, opnd_create_reg(opnd_get_index(opnd)), instr, mem_addr, mem_type, NULL);
+				output_populator_printer(drcontext, opnd_create_immed_int(opnd_get_scale(opnd), OPSZ_PTR), instr, mem_addr, mem_type, NULL);
 				output_populator_printer(drcontext, opnd_create_immed_int(opnd_get_disp(opnd), OPSZ_PTR), instr, mem_addr, mem_type, NULL);
 			}
 			else{
