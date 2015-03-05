@@ -103,8 +103,9 @@
 
 	 uint32_t tree_build = BUILD_RANDOM;
 	 uint32_t mode = TREE_BUILD_STAGE;
-	 
+
 	 uint32_t dump = 1;
+	 uint32_t version = VER_NO_ADDR_OPND;
 
 
 	 /***************************** command line args processing ************************/
@@ -167,6 +168,9 @@
 		 }
 		 else if (args[i]->name.compare("-dump") == 0){
 			 dump = atoi(args[i]->value.c_str());
+		 }
+		 else if (args[i]->name.compare("-version") == 0){
+			 version = atoi(args[i]->value.c_str());
 		 }
 		 else{
 			 ASSERT_MSG(false, ("ERROR: unknown option\n"));
@@ -324,8 +328,8 @@
 	 vector<mem_info_t *> mem_info;
 	 vector<pc_mem_region_t *> pc_mem_info;
 
-	 create_mem_layout(instrace_file, mem_info);
-	 create_mem_layout(instrace_file, pc_mem_info);
+	 create_mem_layout(instrace_file, mem_info, version);
+	 create_mem_layout(instrace_file, pc_mem_info, version);
 	 sort_mem_info(mem_info);
 
 	 link_mem_regions_greedy_dim(mem_info, 0);
@@ -368,7 +372,7 @@
 	 instrace_file.clear();
 	 instrace_file.seekg(0, instrace_file.beg);
 
-	 vec_cinstr instrs_forward_unfiltered = walk_file_and_get_instructions(instrace_file, static_info);
+	 vec_cinstr instrs_forward_unfiltered = walk_file_and_get_instructions(instrace_file, static_info, version);
 	 /* need to filter unwanted instrs from the file we got */
 	 vec_cinstr instrs_forward = filter_instr_trace(start_pc, end_pc, instrs_forward_unfiltered);
 

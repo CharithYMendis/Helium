@@ -11,7 +11,7 @@
 
 using namespace std;
 
-void create_mem_layout(std::ifstream &in, vector<mem_info_t *> &mem_info){
+void create_mem_layout(std::ifstream &in, vector<mem_info_t *> &mem_info, uint32_t version){
 
 	uint32_t count = 0;
 
@@ -21,7 +21,7 @@ void create_mem_layout(std::ifstream &in, vector<mem_info_t *> &mem_info){
 	DEBUG_PRINT(("create_mem_layout(mem_info)...\n"), 2);
 
 	while (!in.eof()){
-		cinstr_t * instr = get_next_from_ascii_file(in);
+		cinstr_t * instr = get_next_from_ascii_file(in, version);
 		mem_input_t * input = new mem_input_t;
 
 		if (instr != NULL){
@@ -65,7 +65,7 @@ void create_mem_layout(std::ifstream &in, vector<mem_info_t *> &mem_info){
 }
 
 /* only app_pc based pc_mem_region recording is done here - if needed implement the module based recording */
-void create_mem_layout(std::ifstream &in, vector<pc_mem_region_t *> &mem_info){
+void create_mem_layout(std::ifstream &in, vector<pc_mem_region_t *> &mem_info, uint32_t version){
 
 	uint32_t count = 0;
 
@@ -75,7 +75,7 @@ void create_mem_layout(std::ifstream &in, vector<pc_mem_region_t *> &mem_info){
 	DEBUG_PRINT(("create_mem_layout(pc_mem_regions)...\n"), 2);
 
 	while (!in.eof()){
-		cinstr_t * instr = get_next_from_ascii_file(in);
+		cinstr_t * instr = get_next_from_ascii_file(in, version);
 		mem_input_t * input = new mem_input_t;
 
 		if (instr != NULL){

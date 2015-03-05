@@ -25,7 +25,7 @@ void go_to_line(uint32_t line_no, std::ifstream &file);
 uint32_t go_to_line_dest(std::ifstream &file, uint64_t dest, uint32_t stride);
 
 /* main file parsing functions */
-cinstr_t * get_next_from_ascii_file(ifstream &file){
+cinstr_t * get_next_from_ascii_file(ifstream &file, uint32_t version){
 
 	cinstr_t * instr;
 	char string_ins[MAX_STRING_LENGTH];
@@ -200,12 +200,12 @@ void parse_debug_disasm(vector<Static_Info *> &static_info, ifstream &file){
 }
 
 /* advanced instruction oriented file parsing functions */
-vector<cinstr_t * > get_all_instructions(ifstream &file){
+vector<cinstr_t * > get_all_instructions(ifstream &file, uint32_t version){
 
 	vector<cinstr_t *> instrs;
 
 	while (!file.eof()){
-		cinstr_t * instr = get_next_from_ascii_file(file);
+		cinstr_t * instr = get_next_from_ascii_file(file, version);
 		if (instr != NULL){
 			instrs.push_back(instr);
 		}
@@ -217,14 +217,14 @@ vector<cinstr_t * > get_all_instructions(ifstream &file){
 }
 
 
-vec_cinstr walk_file_and_get_instructions(ifstream &file, vector<Static_Info *> &static_info){
+vec_cinstr walk_file_and_get_instructions(ifstream &file, vector<Static_Info *> &static_info, uint32_t version){
 
 	cinstr_t * instr;
 	Static_Info * info;
 	vec_cinstr instrs;
 
 	while (!file.eof()){
-		instr = get_next_from_ascii_file(file);
+		instr = get_next_from_ascii_file(file, version);
 		
 		if (instr != NULL){
 			info = get_static_info(static_info, instr->pc);
@@ -305,7 +305,7 @@ bool go_backward_line(ifstream &file){
  
  }
  
-uint32_t go_to_line_dest(ifstream &file, uint64_t dest, uint32_t stride){
+uint32_t go_to_line_dest(ifstream &file, uint64_t dest, uint32_t stride, uint32_t version){
 
 	/* assume that the file is at the beginning*/
 	uint32_t lineno = 0;
@@ -313,7 +313,7 @@ uint32_t go_to_line_dest(ifstream &file, uint64_t dest, uint32_t stride){
 
 
 	while (!file.eof()){
-		instr = get_next_from_ascii_file(file);
+		instr = get_next_from_ascii_file(file, version);
 		lineno++;
 		if (instr != NULL){
 			for (int i = 0; i < instr->num_dsts; i++){
@@ -331,14 +331,14 @@ uint32_t go_to_line_dest(ifstream &file, uint64_t dest, uint32_t stride){
 }
 
 /* debug routines */
-void walk_instructions(ifstream &file){
+void walk_instructions(ifstream &file, uint32_t version){
 
 	cinstr_t * instr;
 	rinstr_t * rinstr;
 	int no_rinstrs;
 
 	while (!file.eof()){
-		instr = get_next_from_ascii_file(file);
+		instr = get_next_from_ascii_file(file, version);
 		if (instr != NULL){
 			rinstr = cinstr_to_rinstrs(instr, no_rinstrs, "", 0);
 			delete[] rinstr;
