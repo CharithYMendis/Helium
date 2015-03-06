@@ -140,7 +140,16 @@ static void assert_opnds(int opcode, int needed_src, int needed_dst, int actual_
 
 /************************************ CISC to RISC ****************************************************************/
 
-/* this gets true dependancies + instructions affecting eflags */
+/* this gets true dependancies + instructions affecting eflags 
+Function - cinstr_to_rinstrs_eflags
+
+Parameters - refer to cinstr_to_rinstrs function
+Return - refer to cinstr_to_rinstrs function
+
+This function is similar to cinstr_to_rinstrs in all ways except in addition, it canonicalizes instructions which affect eflags 
+but does not write to any destination permanently.
+
+*/
 rinstr_t * cinstr_to_rinstrs_eflags(cinstr_t * cinstr, int &amount, std::string disasm, uint32_t line){
 
 	//get already handled instructions which pose true dependencies - this will decide whether an instruction is not handled at all
@@ -180,6 +189,22 @@ rinstr_t * cinstr_to_rinstrs_eflags(cinstr_t * cinstr, int &amount, std::string 
 }
 
 /* this is a pure function without side effects for cinstr - check to make sure */
+
+/*
+Function - cinstr_to_rinstrs
+
+Parameters
+ cinstr - pointer to a pre-populated complex x86 instruction
+ amount - pass by reference variable, which will contain how many reduced set instructions were need to canonicalize the given x86 instruction
+ disasm - string of the disassembly of 'cinstr'. Can be used for debuggin purposes 
+ line	- the line in which this instruction can be found in the instruction trace (after filtering)
+
+Return
+ rinstr_t * - an array of reduced instructions
+
+ Please fill out new instructions using the guidelines given in the README file.
+
+*/
 rinstr_t * cinstr_to_rinstrs(cinstr_t * cinstr, int &amount, std::string disasm, uint32_t line){
 
 	int operation;
@@ -1212,7 +1237,16 @@ bool check_lahf_bit(lahf_bits flag_type, uint32_t reg_val){
 
 }
 
-/* checks if the particular instruction is handled */
+/* checks if the particular instruction is handled 
+Function - is_instr_handled
+
+Parameters
+ opcode - opcode of the x86 instruction
+
+Return
+ bool - whether the particular instruction is handled
+
+*/
 bool is_instr_handled(uint32_t opcode){
 
 	switch (opcode){
@@ -1300,7 +1334,16 @@ bool is_instr_handled(uint32_t opcode){
 
 }
 
-/* this returns the flag mask register of the affected flags by the relevant opcode */
+/* this returns the flag mask register of the affected flags by the relevant opcode
+Function - is_eflags_affected
+
+Parameters
+ opcode - opcode of the x86 instruction
+
+Return
+ uint32_t - the mask register which carries a bit vector of which flags are affected by which instruction
+
+*/
 uint32_t is_eflags_affected(uint32_t opcode){
 
 	uint32_t flags = 0;
@@ -1362,7 +1405,16 @@ uint32_t is_eflags_affected(uint32_t opcode){
 
 }
 
-/* determines if the branch is taken based on the value of the flags register */
+/* determines if the branch is taken based on the value of the flags register 
+Function - is_branch_taken
+
+Parameters
+ opcode - x86 instruction opcode, make sure this instruction is a conditional jump
+ flags  - the actual value of the flags recovered by DR instrumentation at runtime via lahf instruction (refer lahf_bits to find the exact position)
+
+Return 
+ bool - returns, based on the jump instruction and the flag values at the point of execution, whether this branch is taken or not
+*/
 bool is_branch_taken(uint32_t opcode, uint32_t flags){
 
 	bool cf = check_lahf_bit(Carry_lahf, flags);
@@ -1448,7 +1500,21 @@ bool is_branch_taken(uint32_t opcode, uint32_t flags){
 
 }
 
-/* checks if a particular conditional jump is affected */
+/* checks if a particular conditional jump is affected 
+Function - is_jmp_conditional_affected
+
+Parameters
+ opcode - x86 instruction opcode, make sure this instruction is a conditional jump
+ flags	- the flags bit mask vector of the condition codes for a given instruction, obtained through is_eflags_affected function
+
+Return
+ bool - whether the condition codes that are updated by a particular instruction is actually consumed by the conditional jump. 
+
+ However, note that it is up to the user to perform reaching definitions analysis to find the correct instruction which determines
+ branching direction. This function will only say whether given the flags mask vector for a particular instruction, will it potentially 
+ affect the branching decision for the conditional jump that is queried.
+
+*/
 bool is_jmp_conditional_affected(uint32_t opcode, uint32_t flags){
 
 	bool cf = check_eflag_bit(Carry_Flag,flags);
@@ -1459,6 +1525,8 @@ bool is_jmp_conditional_affected(uint32_t opcode, uint32_t flags){
 	bool sf = check_eflag_bit(Sign_Flag, flags);
 
 	bool unhandled = false;
+
+	/*BUG - need to change it to a OR */
 
 	switch (opcode){
 	case OP_jnl:
@@ -1513,6 +1581,16 @@ bool is_jmp_conditional_affected(uint32_t opcode, uint32_t flags){
 
 }
 
+/*
+Function - is_conditional_jump_ins
+
+Parameters
+	opcode -  x86 instruction opcode
+
+Return
+	bool - whether the instruction is a conditional jump instruction
+
+*/
 bool is_conditional_jump_ins(uint32_t opcode){
 
 
