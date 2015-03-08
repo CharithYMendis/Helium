@@ -18,6 +18,7 @@ Please install the following dependencies
 building the project (all batch files should be run inside their folders)
 
 In the <repo>\utility folder,
+
 1. run setup_folders.bat
 2. run setup.bat
 3. run build_all_exalgo.bat {arch} {debug/release} {halide_dir}
