@@ -3,6 +3,8 @@ Helium
 
 Helium: Lifting High-Performance Stencil Kernels from Stripped x86 Binaries to Halide DSL Code
 
+All the paths mentioned here are relative to the project parent folder.
+
 Please install the following dependencies
 
 *	Install VS2013 and have VC++ 2013 runtime. (MSDN allows free download and activation for @edu emails)
@@ -11,13 +13,15 @@ Please install the following dependencies
 *  Install Cygwin64 from [here](https://cygwin.com/install.html) and install Perl, but not its SVN!! Put Cygwin's bin into the path.
 *  Install CMake's latest version from [here](http://www.cmake.org/download/)
 *	Download the github repository for the project
-*	Installing Dynamorio – run the batch file <repo>\utility\dr_build.bat {folder} {dr_folder_name}
+*	Installing Dynamorio – run the batch file utility\dr_build.bat {folder} {dr_folder_name}
 *	Installing Halide – just use the nightly builds of Halide from [here](https://drive.google.com/folderview?id=0B3x1cdB8WoSDSy1ZMVZoYmhnaTQ&usp=sharing) (do not try to build it in windows, but if you insist use the powershell scripts in <repo>\utility\halide_<type>_build.ps -> but this is PAINFUL!!)
 
 
-building the project (all batch files should be run inside their folders)
+### building the project 
 
-In the <repo>\utility folder,
+All batch files should be run inside their folders.
+
+In the utility folder,
 
 1. run setup_folders.bat
 2. run setup.bat
