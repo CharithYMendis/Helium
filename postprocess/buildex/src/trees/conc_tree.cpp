@@ -3,7 +3,7 @@
 #include <fstream>
 #include <iostream>
 
-#include "defines.h"
+#include "utility\defines.h"
 #include "trees\trees.h"
 #include "analysis\x86_analysis.h"
 #include "utility\print_helper.h"

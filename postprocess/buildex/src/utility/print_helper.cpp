@@ -1,7 +1,7 @@
 #include <fstream>
 #include <string>
 
-#include "defines.h"
+#include "utility/defines.h"
 #include "common_defines.h"
 
 #include "utility/print_helper.h"
@@ -79,14 +79,14 @@ string operation_to_string(uint operation){
 /* get the regname to string */
 string regname_to_string(uint reg){
 
-#include "print_regs.h"
+#include "utility/print_regs.h"
 	return "ERROR";
 }
 
 /* DR operations to string */
 string dr_operation_to_string(uint operation){
 
-#include "print_ops.h"
+#include "utility/print_ops.h"
 	return "ERROR";
 
 }

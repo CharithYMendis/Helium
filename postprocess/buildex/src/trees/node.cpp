@@ -7,7 +7,7 @@ using namespace std;
 #include "trees/nodes.h"
 #include "analysis/x86_analysis.h"
 #include "common_defines.h"
-#include "defines.h"
+#include "utility/defines.h"
 
 
 /* this implements the abstract class - Node */

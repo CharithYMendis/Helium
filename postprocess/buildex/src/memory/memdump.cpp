@@ -3,7 +3,7 @@
 #include <string>
 #include <stdlib.h>
 
-#include "defines.h"
+#include "utility/defines.h"
 #include "utilities.h"
 #include "imageinfo.h"
 #include "memory/memdump.h"

@@ -1,7 +1,7 @@
 #include <assert.h>
 #include <fstream>
 #include <iostream>
-#include "defines.h"
+#include "utility/defines.h"
 
 #include "trees/nodes.h"
 

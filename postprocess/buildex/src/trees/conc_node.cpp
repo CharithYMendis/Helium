@@ -2,7 +2,7 @@
 #include <fstream>
 #include <iostream>
 
-#include "defines.h"
+#include "utility/defines.h"
 #include "common_defines.h"
 #include "analysis/x86_analysis.h"
 #include "trees/nodes.h"

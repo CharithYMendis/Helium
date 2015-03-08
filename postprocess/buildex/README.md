@@ -12,4 +12,4 @@ Inside the utility folder,
 2. e.g:- if you build a 32 bit debug build by running *build.bat m32 debug*, a folder build32 will be created with the VS2013 solution. 
 Further, it would build the solution as well.
 
-For specifics of how to contribute to the project, please refer individual src directories.
+For specifics on how to contribute to the project, please refer individual src directories.

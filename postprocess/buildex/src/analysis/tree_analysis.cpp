@@ -8,7 +8,7 @@
 #include "common_defines.h"
 #include "utility/fileparser.h"
 #include "analysis/x86_analysis.h"
-#include "defines.h"
+#include "utility/defines.h"
 
 using namespace std;
 

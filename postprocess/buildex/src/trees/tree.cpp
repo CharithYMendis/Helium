@@ -7,7 +7,7 @@ using namespace std;
 #include "trees/trees.h"
 #include "analysis/x86_analysis.h"
 #include "common_defines.h"
-#include "defines.h"
+#include "utility/defines.h"
 #include "utility/print_helper.h"
 
 

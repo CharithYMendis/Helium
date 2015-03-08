@@ -4,7 +4,7 @@
 #include <vector>
 
 #include "utility/fileparser.h"
-#include "defines.h"
+#include "utility/defines.h"
 #include "meminfo.h"
 #include "utilities.h"
 #include "memory/meminstrace.h"
