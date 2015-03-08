@@ -1,0 +1,4 @@
+build*/
+tests/
+obj/
+*.exe
