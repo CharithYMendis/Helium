@@ -9,10 +9,10 @@ Further, it has an ensemble of functions for checking which instructions affect 
 
 Before developing any code in this file, please download the Intel software developer’s manual, which can be found [here](http://www.intel.com/content/dam/www/public/us/en/documents/manuals/64-ia-32-architectures-software-developer-instruction-set-reference-manual-325383.pdf)
 
-# Instructions for developers
+## Instructions for developers
 
 
-## Development flow for introducing new instructions
+### Development flow for introducing new instructions
 
 1.	If the instruction affects any destination (it has one or more destination operands), then function cinstr_to_rinstrs should be updated.
 2.	Else if the instruction affects the condition codes, then it should be updated in the cinstr_to_rinstrs_eflags function.
@@ -22,7 +22,7 @@ Before developing any code in this file, please download the Intel software deve
 
 Please refer the source code for comments, which describe the arguments and return types of each function, data structure.
 
-## Steps for reduction of x86 instructions
+### Steps for reduction of x86 instructions
 
 The following guidelines apply when adding new x86 instructions to the functions *cinstr_to_rinstrs* and *cinstr_to_rinstrs_eflags*. 
 
@@ -36,7 +36,7 @@ For each of the flavors,
 Note the following as well.
 The opcodes used in complex x86 instructions are not the same as the opcodes used in the reduced set of instructions. x86 instructions start with a capital ‘O’ and reduced set instructions start with a simple ‘o’.
 
-## Canonicalization example 
+### Canonicalization example 
 
 Following example shows how some of the flavors of Intel’s imul instruction are canonicalized to reduced instructions in *cinstr_to_rinstrs* function. Similar procedure can be adopted for reducing instructions in *cinstr_to_rinstrs_eflags* function
  
