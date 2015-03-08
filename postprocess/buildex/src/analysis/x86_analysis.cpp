@@ -241,6 +241,66 @@ rinstr_t * cinstr_to_rinstrs(cinstr_t * cinstr, int &amount, std::string disasm,
 
 	switch (cinstr->opcode){
 
+	case OP_pmuldq:
+		// Kevin
+		if_bounds(2,1){
+			// currently assuming destination is 256 or 128 bit and sources are 128 bit. 
+			// If destination larger than 128 bit, should keep upper bits unchanged
+			// dsts[0][63:0] <- srcs[0][31:0] * srcs[1][31:0]
+			// dsts[0][127:64] <- srcs[0][95:64] * srcs[1][95:64]
+
+			amount = 11;
+			if(cinstr->dsts[0].width == 256){
+				amount = 13;
+			}
+			rinstr = new rinstr_t[amount];
+			// make 2 tmp 64 bit reg and 2 tmp 32 bit reg
+			operand_t virtual_reg32_1 = { REG_TYPE, 32, DR_REG_VIRTUAL_1 };
+			operand_t virtual_reg32_2 = { REG_TYPE, 32, DR_REG_VIRTUAL_2 };
+			operand_t virtual_reg64_1 = { REG_TYPE, 64, DR_REG_VIRTUAL_3 };
+			operand_t virtual_reg64_2 = { REG_TYPE, 64, DR_REG_VIRTUAL_4 };
+			reg_to_mem_range(&virtual_reg32_1);
+			reg_to_mem_range(&virtual_reg32_2);
+			reg_to_mem_range(&virtual_reg64_1);
+			reg_to_mem_range(&virtual_reg64_2);
+			// tmp32_1 <= split_l(tmp64_1 <= split_l(srcs[0]))
+			rinstr[0] = { op_split_l, virtual_reg64_1, 1, { cinstr->srcs[0] }, true };
+			rinstr[1] = { op_split_l, virtual_reg32_1, 1, { virtual_reg64_1 }, true };
+			
+			// tmp32_2 <= split_l(tmp64_1 <= split_l(srcs[1]))
+			rinstr[2] = { op_split_l, virtual_reg64_1, 1, { cinstr->srcs[1] }, true };
+			rinstr[3] = { op_split_l, virtual_reg32_2, 1, { virtual_reg64_1 }, true };
+
+			// tmp64_2 <= tmp32_1 * tmp32_2 (srcs[0][31:0]*srcs[1][31:0])
+			rinstr[4] = { op_mul, virtual_reg64_2, 2, { virtual_reg32_1, virtual_reg32_2 }, true };
+
+			// repeat to get tmp64_1 <= srcs[0][95:64] * srcs[1][95:64]
+			rinstr[5] = { op_split_h, virtual_reg64_1, 1, { cinstr->srcs[0] }, true };
+			rinstr[6] = { op_split_l, virtual_reg32_1, 1, { virtual_reg64_1 }, true };
+			rinstr[7] = { op_split_h, virtual_reg64_1, 1, { cinstr->srcs[1] }, true };
+			rinstr[8] = { op_split_l, virtual_reg32_2, 1, { virtual_reg64_1 }, true };
+			rinstr[9] = { op_mul, virtual_reg64_1, 2, { virtual_reg32_1, virtual_reg32_2 }, true };
+
+			if(cinstr->dsts[0].width == 256){
+				operand_t virtual_reg128_1 = { REG_TYPE, 128, DR_REG_VIRTUAL_5 };
+				operand_t virtual_reg128_2 = { REG_TYPE, 128, DR_REG_VIRTUAL_6 };
+				reg_to_mem_range(&virtual_reg128_1);
+				reg_to_mem_range(&virtual_reg128_2);
+				// tmp128_1 <= split_h(dsts[0])
+				rinstr[10] = { op_split_h, virtual_reg128_1, 1, { cinstr->dsts[0] }, true };
+				// tmp128_2 <= tmp64_1 : tmp64_2
+				rinstr[11] = { op_concat, virtual_reg128_2, 2, { virtual_reg64_1, virtual_reg64_2 }, true };
+				// dst <= tmp128_1 : tmp128_2
+				rinstr[12] = {op_concat, cinstr->dsts[0], 2, { virtual_reg128_1, virtual_reg128_2 }, true };
+			}
+			else{
+				// dst <= tmp64_1 : tmp64_2 
+				rinstr[10] = { op_concat, cinstr->dsts[0], 2, { virtual_reg64_1, virtual_reg64_2 }, true };	
+			}
+
+		}
+		else_bounds;
+
 		/******************************************integer instructions****************************************************************/
 
 	case OP_push_imm:
@@ -1310,6 +1370,7 @@ Return
 bool is_instr_handled(uint32_t opcode){
 
 	switch (opcode){
+	case OP_pmuldq:
 	case OP_push_imm:
 	case OP_push:
 	case OP_pop:

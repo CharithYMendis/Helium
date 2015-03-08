@@ -1422,7 +1422,11 @@ enum {
 	/*virtual registers for split and joins*/
 	DR_REG_VIRTUAL_1, /*"virtual1"*/
 	DR_REG_VIRTUAL_2, /*"virtual2"*/
-
+	DR_REG_VIRTUAL_3, /*"virtual3"*/
+	DR_REG_VIRTUAL_4, /*"virtual4"*/
+	DR_REG_VIRTUAL_5, /*"virtual5"*/
+	DR_REG_VIRTUAL_6, /*"virtual6"*/
+	
 
 
     
