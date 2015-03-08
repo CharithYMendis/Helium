@@ -38,7 +38,7 @@ The opcodes used in complex x86 instructions are not the same as the opcodes use
 
 ### Canonicalization example 
 
-Following example shows how some of the flavors of Intel’s imul instruction are canonicalized to reduced instructions in *cinstr_to_rinstrs* function. Similar procedure can be adopted for reducing instructions in *cinstr_to_rinstrs_eflags* function
+Following example shows how some of the flavors of Intel’s imul instruction are canonicalized to reduced instructions in *cinstr_to_rinstrs* function. Similar procedure can be adopted for reducing instructions in *cinstr_to_rinstrs_eflags* function.
  
 	case OP_imul:
 			// 1st flavour -> 1 dst * 2 src

@@ -1,32 +1,30 @@
-exalgo
+Helium
 ======
 
-Extracting algorithms from binaries
+Helium: Lifting High-Performance Stencil Kernels from Stripped x86 Binaries to Halide DSL Code
 
-Please see documentation for implementation and conventions used
+Please install the following dependencies
 
-
-1.	Install VS2013 and have VC++ 2013 runtime. (MSDN allows free download and activation for @edu emails)
+*	Install VS2013 and have VC++ 2013 runtime. (MSDN allows free download and activation for @edu emails)
 	Make sure you do a default installation with default paths.
-2.  SVN - http://www.visualsvn.com/downloads/ download it here and put it on to the path
-3.  Install Cygwin64 https://cygwin.com/install.html and install Perl, but not its SVN!! Put Cygwin's bin into the path.
-4.  CMake latest version  http://www.cmake.org/download/
-5.	Download the github repository for the project
-6.	Installing Dynamorio – run the batch file <repo>\utility\dr_build.bat {folder} {dr_folder_name}
-7.	Installing Halide – just use the nightly builds of Halide (do not try to build it in windows 
-OR use the powershell scripts in <repo>\utility\halide_<type>_build.ps -> but this is PAINFUL!!
-https://drive.google.com/folderview?id=0B3x1cdB8WoSDSy1ZMVZoYmhnaTQ&usp=sharing
+*  SVN - download it [here](http://www.visualsvn.com/downloads/) and put it on to the PATH
+*  Install Cygwin64 from [here](https://cygwin.com/install.html) and install Perl, but not its SVN!! Put Cygwin's bin into the path.
+*  Install CMake's latest version from [here](http://www.cmake.org/download/)
+*	Download the github repository for the project
+*	Installing Dynamorio – run the batch file <repo>\utility\dr_build.bat {folder} {dr_folder_name}
+*	Installing Halide – just use the nightly builds of Halide from [here](https://drive.google.com/folderview?id=0B3x1cdB8WoSDSy1ZMVZoYmhnaTQ&usp=sharing) (do not try to build it in windows, but if you insist use the powershell scripts in <repo>\utility\halide_<type>_build.ps -> but this is PAINFUL!!)
 
 
-building the project (all batch files should be run inside their folder)
+building the project (all batch files should be run inside their folders)
 
-run setup_folders.bat
-run setup.bat
-run build_all_exalgo.bat {arch} {debug/release} {halide_dir}
+In the <repo>\utility folder,
+1. run setup_folders.bat
+2. run setup.bat
+3. run build_all_exalgo.bat {arch} {debug/release} {halide_dir}
 
 now everything should be built (hopefully)
 
-procedure for running the tools
+procedure for running the tools (obsolete)
 
 1.	get the code_coverage -> preprocess\code_cov\code_cov.bat {arch}
 2.	get the diff -> preprocess\code_diff\build32\bin\code_diff.exe {first} {second}  {output_file}

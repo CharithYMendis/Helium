@@ -114,28 +114,36 @@ src/analysis/staticinfo.cpp
 
 #src/sympy.cpp
 
-target_link_libraries(buildex Gdiplus.lib)
 #find_library(PYTHON python27
 #		PATHS "C:\Python278\libs")
 #message(${PYTHON})
 #target_link_libraries(buildex ${PYTHON})
 
-#testing framework establishment
+target_link_libraries(buildex Gdiplus.lib)
 
-set(GTEST_ROOT "C:/Charith/libraries/gtest-1.7.0/gtest-1.7.0")
-set(GTEST_MSVC_SEARCH "MD")
+option(BUILDEX_TEST OFF)
 
-enable_testing()
-find_package(GTest REQUIRED)
-set(PROJECT_TEST_NAME ${PROJECT_NAME}_test)
+if(BUILDEX_TEST)
+	
 
-include_directories(${GTEST_INCLUDE_DIRS})
-include_directories(${PROJECT_SOURCE_DIR}/tests)
-file(GLOB TEST_SRC_FILES ${PROJECT_SOURCE_DIR}/tests/*.cpp)
+	#testing framework establishment
 
-add_executable(${PROJECT_TEST_NAME} ${TEST_SRC_FILES})
+	set(GTEST_ROOT "C:/Charith/libraries/gtest-1.7.0/gtest-1.7.0")
+	set(GTEST_MSVC_SEARCH "MD")
 
-target_link_libraries(${PROJECT_TEST_NAME} ${GTEST_BOTH_LIBRARIES})
-add_test(test-all bin/${PROJECT_TEST_NAME})
+	enable_testing()
+	find_package(GTest REQUIRED)
+	set(PROJECT_TEST_NAME ${PROJECT_NAME}_test)
+
+	include_directories(${GTEST_INCLUDE_DIRS})
+	include_directories(${PROJECT_SOURCE_DIR}/tests)
+	file(GLOB TEST_SRC_FILES ${PROJECT_SOURCE_DIR}/tests/*.cpp)
+
+	add_executable(${PROJECT_TEST_NAME} ${TEST_SRC_FILES})
+
+	target_link_libraries(${PROJECT_TEST_NAME} ${GTEST_BOTH_LIBRARIES})
+	add_test(test-all bin/${PROJECT_TEST_NAME})
+	
+endif()
 
 
