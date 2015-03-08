@@ -25,6 +25,18 @@ In the <repo>\utility folder,
 
 now everything should be built (hopefully)
 
+### Project structure
+
+* dr_clients - contains all the DynamoRIO instrumentation clients
+* preprocess - contains all analysis for code localization
+	+ code_cov - code coverage instrumentation invocation script
+	+ code_diff - tool for diffing two code coverage files
+	+ filter_funcs - tool for localizing the filter function by analyzing the memory traces and profiling information extracted through DynamoRIO instrumentation
+	+ image_cons - constructing example images for analysis (the generated images are synthetic examples)
+* postprocess - contains all analysis for expression extraction
+	+ buildex - main analysis project which processes instruction traces and memory dumps to come up with halide version of the filter. This includes various other utilitties for debugging.
+
+
 procedure for running the tools (obsolete)
 
 1.	get the code_coverage -> preprocess\code_cov\code_cov.bat {arch}
