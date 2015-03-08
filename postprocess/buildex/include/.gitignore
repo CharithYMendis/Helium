@@ -3,3 +3,4 @@ tests/
 obj/
 *.exe
 deleted/
+old/
