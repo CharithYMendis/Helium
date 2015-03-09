@@ -168,7 +168,7 @@ void print_app_pc_file(ofstream &file, vector<pc_mem_region_t *> &pc_mems){
 }
 
 void print_app_pc_file(ofstream &file, vector<uint32_t> instrs, string module){
-
+	file << 1 << endl;
 	file << "\"" << module << "\"" << endl;
 	file << instrs.size() << endl;
 	for (int i = 0; i < instrs.size(); i++){

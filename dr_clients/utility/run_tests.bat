@@ -3,8 +3,8 @@
 if "%1"=="help" (
 	echo usage {arch} {exec} {test_name} {debug_on_off} {phase} {filter_file} {filter_mode} {input_image} {output_image}
 	echo 	{arch} m32, m64
-	echo 	{exec} photoshop, halide, ctests, asm, gimp
-	echo 	{test_name} - should be the executable name that DR is running on {without exe}
+	echo 	{exec} photoshop, halide, ctests, asm, gimp, ppt
+	echo 	{test_name} - should be the executable name that DR is running on {with exe\EXE}
 	echo 	{debug_on_off} - 1,0
 	echo 	{phase} - phase of running dr clients "profile_memtrace" "profile" "opndtrace" "opcodetrace" "disasmtrace" "instrace" "memdump" "ins_distrace" "funcreplace" "instrace_memdump"
 	echo 	{filter_file} - the filter file name {only filename with ext}

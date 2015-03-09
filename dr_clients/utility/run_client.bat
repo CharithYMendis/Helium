@@ -14,7 +14,7 @@ Setlocal EnableDelayedExpansion
 if "%1"=="help" (
 	echo usage {arch} {exec} {debug_on_off} {phase} {test_name} {filter_prefix} {filter_mode} 
 	echo 	{arch} m32, m64
-	echo 	{exec} photoshop, halide, ctests, asm
+	echo 	{exec} photoshop, halide, ctests, asm, gimp, ppt
 	echo 	{test_name} - should be the executable name that DR is running on
 	echo 	{debug_on_off} - 1,0
 	echo 	{client_names} - "as a single argument"
@@ -43,8 +43,8 @@ call set_parameters %FILTER_MODE_STRING% %INSTRACE_MODE_STRING%
 ::set MD_FILTER_FILE=%EXALGO_FILTER_FOLDER%\memdump_filter.log
 ::set MD_APP_PC_FILE=%EXALGO_FILTER_FOLDER%\memdump_app_pc.log
 
-set MD_FILTER_FILE=%EXALGO_FILTER_FOLDER%\filter_%TEST_NAME%.exe.log
-set MD_APP_PC_FILE=%EXALGO_FILTER_FOLDER%\filter_%TEST_NAME%.exe_app_pc.log
+set MD_FILTER_FILE=%EXALGO_FILTER_FOLDER%\filter_%TEST_NAME%.log
+set MD_APP_PC_FILE=%EXALGO_FILTER_FOLDER%\filter_%TEST_NAME%_app_pc.log
 
 set CURRENT_DIR=%CD%
 

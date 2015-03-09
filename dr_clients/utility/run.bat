@@ -3,7 +3,7 @@
 if "%1"=="help" (
 	echo usage {arch} {exec} {client_arg} {test_name}
 	echo 	{arch} m32, m64
-	echo 	{exec} photoshop, halide, ctests, asm
+	echo 	{exec} photoshop, halide, ctests, asm, gimp, ppt
 	echo 	{client_arg}
 	echo 	{test_name}
 	exit /b
@@ -20,9 +20,9 @@ cd ..\build64\bin
 set DR_PATH=%DYNAMORIO_64_DEBUG_HOME%\bin64\drrun.exe
 set DYNAMORIO_HOME=%DYNAMORIO_64_DEBUG_HOME%
 set PHOTOSHOP="C:\Program Files\Adobe\Adobe Photoshop CS6 (64 Bit)\Photoshop.exe"
-set HALIDE_TEST=%EXALGO_TEST_FOLDER%\halide_tests\bin64\%4.exe
-set ASM_TEST=%EXALGO_TEST_FOLDER%\asm_tests\bin64\%4.exe
-set C_TEST=%EXALGO_TEST_FOLDER%\c_tests\bin64\%4.exe
+set HALIDE_TEST=%EXALGO_TEST_FOLDER%\halide_tests\bin64\%4
+set ASM_TEST=%EXALGO_TEST_FOLDER%\asm_tests\bin64\%4
+set C_TEST=%EXALGO_TEST_FOLDER%\c_tests\bin64\%4
 )
 
 if "%1"=="m32" (
@@ -30,9 +30,9 @@ cd ..\build32\bin
 set DR_PATH=%DYNAMORIO_32_RELEASE_HOME%\bin32\drrun.exe
 set DYNAMORIO_HOME=%DYNAMORIO_32_RELEASE_HOME%
 set PHOTOSHOP="C:\Program Files (x86)\Adobe\Adobe Photoshop CS6\Photoshop.exe"
-set HALIDE_TEST=%EXALGO_TEST_FOLDER%\halide_tests\bin32\%4.exe
-set ASM_TEST=%EXALGO_TEST_FOLDER%\asm_tests\bin32\%4.exe
-set C_TEST=%EXALGO_TEST_FOLDER%\c_tests\bin32\%4.exe
+set HALIDE_TEST=%EXALGO_TEST_FOLDER%\halide_tests\bin32\%4
+set ASM_TEST=%EXALGO_TEST_FOLDER%\asm_tests\bin32\%4
+set C_TEST=%EXALGO_TEST_FOLDER%\c_tests\bin32\%4
 set GIMP="C:\Program Files\GIMP 2\bin\gimp-2.8.exe"
 set PPT="C:\Program Files (x86)\Microsoft Office\Office15\POWERPNT.EXE"
 set IRFAN="C:\Program Files (x86)\IrfanView\i_view32.exe"

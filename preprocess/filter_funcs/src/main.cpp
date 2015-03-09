@@ -21,7 +21,7 @@ ofstream log_file;
 
 void print_usage(){
 	printf("usage - format -<name> <value>\n");
-	printf("\t exec - the executable which DR analyzed (without exe) \n");
+	printf("\t exec - the executable which DR analyzed (with exe\EXE) \n");
 	printf("\t in_image - the in_image filename with ext \n");
 	printf("\t out_image - the out_image filename with ext \n");
 	printf("\t debug - 1,0 which turns debug mode on/off \n");
@@ -101,8 +101,8 @@ int main(int argc, char **argv){
 	vector<string> files = get_all_files_in_folder(output_folder);
 
 	for (int i = 0; i < in_images.size(); i++){
-		string profile_string("profile_" + exec + ".EXE_" + in_images[i]);
-		string memtrace_string("memtrace_" + exec + ".EXE_" + in_images[i]);
+		string profile_string("profile_" + exec + in_images[i]);
+		string memtrace_string("memtrace_" + exec + in_images[i]);
 
 		DEBUG_PRINT(("profile string - %s\n", profile_string.c_str()), 5);
 		DEBUG_PRINT(("memtrace string - %s\n", memtrace_string.c_str()), 5);
@@ -139,11 +139,11 @@ int main(int argc, char **argv){
 		process_name = process_name.substr(0, find);
 	}
 
-	ofstream filter_file(get_standard_folder("filter") + "\\" + process_name + "_" +  exec + ".exe.log", ofstream::out); 
-	ofstream app_pc_file(get_standard_folder("filter") + "\\" + process_name + "_" + exec + ".exe_app_pc.log", ofstream::out);
+	ofstream filter_file(get_standard_folder("filter") + "\\" + process_name + "_" +  exec + ".log", ofstream::out); 
+	ofstream app_pc_file(get_standard_folder("filter") + "\\" + process_name + "_" + exec + "_app_pc.log", ofstream::out);
 
 	if (debug){
-		log_file.open(get_standard_folder("log") + "\\" + process_name + "_" + exec + ".exe.log", ofstream::out);
+		log_file.open(get_standard_folder("log") + "\\" + process_name + "_" + exec + ".log", ofstream::out);
 	}
 	
 	/****************************main algorithm***************************/

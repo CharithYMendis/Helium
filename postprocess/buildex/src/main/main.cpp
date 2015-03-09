@@ -44,7 +44,7 @@
  
  void print_usage(){
 	 printf("usage - format -<name> <value>\n");
-	 printf("\t exec - the executable which DR analyzed (without exe) \n");
+	 printf("\t exec - the executable which DR analyzed (with exe\EXE) \n");
 	 printf("\t thread_id - the thread id that the instrace file belongs to\n");
 	 
 	 printf("\t start_trace - tracing start line\n");
@@ -233,7 +233,7 @@
 	int64_t max_size = -1;
 	/* get the instrace files for this exec */
 	for (int i = 0; i < files.size(); i++){
-		if (is_prefix(files[i], "instrace_" + exec + ".exe_" + in_image + "_asm_instr")){
+		if (is_prefix(files[i], "instrace_" + exec + "_" + in_image + "_asm_instr")){
 			/*open the file*/
 			string file = output_folder + "\\" + files[i];
 			_stat(file.c_str(), &buf);
@@ -261,7 +261,7 @@
 	 out_image_filename = get_standard_folder("image") + "\\" + out_image;
 
 	 /* get the app_pcs to track files */
-	 app_pc_filename = filter_folder + "\\filter_" + exec + ".exe_app_pc.log";
+	 app_pc_filename = filter_folder + "\\filter_" + exec + "_app_pc.log";
 	 app_pc_file.open(app_pc_filename, ifstream::in);
 
 	 /* get the image mem config files - these have common configs for a given image processing program like Photoshop (hardcoded)  */

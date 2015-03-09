@@ -53,7 +53,6 @@ def run_profiling(program, executable):
         command = 'run_tests.bat '
         for arg in args:
                 command += arg + ' '
-        print command
         p = subprocess.Popen(command)
         p.communicate()
         
