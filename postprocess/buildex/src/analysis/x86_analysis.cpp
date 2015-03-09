@@ -275,7 +275,7 @@ rinstr_t * cinstr_to_rinstrs(cinstr_t * cinstr, int &amount, std::string disasm,
 			rinstr = new rinstr_t[3];
 			amount = 3;
 			// create an operand for the virtual register
-			operand_t virtual_reg = { REG_TYPE, 2 * cinstr->srcs[1].width, DR_REG_VIRTUAL_1 };
+			operand_t virtual_reg = { REG_TYPE, 2 * cinstr->srcs[1].width, DR_REG_VIRTUAL_1 , NULL};
 			reg_to_mem_range(&virtual_reg);
 
 			//virtual <= eax * src0
@@ -297,7 +297,7 @@ rinstr_t * cinstr_to_rinstrs(cinstr_t * cinstr, int &amount, std::string disasm,
 			rinstr = new rinstr_t[3];
 			amount = 3;
 			// create an operand for the virtual register
-			operand_t virtual_reg = { REG_TYPE, 2 * cinstr->srcs[1].width, DR_REG_VIRTUAL_1 };
+			operand_t virtual_reg = { REG_TYPE, 2 * cinstr->srcs[1].width, DR_REG_VIRTUAL_1 , NULL};
 			reg_to_mem_range(&virtual_reg);
 
 			//virtual <= eax * src0
@@ -318,7 +318,7 @@ rinstr_t * cinstr_to_rinstrs(cinstr_t * cinstr, int &amount, std::string disasm,
 			rinstr = new rinstr_t[3];
 			amount = 3;
 			/* create an operand for the virtual register */
-			operand_t virtual_reg = { REG_TYPE, 2 * cinstr->srcs[1].width, DR_REG_VIRTUAL_1 };
+			operand_t virtual_reg = { REG_TYPE, 2 * cinstr->srcs[1].width, DR_REG_VIRTUAL_1 , NULL};
 			reg_to_mem_range(&virtual_reg);
 
 			//virtual <- edx:eax
@@ -348,7 +348,7 @@ rinstr_t * cinstr_to_rinstrs(cinstr_t * cinstr, int &amount, std::string disasm,
 		if_bounds(2, 2){
 			rinstr = new rinstr_t[3];
 			amount = 3;
-			operand_t virtual_reg = { REG_TYPE, cinstr->srcs[0].width, DR_REG_VIRTUAL_1 };
+			operand_t virtual_reg = { REG_TYPE, cinstr->srcs[0].width, DR_REG_VIRTUAL_1 , NULL};
 			reg_to_mem_range(&virtual_reg);
 
 			ASSERT_MSG(((cinstr->dsts[0].value == cinstr->srcs[0].value) && (cinstr->dsts[1].value == cinstr->srcs[1].value)), ("op_fxch the dsts and srcs should match\n"));
@@ -386,7 +386,7 @@ rinstr_t * cinstr_to_rinstrs(cinstr_t * cinstr, int &amount, std::string disasm,
 			operand_t first = cinstr->srcs[0];
 			operand_t second = cinstr->srcs[1];
 			if (first.type == second.type && first.value == second.value){
-				operand_t zero = { IMM_INT_TYPE, cinstr->srcs[0].width, 0 };
+				operand_t zero = { IMM_INT_TYPE, cinstr->srcs[0].width, 0 , NULL};
 				rinstr[0] = { op_assign, cinstr->dsts[0], 1, { zero }, false };
 			}
 			else{
@@ -431,7 +431,7 @@ rinstr_t * cinstr_to_rinstrs(cinstr_t * cinstr, int &amount, std::string disasm,
 		if_bounds(1, 1){
 			rinstr = new rinstr_t[1];
 			amount = 1;
-			operand_t immediate = { IMM_INT_TYPE, cinstr->srcs[0].width, 1 };
+			operand_t immediate = { IMM_INT_TYPE, cinstr->srcs[0].width, 1 , NULL};
 			rinstr[0] = { op_sub, cinstr->dsts[0], 2, { cinstr->srcs[0], immediate }, true };
 		}
 		else_bounds;
@@ -440,7 +440,7 @@ rinstr_t * cinstr_to_rinstrs(cinstr_t * cinstr, int &amount, std::string disasm,
 		if_bounds(1, 1){
 			rinstr = new rinstr_t[1];
 			amount = 1;
-			operand_t immediate = { IMM_INT_TYPE, cinstr->srcs[0].width, 1 };
+			operand_t immediate = { IMM_INT_TYPE, cinstr->srcs[0].width, 1 , NULL};
 			rinstr[0] = { op_add, cinstr->dsts[0], 2, { cinstr->srcs[0], immediate }, true };
 		}
 		else_bounds;
@@ -503,7 +503,7 @@ rinstr_t * cinstr_to_rinstrs(cinstr_t * cinstr, int &amount, std::string disasm,
 			else{
 				rinstr = new rinstr_t[3];
 				amount = 3;
-				operand_t virtual_reg = { REG_TYPE, cinstr->srcs[0].width, DR_REG_VIRTUAL_1 };
+				operand_t virtual_reg = { REG_TYPE, cinstr->srcs[0].width, DR_REG_VIRTUAL_1 , NULL};
 				reg_to_mem_range(&virtual_reg);
 
 				//virtual <= scale(src2) * index(src1)
@@ -532,7 +532,7 @@ rinstr_t * cinstr_to_rinstrs(cinstr_t * cinstr, int &amount, std::string disasm,
 			}
 			//dsts[0] <- srcs[1] - srcs[0]
 			if ((cinstr->srcs[0].type == cinstr->srcs[1].type) && (cinstr->srcs[0].value == cinstr->srcs[1].value)){
-				operand_t immediate_0 = { IMM_INT_TYPE, cinstr->srcs[1].width, 0 };
+				operand_t immediate_0 = { IMM_INT_TYPE, cinstr->srcs[1].width, 0 , NULL};
 				rinstr[0] = { op_assign, cinstr->dsts[0], 1, { immediate_0 }, true };
 			}
 			else{
@@ -540,7 +540,7 @@ rinstr_t * cinstr_to_rinstrs(cinstr_t * cinstr, int &amount, std::string disasm,
 			}
 			if (cf){ //substract an immediate 1
 				//dsts[0] <- dsts[0] - 1
-				operand_t immediate_1 = { IMM_INT_TYPE, cinstr->srcs[1].width, 1 };
+				operand_t immediate_1 = { IMM_INT_TYPE, cinstr->srcs[1].width, 1 , NULL};
 				rinstr[1] = { op_sub, cinstr->dsts[0], 2, { cinstr->dsts[0], immediate_1 }, true };
 			}
 
@@ -568,11 +568,11 @@ rinstr_t * cinstr_to_rinstrs(cinstr_t * cinstr, int &amount, std::string disasm,
 			case OP_setb: flag = check_lahf_bit(Carry_lahf, cinstr->eflags); break;
 			}
 			if (flag){
-				operand_t immediate = { IMM_INT_TYPE, cinstr->dsts[0].width, 1 };
+				operand_t immediate = { IMM_INT_TYPE, cinstr->dsts[0].width, 1, NULL};
 				rinstr[0] = { op_assign, cinstr->dsts[0], 1, { immediate }, true };
 			}
 			else{
-				operand_t immediate = { IMM_INT_TYPE, cinstr->dsts[0].width, 0 };
+				operand_t immediate = { IMM_INT_TYPE, cinstr->dsts[0].width, 0, NULL};
 				rinstr[0] = { op_assign, cinstr->dsts[0], 1, { immediate }, true };
 			}
 		}
@@ -582,7 +582,7 @@ rinstr_t * cinstr_to_rinstrs(cinstr_t * cinstr, int &amount, std::string disasm,
 
 		if_bounds(2, 2){
 			rinstr = new rinstr_t[3];
-			operand_t virtual_reg = { REG_TYPE, cinstr->srcs[0].width, DR_REG_VIRTUAL_1 };
+			operand_t virtual_reg = { REG_TYPE, cinstr->srcs[0].width, DR_REG_VIRTUAL_1, NULL};
 			reg_to_mem_range(&virtual_reg);
 			rinstr[0] = { op_add, virtual_reg, 2, { cinstr->srcs[0], cinstr->srcs[1] }, true };
 			rinstr[1] = { op_assign, cinstr->srcs[1], 1, { cinstr->srcs[0] }, true };
@@ -637,7 +637,7 @@ rinstr_t * cinstr_to_rinstrs(cinstr_t * cinstr, int &amount, std::string disasm,
 		if_bounds(2, 2){
 			rinstr = new rinstr_t[3];
 			amount = 3;
-			operand_t virtual_reg = { REG_TYPE, cinstr->srcs[0].width, DR_REG_VIRTUAL_1 };
+			operand_t virtual_reg = { REG_TYPE, cinstr->srcs[0].width, DR_REG_VIRTUAL_1, NULL};
 			reg_to_mem_range(&virtual_reg);
 			ASSERT_MSG(((cinstr->dsts[0].value == cinstr->srcs[0].value) && (cinstr->dsts[1].value == cinstr->srcs[1].value)), ("op_fxch the dsts and srcs should match\n"));
 			//virtual <- src[0]
