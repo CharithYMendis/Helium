@@ -122,7 +122,8 @@ void * empty_ret_mutator(void * value, vector<void *> values, void * ori_value);
 
 	 bool update_depandancy_backward(rinstr_t * instr, uint32_t pc, std::string disasm, uint32_t line);
 	 bool update_dependancy_forward(rinstr_t * instr, uint32_t pc, std::string disasm, uint32_t line);
-	 
+	 bool update_dependancy_forward_with_indirection(rinstr_t * instr, uint32_t pc, std::string disasm, uint32_t line);
+
 	 std::string serialize_tree();
 	 void construct_tree(std::string stree);
 	 void print_conditionals();
