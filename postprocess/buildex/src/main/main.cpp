@@ -34,8 +34,6 @@
 #include "imageinfo.h"
 #include "common_defines.h"
 
-
-
  using namespace std;
 
  bool debug = false;
@@ -44,7 +42,7 @@
  
  void print_usage(){
 	 printf("usage - format -<name> <value>\n");
-	 printf("\t exec - the executable which DR analyzed (with exe\EXE) \n");
+	 printf("\t exec - the executable which DR analyzed (with exe/EXE) \n");
 	 printf("\t thread_id - the thread id that the instrace file belongs to\n");
 	 
 	 printf("\t start_trace - tracing start line\n");

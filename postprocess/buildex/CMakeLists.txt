@@ -42,7 +42,8 @@ include_directories("include")
 include_directories("../../common/include")
 include_directories("C:/Python278/include")
 
-source_group(main FILES src/main/main.cpp)
+source_group(main FILES src/main/main.cpp
+tests/src/test_vector.cpp)
 source_group(memory FILES
 src/memory/memanalysis.cpp
 src/memory/memdump.cpp
@@ -71,7 +72,8 @@ src/analysis/conditional_analysis.cpp
 src/analysis/preprocess.cpp
 src/analysis/tree_analysis.cpp
 src/analysis/x86_analysis.cpp
-src/analysis/staticinfo.cpp)
+src/analysis/staticinfo.cpp
+src/analysis/indirection_analysis.cpp)
 
 add_executable(buildex 
 
@@ -102,6 +104,7 @@ src/analysis/preprocess.cpp
 src/analysis/tree_analysis.cpp
 src/analysis/x86_analysis.cpp
 src/analysis/staticinfo.cpp
+src/analysis/indirection_analysis.cpp
 
 ../../common/src/imageinfo.cpp
 ../../common/src/meminfo.cpp
@@ -109,6 +112,44 @@ src/analysis/staticinfo.cpp
 
 #header files to be included
 #include/memory/memanalysis.h
+
+)
+
+add_executable(test_vector 
+
+tests/src/test_vector.cpp
+
+src/utility/fileparser.cpp
+src/utility/print_helper.cpp
+#src/utility/sympy.cpp
+
+src/trees/node.cpp
+src/trees/tree.cpp
+src/trees/conc_node.cpp
+src/trees/conc_tree.cpp
+src/trees/abs_node.cpp
+src/trees/abs_tree.cpp
+src/trees/comp_abs_node.cpp
+src/trees/comp_abs_tree.cpp
+
+src/memory/memanalysis.cpp
+src/memory/memdump.cpp
+src/memory/meminstrace.cpp
+src/memory/memregions.cpp
+
+src/halide/halide.cpp
+
+src/analysis/conditional_analysis.cpp
+src/analysis/preprocess.cpp
+src/analysis/tree_analysis.cpp
+src/analysis/x86_analysis.cpp
+src/analysis/staticinfo.cpp
+src/analysis/indirection_analysis.cpp
+
+../../common/src/imageinfo.cpp
+../../common/src/meminfo.cpp
+../../common/src/utilities.cpp
+
 
 )
 
@@ -120,6 +161,7 @@ src/analysis/staticinfo.cpp
 #target_link_libraries(buildex ${PYTHON})
 
 target_link_libraries(buildex Gdiplus.lib)
+target_link_libraries(test_vector Gdiplus.lib)
 
 option(BUILDEX_TEST OFF)
 
