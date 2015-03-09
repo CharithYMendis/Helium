@@ -992,11 +992,27 @@ void update_regs_to_mem_range(vec_cinstr &instrs){
 		for (int i = 0; i < instr->num_srcs; i++){
 			if ((instr->srcs[i].type == REG_TYPE) && (instr->srcs[i].value > DR_REG_ST7)) instr->srcs[i].value += 8;
 			reg_to_mem_range(&instr->srcs[i]);
+			if (instr->srcs[i].addr != NULL){
+				for (int j = 0; j < 4; j++){
+					if (instr->srcs[i].addr[j].type == REG_TYPE && instr->srcs[i].addr[j].value == 0){
+						continue;
+					}
+					reg_to_mem_range(&instr->srcs[i].addr[j]);
+				}
+			}
 		}
 
 		for (int i = 0; i < instr->num_dsts; i++){
 			if (instr->dsts[i].type == REG_TYPE && (instr->dsts[i].value > DR_REG_ST7)) instr->dsts[i].value += 8;
 			reg_to_mem_range(&instr->dsts[i]);
+			if (instr->dsts[i].addr != NULL){
+				for (int j = 0; j < 4; j++){
+					if (instr->dsts[i].addr[j].type == REG_TYPE && instr->dsts[i].addr[j].value == 0){
+						continue;
+					}
+					reg_to_mem_range(&instr->dsts[i].addr[j]);
+				}
+			}
 		}
 	}
 
