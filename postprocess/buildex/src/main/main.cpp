@@ -212,7 +212,7 @@
 		 int64_t max_size = -1;
 		 /* get the instrace files for this exec */
 		 for (int i = 0; i < files.size(); i++){
-			 if (is_prefix(files[i], "instrace_" + exec)){
+			 if (is_prefix(files[i], "instrace_" + exec + "_" + in_image + "_instr")){
 				 /*open the file*/
 				 string file = output_folder + "\\" + files[i];
 				 _stat(file.c_str(), &buf);

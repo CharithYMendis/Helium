@@ -11,7 +11,7 @@ parent_folder = os.environ.get('EXALGO_PARENT_FOLDER')
 def run_instrace(program, executable, in_image, out_image, phase):
         os.chdir(parent_folder + '/dr_clients/utility')
         args = ['m32', program, executable, '1',
-                phase, 'filter_' + executable + '.exe.log',
+                phase, 'filter_' + executable + '.log',
                 'func', in_image, out_image]
         command = 'run_tests.bat '
         for arg in args:

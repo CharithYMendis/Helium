@@ -113,7 +113,6 @@ cinstr_t * get_next_from_ascii_file(ifstream &file, uint32_t version){
 
 		instr->eflags = (uint32_t)stoull(tokens[index++].c_str());
 		instr->pc = atoi(tokens[index++].c_str());
-
 	}
 
 #ifdef DEBUG
