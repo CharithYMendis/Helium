@@ -140,6 +140,27 @@ static void assert_opnds(int opcode, int needed_src, int needed_dst, int actual_
 
 /************************************ CISC to RISC ****************************************************************/
 
+cinstr_t * create_new_cinstr(const cinstr_t  &instr){
+	cinstr_t * new_instr = new cinstr_t(instr);
+	for (int i = 0; i < instr.num_dsts; i++){
+		if (instr.dsts[i].addr != NULL){
+			new_instr->dsts[i].addr = new operand_t[4];
+			for (int j = 0; j < 4; j++){
+				new_instr->dsts[i].addr[j] = instr.dsts[i].addr[j];
+			}
+		}
+	}
+	for (int i = 0; i < instr.num_srcs; i++){
+		if (instr.srcs[i].addr != NULL){
+			new_instr->srcs[i].addr = new operand_t[4];
+			for (int j = 0; j < 4; j++){
+				new_instr->srcs[i].addr[j] = instr.srcs[i].addr[j];
+			}
+		}
+	}
+	return new_instr;
+}
+
 /* this gets true dependancies + instructions affecting eflags 
 Function - cinstr_to_rinstrs_eflags
 
@@ -987,7 +1008,6 @@ int mem_range_to_reg(operand_t * opnd){
 void update_regs_to_mem_range(vec_cinstr &instrs){
 
 	for (int i = 0; i < instrs.size(); i++){
-
 		cinstr_t * instr = instrs[i].first;
 		for (int i = 0; i < instr->num_srcs; i++){
 			if ((instr->srcs[i].type == REG_TYPE) && (instr->srcs[i].value > DR_REG_ST7)) instr->srcs[i].value += 8;

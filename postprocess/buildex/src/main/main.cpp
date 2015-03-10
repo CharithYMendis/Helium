@@ -378,7 +378,7 @@
 	 /* make a copy for the backwards analysis */
 	 vec_cinstr instrs_backward;
 	 for (int i = instrs_forward.size() - 1; i >= 0; i--){
-		 cinstr_t * new_cinstr = new cinstr_t(*instrs_forward[i].first);
+		 cinstr_t * new_cinstr = create_new_cinstr(*instrs_forward[i].first);
 		 pair<cinstr_t *, Static_Info *> instr_string = make_pair(new_cinstr, instrs_forward[i].second);
 		 instrs_backward.push_back(instr_string);
 	 }
@@ -410,6 +410,17 @@
 
 	app_pc = find_dependant_statements(instrs_forward, input_mem_region, static_info);
 	app_pc_vec = find_dependant_statements_with_indirection(instrs_forward, input_mem_region, static_info);
+
+	cout << "dependant statements" << endl;
+	for (int i = 0; i < app_pc_vec[0].size(); i++){
+		string disasm_string = get_disasm_string(static_info, app_pc_vec[0][i]);
+		cout << app_pc_vec[0][i] << " " << disasm_string << endl;
+	}
+	cout << "indirect dependant statements" << endl;
+	for (int i = 0; i < app_pc_vec[1].size(); i++){
+		string disasm_string = get_disasm_string(static_info, app_pc_vec[1][i]);
+		cout << app_pc_vec[1][i] << " " << disasm_string << endl;
+	}
 
 	cout << "dependant statements" << endl;
 	if (debug_level >= 4){

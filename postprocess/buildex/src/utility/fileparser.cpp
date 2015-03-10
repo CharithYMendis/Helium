@@ -47,7 +47,7 @@ uint32_t fill_operand(operand_t * operand, vector<string> &tokens, uint32_t star
 			/* we need to collect the addr operands */
 			operand->addr = new operand_t[4];
 			for (int j = 0; j < 4; j++){
-				operand->addr[j].type == atoi(tokens[i++].c_str());
+				operand->addr[j].type = atoi(tokens[i++].c_str());
 				operand->addr[j].width = atoi(tokens[i++].c_str());
 #ifndef __GNUG__
 				operand->addr[j].value = stoull(tokens[i++].c_str());

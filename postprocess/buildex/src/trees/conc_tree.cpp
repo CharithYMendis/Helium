@@ -530,6 +530,7 @@ bool Conc_Tree::update_dependancy_forward_with_indirection(rinstr_t * instr, uin
 			}
 		}
 
+
 		for (int j = 0; j < srcs.size(); j++){
 
 			if (srcs[j]->type == IMM_FLOAT_TYPE || srcs[j]->type == IMM_INT_TYPE) continue;

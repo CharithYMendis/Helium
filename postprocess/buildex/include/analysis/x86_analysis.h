@@ -87,6 +87,7 @@ enum {
 			std::string disasm, 
 			uint32_t line);
  void cinstr_convert_reg(cinstr_t * instr);
+ cinstr_t * create_new_cinstr(const cinstr_t  &instr);
 			
  void	reg_to_mem_range(operand_t * opnd);
  int	mem_range_to_reg(operand_t * opnd);
