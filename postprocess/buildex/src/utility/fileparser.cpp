@@ -57,6 +57,9 @@ uint32_t fill_operand(operand_t * operand, vector<string> &tokens, uint32_t star
 			}
 
 		}
+		else{
+			operand->addr = NULL;
+		}
 	}
 	else if(version == VER_NO_ADDR_OPND){
 		operand->addr = NULL;

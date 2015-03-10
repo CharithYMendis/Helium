@@ -21,6 +21,7 @@
 #include "analysis\staticinfo.h"
 #include "analysis\preprocess.h"
 #include "analysis\conditional_analysis.h"
+#include "analysis\indirection_analysis.h"
 
 #include "memory/memregions.h"
 #include "memory/memdump.h"
@@ -398,6 +399,7 @@
 	 
 	 vector<uint32_t> app_pc;
 	 vector<Jump_Info * > cond_app_pc;
+	 vector<vector<uint32_t> > app_pc_vec;
  
 	mem_regions_t * input_mem_region = (image_regions[0]->type == IMAGE_INPUT ? image_regions[0] : image_regions[1]);
 	mem_regions_t * output_mem_region = (image_regions[0]->type == IMAGE_INPUT ? image_regions[1] : image_regions[0]);
@@ -407,6 +409,7 @@
 	cout << "count after filtering : " << static_info.size() << endl;
 
 	app_pc = find_dependant_statements(instrs_forward, input_mem_region, static_info);
+	app_pc_vec = find_dependant_statements_with_indirection(instrs_forward, input_mem_region, static_info);
 
 	cout << "dependant statements" << endl;
 	if (debug_level >= 4){
