@@ -10,7 +10,7 @@
 
 std::vector< std::vector<uint32_t> > find_dependant_statements_with_indirection
 					(vec_cinstr &instrs, mem_regions_t * mem, std::vector<Static_Info *> static_info);
-void update_dependant_indireciton(vector<uint32_t> dep, vector<Static_Info *> &static_info);
+void populate_dependant_indireciton(std::vector<Static_Info *> &static_info, std::vector<uint32_t> dep);
 
 
 

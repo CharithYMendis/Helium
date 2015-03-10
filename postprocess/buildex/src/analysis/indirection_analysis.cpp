@@ -72,7 +72,7 @@ vector< vector<uint32_t> > find_dependant_statements_with_indirection(vec_cinstr
 
 }
 
-void update_dependant_indireciton(vector<uint32_t> dep, vector<Static_Info *> &static_info){
+void populate_dependant_indireciton(vector<Static_Info *> &static_info, vector<uint32_t> dep){
 
 	for (int i = 0; i < static_info.size(); i++){
 
@@ -86,7 +86,6 @@ void update_dependant_indireciton(vector<uint32_t> dep, vector<Static_Info *> &s
 
 		if (dependant){
 			static_info[i]->type = Static_Info::INPUT_DEPENDENT_INDIRECT;
-			cout << static_info[i]->type << endl;
 		}
 
 	}

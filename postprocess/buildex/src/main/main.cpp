@@ -12,6 +12,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <assert.h>
+#include <algorithm>
 
 #include  "..\..\..\dr_clients\include\output.h"
 #include "utility\fileparser.h"
@@ -395,40 +396,50 @@
 	 DEBUG_PRINT(("updated forward instr's floating point regs\n"), 2);
 
 	 
-	 /**************************** conditional analysis *************************************************************/
+	 /**************************** forward analysis for conditionals, indirection *************************************************************/
 	 
 	 vector<uint32_t> app_pc;
-	 vector<Jump_Info * > cond_app_pc;
+	 vector<uint32_t> app_pc_indirect;
 	 vector<vector<uint32_t> > app_pc_vec;
+
+	 vector<Jump_Info * > cond_app_pc;
  
+	 /* CHANGE - this is not generic */
 	mem_regions_t * input_mem_region = (image_regions[0]->type == IMAGE_INPUT ? image_regions[0] : image_regions[1]);
 	mem_regions_t * output_mem_region = (image_regions[0]->type == IMAGE_INPUT ? image_regions[1] : image_regions[0]);
 
-	cout << "count : " << static_info.size() << endl;
+	cout << "before filter static ins : " << static_info.size() << endl;
 	filter_disasm_vector(instrs_forward, static_info);
-	cout << "count after filtering : " << static_info.size() << endl;
+	cout << "after filter static ins : " << static_info.size() << endl;
 
-	app_pc = find_dependant_statements(instrs_forward, input_mem_region, static_info);
+	//app_pc = find_dependant_statements(instrs_forward, input_mem_region, static_info);
+	cout << "finding dependant statements direct and indirect" << endl;
 	app_pc_vec = find_dependant_statements_with_indirection(instrs_forward, input_mem_region, static_info);
+	app_pc = app_pc_vec[0];
+	app_pc_indirect.resize(app_pc_vec[1].size());
+	vector<uint32_t>::iterator it;
+
+	sort(app_pc_vec[0].begin(), app_pc_vec[0].end());
+	sort(app_pc_vec[1].begin(), app_pc_vec[1].end());
+
+	it = set_difference(app_pc_vec[1].begin(), app_pc_vec[1].end(), app_pc_vec[0].begin(), app_pc_vec[0].end(), app_pc_indirect.begin());
+	app_pc_indirect.resize(it - app_pc_indirect.begin());
 
 	cout << "dependant statements" << endl;
-	for (int i = 0; i < app_pc_vec[0].size(); i++){
-		string disasm_string = get_disasm_string(static_info, app_pc_vec[0][i]);
-		cout << app_pc_vec[0][i] << " " << disasm_string << endl;
-	}
-	cout << "indirect dependant statements" << endl;
-	for (int i = 0; i < app_pc_vec[1].size(); i++){
-		string disasm_string = get_disasm_string(static_info, app_pc_vec[1][i]);
-		cout << app_pc_vec[1][i] << " " << disasm_string << endl;
-	}
-
-	cout << "dependant statements" << endl;
-	if (debug_level >= 4){
+	if (debug_level >= 2){
 		for (int i = 0; i < app_pc.size(); i++){
 			string disasm_string = get_disasm_string(static_info, app_pc[i]);
 			cout << app_pc[i] << " " << disasm_string << endl;
 		}
 	}
+
+	cout << "indirect dependant statements" << endl;
+	for (int i = 0; i < app_pc_indirect.size(); i++){
+		string disasm_string = get_disasm_string(static_info, app_pc_indirect[i]);
+		cout << app_pc_indirect[i] << " " << disasm_string << endl;
+	}
+
+	
 
 	cond_app_pc = find_dependant_conditionals(app_pc, instrs_forward, static_info);
 
@@ -451,6 +462,7 @@
 	}
 	 
 	 populate_conditional_instructions(static_info, cond_app_pc);
+	 populate_dependant_indireciton(static_info, app_pc_indirect);
 
 	 cout << "populated cond. instrs" << endl;
 	 for (int i = 0; i < static_info.size(); i++){
