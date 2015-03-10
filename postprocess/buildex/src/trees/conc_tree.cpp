@@ -284,7 +284,7 @@ void Conc_Tree::add_address_dependancy(Node * node, operand_t * opnds){
 	}
 
 	Conc_Node * current_node;
-	Conc_Node * indirect_node = new Conc_Node(DEFAULT_TYPE, 0, 0, 0.0); 
+	Conc_Node * indirect_node = new Conc_Node(REG_TYPE, 0, 0, 0.0); //reg_type is used here; it doesn't really matter as this is an operation only node
 	indirect_node->operation = op_indirect;
 
 	node->srcs.push_back(indirect_node);
@@ -293,7 +293,7 @@ void Conc_Tree::add_address_dependancy(Node * node, operand_t * opnds){
 	current_node = indirect_node;
 
 	if (opnds[0].value != 0 && opnds[1].value != 0){
-		Conc_Node * add_node = new Conc_Node(REG_TYPE, 0, 0, 0.0);
+		Conc_Node * add_node = new Conc_Node(REG_TYPE, 0, 0, 0.0); //reg_type is used here; it doesn't really matter as this is an operation only node
 		add_node->operation = op_add;
 
 		indirect_node->srcs.push_back(add_node);
