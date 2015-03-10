@@ -52,6 +52,8 @@ enum {
 	op_eq,
 	op_neq,
 
+	/*address dependancy*/
+	op_indirect,
 
 	op_unknown
 

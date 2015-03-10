@@ -273,7 +273,59 @@ void add_dependancy(Node * dst, Node * src, uint operation){
 	src->pos.push_back(src_index);
 }
 
-bool Conc_Tree::update_depandancy_backward(rinstr_t * instr, uint32_t pc, std::string disasm, uint32_t line)
+
+void Conc_Tree::add_address_dependancy(Node * node, operand_t * opnds){
+
+	/* four operands here for [base + index * scale + disp] */
+	
+	/* make sure that this is a base-disp address */
+	if (opnds[0].value == 0 && opnds[1].value == 0){
+		return;
+	}
+
+	Conc_Node * current_node;
+	Conc_Node * indirect_node = new Conc_Node(DEFAULT_TYPE, 0, 0, 0.0); 
+	indirect_node->operation = op_indirect;
+
+	node->srcs.push_back(indirect_node);
+	indirect_node->prev.push_back(node);
+	indirect_node->pos.push_back(node->srcs.size() - 1);
+	current_node = indirect_node;
+
+	if (opnds[0].value != 0 && opnds[1].value != 0){
+		Conc_Node * add_node = new Conc_Node(REG_TYPE, 0, 0, 0.0);
+		add_node->operation = op_add;
+
+		indirect_node->srcs.push_back(add_node);
+		add_node->prev.push_back(indirect_node);
+		add_node->pos.push_back(indirect_node->srcs.size() - 1);
+		current_node = add_node;
+	}
+	
+	/* some special cases to be worried about 
+	1. we don't consider the scale or displacement here; it may be just the access width + constant offset for an addr calc
+	*/
+
+
+	for (int i = 0; i < 2; i++){
+
+		if (opnds[i].value == 0) continue;
+		
+		Node * addr_node = search_node(&opnds[i]);
+		if (addr_node == NULL){
+			addr_node = new Conc_Node(&opnds[i]);
+			add_to_frontier(generate_hash(&opnds[i]), addr_node);
+		}
+
+		current_node->srcs.push_back(addr_node);
+		addr_node->prev.push_back(current_node);
+		addr_node->pos.push_back(current_node->srcs.size() - 1);
+
+	}
+
+}
+
+bool Conc_Tree::update_depandancy_backward(rinstr_t * instr, cinstr_t * cinstr, Static_Info * info, uint32_t line)
 {
 	//TODO: have precomputed nodes for immediate integers -> can we do it for floats as well? -> just need to point to them in future (space optimization)
 	Node * head = get_head();
@@ -290,6 +342,13 @@ bool Conc_Tree::update_depandancy_backward(rinstr_t * instr, uint32_t pc, std::s
 			frontier[hash].bucket[amount] = head;
 			frontier[hash].amount++;
 		}
+
+		if ((info->type & Static_Info::INPUT_DEPENDENT_INDIRECT) == Static_Info::INPUT_DEPENDENT_INDIRECT){
+			if (instr->dst.addr != NULL){ /* ok, we have an address calculation dependancy */
+				add_address_dependancy(head, instr->dst.addr);
+			}
+		}
+
 	}
 
 
@@ -328,7 +387,7 @@ bool Conc_Tree::update_depandancy_backward(rinstr_t * instr, uint32_t pc, std::s
 		for (int i = 0; i < full_overlap_nodes.size(); i++){
 			DEBUG_PRINT(("full overlap - %s\n", opnd_to_string(full_overlap_nodes[i]->symbol).c_str()), 4);
 			add_dependancy(full_overlap_nodes[i], dst, op_full_overlap);
-			full_overlap_nodes[i]->pc = pc;
+			full_overlap_nodes[i]->pc = info->pc;
 			full_overlap_nodes[i]->line = line;
 			remove_from_frontier(full_overlap_nodes[i]->symbol);
 		}
@@ -354,7 +413,7 @@ bool Conc_Tree::update_depandancy_backward(rinstr_t * instr, uint32_t pc, std::s
 
 		/* we need to update the line and pc information */
 		dst->line = line;
-		dst->pc = pc;
+		dst->pc = info->pc;
 
 	}
 
@@ -410,7 +469,7 @@ bool Conc_Tree::update_depandancy_backward(rinstr_t * instr, uint32_t pc, std::s
 				src->pos.push_back(dst->pos[j]);
 				dst->prev[j]->srcs[dst->pos[j]] = src;
 				src->line = line;
-				src->pc = pc;
+				src->pc = info->pc;
 
 				assign_opt = true;  //this is here to differentitate between the head and the rest of the nodes
 			}
@@ -440,8 +499,6 @@ bool Conc_Tree::update_depandancy_backward(rinstr_t * instr, uint32_t pc, std::s
 			if (instr->is_floating){
 				src->is_double = instr->is_floating;
 			}
-
-
 		}
 
 
@@ -456,6 +513,12 @@ bool Conc_Tree::update_depandancy_backward(rinstr_t * instr, uint32_t pc, std::s
 		if (add_node) add_to_frontier(hash_src, src);
 
 		DEBUG_PRINT(("completed adding a src\n"), 4);
+
+		if ( (info->type & Static_Info::INPUT_DEPENDENT_INDIRECT) == Static_Info::INPUT_DEPENDENT_INDIRECT){
+			if (instr->srcs[i].addr != NULL){ /* ok, we have an address calculation dependancy */
+				add_address_dependancy(src, instr->srcs[i].addr);
+			}
+		}
 
 	}
 

@@ -144,10 +144,10 @@ void build_conc_tree(uint64_t destination,
 	//do the initial processing
 	for (int i = index; i >= 0; i--){
 		if (instrs[curpos].second != NULL){
-			tree->update_depandancy_backward(&rinstr[i], instr->pc, instrs[curpos].second->disassembly, curpos);
+			tree->update_depandancy_backward(&rinstr[i], instrs[curpos].first, instrs[curpos].second, curpos);
 		}
 		else{
-			tree->update_depandancy_backward(&rinstr[i], instr->pc, "not captured\n", curpos);
+			tree->update_depandancy_backward(&rinstr[i], instrs[curpos].first, NULL, curpos);
 		}
 	}
 
@@ -181,10 +181,10 @@ void build_conc_tree(uint64_t destination,
 			bool affected = false;
 			for (int i = no_rinstrs - 1; i >= 0; i--){
 				if (instrs[curpos].second != NULL){
-					updated = tree->update_depandancy_backward(&rinstr[i], instr->pc, instrs[curpos].second->disassembly, curpos);
+					updated = tree->update_depandancy_backward(&rinstr[i], instrs[curpos].first, instrs[curpos].second, curpos);
 				}
 				else{
-					updated = tree->update_depandancy_backward(&rinstr[i], instr->pc, "not captured\n", curpos);
+					updated = tree->update_depandancy_backward(&rinstr[i], instrs[curpos].first, NULL, curpos);
 				}
 
 				if (updated){

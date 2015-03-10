@@ -12,6 +12,7 @@
 #define MEM_HEAP_TYPE	2
 #define IMM_FLOAT_TYPE	3
 #define IMM_INT_TYPE	4
+#define DEFAULT_TYPE	5
 
 typedef unsigned int uint;
 typedef unsigned long long uint64;

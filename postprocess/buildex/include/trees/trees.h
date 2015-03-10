@@ -120,9 +120,11 @@ void * empty_ret_mutator(void * value, vector<void *> values, void * ori_value);
 	 int generate_hash(operand_t * opnd);
 	 void add_to_frontier(int hash, Node * node);
 
-	 bool update_depandancy_backward(rinstr_t * instr, uint32_t pc, std::string disasm, uint32_t line);
+	 bool update_depandancy_backward(rinstr_t * instr, cinstr_t * cinstr, Static_Info * info, uint32_t line);
 	 bool update_dependancy_forward(rinstr_t * instr, uint32_t pc, std::string disasm, uint32_t line);
 	 bool update_dependancy_forward_with_indirection(rinstr_t * instr, uint32_t pc, std::string disasm, uint32_t line);
+
+	 void add_address_dependancy(Node * node, operand_t * opnds);
 
 	 std::string serialize_tree();
 	 void construct_tree(std::string stree);

@@ -7,6 +7,14 @@
 
 using namespace std;
 
+Static_Info::Static_Info(){
+	type = NONE;
+}
+
+Static_Info::~Static_Info(){
+
+}
+
 
 Static_Info * get_static_info(vector<Static_Info *> instr, uint32_t pc){
 

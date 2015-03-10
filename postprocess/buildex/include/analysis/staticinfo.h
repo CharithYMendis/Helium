@@ -28,6 +28,7 @@ public:
 
 	enum Instr_type {
 
+		NONE = 0,
 		INPUT = 1 << 0,
 		INPUT_DEPENDENT_DIRECT = 1 << 1,
 		INPUT_DEPENDENT_INDIRECT = 1 << 2,
@@ -44,8 +45,8 @@ public:
 	Instr_type type; // type of the instruction
 	std::vector< std::pair<Jump_Info *, bool> > conditionals; // are there any input dependent conditionals?
 	
-	//Static_Info();
-	//~Static_Info();
+	Static_Info();
+	~Static_Info();
 
 };
 
