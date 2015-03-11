@@ -564,9 +564,30 @@ rinstr_t * cinstr_to_rinstrs(cinstr_t * cinstr, int &amount, std::string disasm,
 				operand_t immediate_1 = { IMM_INT_TYPE, cinstr->srcs[1].width, 1 , NULL};
 				rinstr[1] = { op_sub, cinstr->dsts[0], 2, { cinstr->dsts[0], immediate_1 }, true };
 			}
+		}
+		else_bounds;
 
+	case OP_adc:
 
+		if_bounds(1, 2){
 
+			bool cf = check_lahf_bit(Carry_lahf, cinstr->eflags);
+			if (cf){
+				rinstr = new rinstr_t[2];
+				amount = 2;
+			}
+			else{
+				rinstr = new rinstr_t[1];
+				amount = 1;
+			}
+
+			//dsts[0] <- srcs[1] + srcs[0]
+			rinstr[0] = { op_add, cinstr->dsts[0], 2, { cinstr->srcs[1], cinstr->srcs[0] }, true };
+			//dsts[0] <- dsts[0] + 1
+			if (cf){
+				operand_t immediate_1 = { IMM_INT_TYPE, cinstr->srcs[1].width, 1, NULL };
+				rinstr[1] = { op_add, cinstr->dsts[0], 2, { cinstr->dsts[0], immediate_1}, true };
+			}
 		}
 		else_bounds;
 
