@@ -219,7 +219,7 @@ int main(int argc, char ** argv){
 	/* make a copy for the backwards analysis */
 	vec_cinstr instrs_backward;
 	for (int i = instrs_forward.size() - 1; i >= 0; i--){
-		cinstr_t * new_cinstr = new cinstr_t(*instrs_forward[i].first);
+		cinstr_t * new_cinstr = create_new_cinstr(*instrs_forward[i].first);
 		pair<cinstr_t *, Static_Info *> instr_string = make_pair(new_cinstr, instrs_forward[i].second);
 		instrs_backward.push_back(instr_string);
 	}
@@ -229,6 +229,8 @@ int main(int argc, char ** argv){
 	/*preprocessing*/
 	update_regs_to_mem_range(instrs_backward);
 	update_regs_to_mem_range(instrs_forward);
+
+	
 
 	vector<uint32_t> start_pcs;
 	vector<uint32_t> end_pcs;
@@ -244,7 +246,7 @@ int main(int argc, char ** argv){
 	/*        reducing instructions				                            */
 	/************************************************************************/
 
-
+	
 	for (int i = 0; i < instrs_forward.size(); i++){
 		int amount = 0;
 		rinstr_t *  rinstr = cinstr_to_rinstrs(instrs_forward[i].first, amount, instrs_forward[i].second->disassembly, i);
