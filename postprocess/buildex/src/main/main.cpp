@@ -404,9 +404,27 @@
 
 	 vector<Jump_Info * > cond_app_pc;
  
-	 /* CHANGE - this is not generic */
-	mem_regions_t * input_mem_region = (image_regions[0]->type == IMAGE_INPUT ? image_regions[0] : image_regions[1]);
-	mem_regions_t * output_mem_region = (image_regions[0]->type == IMAGE_INPUT ? image_regions[1] : image_regions[0]);
+	 /* need to find a (not the) input and output image region for forward and backward analysis */
+	 mem_regions_t * input_mem_region = NULL;
+	 mem_regions_t * output_mem_region = NULL;
+
+	 for (int i = 0; i < image_regions.size(); i++){
+		 if (image_regions[i]->type == IMAGE_INPUT){
+			 input_mem_region = image_regions[i]; break;
+		 }
+	 }
+
+	 ASSERT_MSG((input_mem_region != NULL), ("ERROR: a input memory region cannot be located\n"));
+
+	 for (int i = 0; i < image_regions.size(); i++){
+		 if (image_regions[i]->type == IMAGE_OUTPUT){
+			 output_mem_region = image_regions[i]; break;
+		 }
+	 }
+
+
+	 ASSERT_MSG((input_mem_region != NULL), ("ERROR: a output memory region cannot be located\n"));
+
 
 	cout << "before filter static ins : " << static_info.size() << endl;
 	filter_disasm_vector(instrs_forward, static_info);

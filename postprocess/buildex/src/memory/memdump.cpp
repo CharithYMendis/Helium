@@ -17,7 +17,7 @@ N,E - embedded or not embedded colors
 */
 
 /* basic photoshop image layout - invert, blur etc. */
-mem_regions_t * locate_image_CN2(char * values, uint32_t size, uint64_t * start, uint64_t * end, image_t * image){
+mem_regions_t * locate_image_CN2(char * values, uint32_t size, uint64_t * start_line, uint64_t * end_line, image_t * image){
 
 	/* we will be searching for the first line of the image */
 
@@ -25,7 +25,7 @@ mem_regions_t * locate_image_CN2(char * values, uint32_t size, uint64_t * start,
 	int i;
 	uint32_t count = 0;
 
-	for (i = 0; i < size; i++){
+	for (i = *start_line; i < size; i++){
 
 		print_progress(&count, 100000);
 
@@ -56,7 +56,10 @@ mem_regions_t * locate_image_CN2(char * values, uint32_t size, uint64_t * start,
 					last += image->width;
 					j += image->width - 1;
 					start_points.push_back(start);
-					if (last == image->width * image->height) { break; }
+					if (last == image->width * image->height) {
+						*end_line = j;
+						break; 
+					}
 				}
 			}
 			/* if we covered the entire image */
@@ -443,6 +446,16 @@ vector<mem_regions_t *> get_image_regions_from_dump(vector<string> filenames, st
 	image_t * in_image = populate_imageinfo(open_image(in_image_filename.c_str()));
 	image_t * out_image = populate_imageinfo(open_image(out_image_filename.c_str()));
 	vector<mem_regions_t *> regions;
+
+	bool similar = true;
+	for (int i = 0; i < in_image->width * in_image->height; i++){
+		if (in_image->image_array[i] != out_image->image_array[i]){
+			cout << "not similar" << endl;
+			similar = false; break;
+			
+		}
+	}
+	if (similar) cout << "two images are similar" << endl;
 	
 	for (int i = 0; i < filenames.size(); i++){
 
@@ -456,8 +469,8 @@ vector<mem_regions_t *> get_image_regions_from_dump(vector<string> filenames, st
 
 		DEBUG_PRINT(("analyzing - base_pc %llx, size %x, write %d\n", base_pc, size, write), 2);
 
-		uint64_t start;
-		uint64_t end;
+		uint64_t start = 0;
+		uint64_t end = 0;
 
 		mem_regions_t * mem = NULL;
 
@@ -470,29 +483,40 @@ vector<mem_regions_t *> get_image_regions_from_dump(vector<string> filenames, st
 		file_values = new char[results.st_size];
 		file.read(file_values, results.st_size);
 
-		/* locate the image */
-		if (write){
-			mem = locate_image_CN2(file_values, results.st_size, &start, &end, out_image);
-			//mem = locate_image_CN2_backward_write(file_values, results.st_size, &start, &end, out_image);
-		}
-		else{
-			mem = locate_image_CN2(file_values, results.st_size, &start, &end, in_image);
-			//mem = locate_image_CN2_backward(file_values, results.st_size, &start, &end, in_image);
+		bool found_region = true;
+
+		while (found_region){
+
+			/* locate the image */
+			if (write){
+				mem = locate_image_CN2(file_values, results.st_size, &start, &end, out_image);
+				//mem = locate_image_CN2_backward_write(file_values, results.st_size, &start, &end, out_image);
+			}
+			else{
+				mem = locate_image_CN2(file_values, results.st_size, &start, &end, in_image);
+				//mem = locate_image_CN2_backward(file_values, results.st_size, &start, &end, in_image);
 
 
-		}
+			}
 
-		if (mem != NULL){
-			mem->start += base_pc;
-			mem->end += base_pc;
-			DEBUG_PRINT(("region found(%u) - start %llx end %llx padding %u\n",write, mem->start, mem->end, mem->padding[0]), 2);
-			regions.push_back(mem);
+			start = end;
+
+			if (mem != NULL){
+				mem->start += base_pc;
+				mem->end += base_pc;
+				DEBUG_PRINT(("region found(%u) - start %llx end %llx padding %u\n", write, mem->start, mem->end, mem->padding[0]), 2);
+				regions.push_back(mem);
+			}
+			else{
+				found_region = false;
+			}
 		}
 
 		delete file_values;
 		file.close();
 	}
 
+	
 	/* remove duplicates */
 	for (int i = 0; i < regions.size(); i++){
 		for (int j = 0; j < i; j++){

@@ -105,8 +105,8 @@ vector<mem_regions_t *> merge_instrace_and_dump_regions(vector<mem_regions_t *> 
 					mem_regions[i]->end = info->end;
 
 					cout << "dims : " << get_number_dimensions(info) << endl;
-					cout << mem_info[i]->start << endl;
-					cout << mem_info[i]->end << endl;
+					cout << mem_info[j]->start << endl;
+					cout << mem_info[j]->end << endl;
  
 
 					if (mem_regions[i]->dimensions == get_number_dimensions(info)){
@@ -125,8 +125,6 @@ vector<mem_regions_t *> merge_instrace_and_dump_regions(vector<mem_regions_t *> 
 					break;
 
 				}
-
-				
 
 			}
 		}
