@@ -255,19 +255,14 @@ rinstr_t * cinstr_to_rinstrs(cinstr_t * cinstr, int &amount, std::string disasm,
 			operand_t input2 = cinstr -> srcs[1];
 			operand_t output = cinstr -> dsts[0];
 			// offset starting point by correct number of BYTES (divide by 8 to change from bits to bytes)
-			operand_t input32_1 = { input1.type, 32, input1.value + ((input1.width - 32) / 8) };
-			operand_t input32_2 = { input2.type, 32, input2.value + ((input2.width - 32) / 8) };
-			operand_t input96_1 = { input1.type, 32, input1.value + ((input1.width - 96) / 8) };
-			operand_t input96_2 = { input2.type, 32, input2.value + ((input2.width - 96) / 8) };
-			// create virtual reg/mem accessing 64 bit output ranges
-			operand_t output_low = { output.type, 64, output.value + ((output.width - 64) / 8) };
-			operand_t output_high = { output.type, 64, output.value + ((output.width - 128) / 8) };
-			reg_to_mem_range(&input32_1);
-			reg_to_mem_range(&input32_2);
-			reg_to_mem_range(&input96_1);
-			reg_to_mem_range(&input96_2);
-			reg_to_mem_range(&output_low);
-			reg_to_mem_range(&output_high);
+			operand_t input32_1 = { input1.type, 4, input1.value + input1.width - 4 };
+			operand_t input32_2 = { input2.type, 4, input2.value + input2.width - 4 };
+			operand_t input96_1 = { input1.type, 4, input1.value + input1.width - 12 };
+			operand_t input96_2 = { input2.type, 4, input2.value + input2.width - 12 };
+			// create virtual reg/mem accessing 8 byte output ranges
+			operand_t output_low = { output.type, 8, output.value + output.width - 8 };
+			operand_t output_high = { output.type, 8, output.value + output.width - 16 };
+
 			// out_low <- input32_1 * input32_2
 			rinstr[0] = { op_mul, output_low, 2, { input32_1, input32_2 }, true };
 			// out_high <- input96_1 * input96_2
