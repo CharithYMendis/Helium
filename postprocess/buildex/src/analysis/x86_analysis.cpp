@@ -1153,7 +1153,7 @@ void update_fp_src(cinstr_t * cinstr, string disasm, uint32_t line){
 	}
 }
 
-void update_floating_point_regs(vec_cinstr &instrs, uint32_t direction, vector<Static_Info *> static_info, uint32_t pc){
+void update_floating_point_regs(vec_cinstr &instrs, uint32_t direction, vector<Static_Info *> static_info, vector<uint32_t> pc){
 
 	tos = DR_REG_ST8;
 
@@ -1168,8 +1168,11 @@ void update_floating_point_regs(vec_cinstr &instrs, uint32_t direction, vector<S
 		uint32_t line = i + 1;
 
 		/* reset for start of the function */
-		if (cinstr->pc == pc){
-			tos = DR_REG_ST8;
+		for (int j = 0; j < pc.size(); j++){
+			if (cinstr->pc == pc[j]){
+				tos = DR_REG_ST8;
+				break;
+			}
 		}
 
 		int amount;

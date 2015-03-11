@@ -650,6 +650,11 @@ std::string Halide_Program::print_abs_tree(Node * nnode, Node * head ,vector<str
 	else if (node->type == Abs_Node::SUBTREE_BOUNDARY){
 	
 	}
+	/*else if (node->type == Abs_Node::INPUT_NODE || node->type == Abs_Node::OUTPUT_NODE || node->type == Abs_Node::INTERMEDIATE_NODE){
+
+
+		
+	}*/
 	else {
 
 		if (node != head){
@@ -665,8 +670,9 @@ std::string Halide_Program::print_abs_tree(Node * nnode, Node * head ,vector<str
 			else{
 				ret += print_abs_tree(node->srcs[0], head, vars);
 			}
-			
+
 		}
+		
 
 	}
 	return ret;

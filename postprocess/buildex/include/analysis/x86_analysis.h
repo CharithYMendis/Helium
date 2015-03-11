@@ -98,7 +98,7 @@ enum {
 	 vec_cinstr  &instrs,
 	 uint32_t direction,
 	 std::vector<Static_Info * > static_info,
-	 uint32_t pc);
+	 std::vector<uint32_t> pc);
  void	update_regs_to_mem_range(vec_cinstr  &instrs);
 
  /* x86 instruction analysis functions */

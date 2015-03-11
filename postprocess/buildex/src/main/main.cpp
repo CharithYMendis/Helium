@@ -64,6 +64,8 @@
 	 printf("\t mode - the mode in which this tool is running mem_info_stage, tree_build_stage, abstraction_stage, halide_output_stage\n");
  
 	 printf("\t dump - whether the application memory dump should be used\n");
+	 printf("\t start_pcs - a comma separated list of start of captured functions\n");
+	 printf("\t end_pcs - a comma separated list of end of captured functions\n");
  }
 
  /* tree build modes */
@@ -106,6 +108,9 @@
 
 	 uint32_t dump = 1;
 	 uint32_t version = VER_NO_ADDR_OPND;
+
+	 vector<uint32_t> start_pcs;
+	 vector<uint32_t> end_pcs;
 
 
 	 /***************************** command line args processing ************************/
@@ -151,8 +156,11 @@
 		 else if (args[i]->name.compare("-stride") == 0){
 			 stride = atoi(args[i]->value.c_str());
 		 }
-		 else if (args[i]->name.compare("-start_pc") == 0){
-			 start_pc = atoi(args[i]->value.c_str());
+		 else if (args[i]->name.compare("-start_pcs") == 0){
+			 vector<string> start_pcs_string = split(args[i]->value, ',');
+			 for (int j = 0; j < start_pcs_string.size(); j++){
+				 start_pcs.push_back(atoi(start_pcs_string[j].c_str()));
+			 }
 		 }
 		 else if (args[i]->name.compare("-seed") == 0){
 			 seed = atoi(args[i]->value.c_str());
@@ -163,8 +171,11 @@
 		 else if (args[i]->name.compare("-mode") == 0){
 			 mode = atoi(args[i]->value.c_str());
 		 }
-		 else if (args[i]->name.compare("-end_pc") == 0){
-			 end_pc = atoi(args[i]->value.c_str());
+		 else if (args[i]->name.compare("-end_pcs") == 0){
+			 vector<string> end_pcs_string = split(args[i]->value, ',');
+			 for (int j = 0; j < end_pcs_string.size(); j++){
+				 end_pcs.push_back(atoi(end_pcs_string[j].c_str()));
+			 }
 		 }
 		 else if (args[i]->name.compare("-dump") == 0){
 			 dump = atoi(args[i]->value.c_str());
@@ -177,6 +188,8 @@
 		 }
 	 }
 
+
+	 ASSERT_MSG((start_pcs.size() == end_pcs.size()), ("ERROR: start and end pcs sizes should match\n"));
 	 ASSERT_MSG(!exec.empty(), ("exec must be specified\n"));
 	 ASSERT_MSG((!in_image.empty()) && (!out_image.empty()), ("image must be specified\n"));
 
@@ -374,7 +387,7 @@
 
 	 vec_cinstr instrs_forward_unfiltered = walk_file_and_get_instructions(instrace_file, static_info, version);
 	 /* need to filter unwanted instrs from the file we got */
-	 vec_cinstr instrs_forward = filter_instr_trace(start_pc, end_pc, instrs_forward_unfiltered);
+	 vec_cinstr instrs_forward = filter_instr_trace(start_pcs, end_pcs, instrs_forward_unfiltered);
 
 	 /* make a copy for the backwards analysis */
 	 vec_cinstr instrs_backward;
@@ -390,9 +403,9 @@
 	 update_regs_to_mem_range(instrs_backward);
 	 update_regs_to_mem_range(instrs_forward);
 
-	 update_floating_point_regs(instrs_backward, BACKWARD_ANALYSIS, static_info, start_pc);
+	 update_floating_point_regs(instrs_backward, BACKWARD_ANALYSIS, static_info, start_pcs);
 	 DEBUG_PRINT(("updated backward instr's floating point regs\n"), 2);
-	 update_floating_point_regs(instrs_forward, FORWARD_ANALYSIS, static_info, start_pc);
+	 update_floating_point_regs(instrs_forward, FORWARD_ANALYSIS, static_info, start_pcs);
 	 DEBUG_PRINT(("updated forward instr's floating point regs\n"), 2);
 
 	 

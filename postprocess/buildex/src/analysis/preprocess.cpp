@@ -73,6 +73,43 @@ vec_cinstr filter_instr_trace(uint32_t start_pc, uint32_t end_pc, vec_cinstr &un
 }
 
 
+int check_pc(vector<uint32_t> candidates, uint32_t pc){
+
+	for (int i = 0; i < candidates.size(); i++){
+		if (candidates[i] == pc) return i;
+	}
+
+
+	return -1;
+
+
+}
+
+vec_cinstr filter_instr_trace(vector<uint32_t> start_pc, vector<uint32_t> end_pc, vec_cinstr &unfiltered_instrs){
+
+
+	vec_cinstr instrs;
+	bool start = false;
+	int32_t index = -1;
+
+	for (int i = 0; i < unfiltered_instrs.size(); i++){
+
+		if (!start){
+			index = check_pc(start_pc, unfiltered_instrs[i].first->pc);
+			if (index != -1) start = true;
+		}
+
+		if (start) instrs.push_back(unfiltered_instrs[i]);
+		if (start && unfiltered_instrs[i].first->pc == end_pc[index]){
+			start = false;
+		}
+	}
+
+	return instrs;
+
+
+}
+
 
 
 
