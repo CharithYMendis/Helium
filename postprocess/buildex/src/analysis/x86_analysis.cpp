@@ -241,6 +241,33 @@ rinstr_t * cinstr_to_rinstrs(cinstr_t * cinstr, int &amount, std::string disasm,
 
 	switch (cinstr->opcode){
 
+		/************************* vector instructions ****************************/
+	case OP_movss:
+		//Kevin - to test
+		if_bounds(1,1){
+			// move low 32 bits from src to dst. Upper bits unchanged if dst is register
+			// bits 127-32 zeroed if source is memory
+			operand_t dst = cinstr -> dsts[0];
+			operand_t src = cinstr -> srcs[0];
+			// get low 32 bits of dst (or 4 bytes)
+			operand_t dst_low = {dst.type, 4, dst.value + dst.width - 4, NULL };
+			operand_t src_low = {src.type, 4, src.value + src.width - 4, NULL };
+			if ( dst.type == MEM_STACK_TYPE || dst.type == MEM_HEAP_TYPE ){
+				rinstr = new rinstr_t[2];
+				rinstr[0] = { op_assign, dst_low, 1, { src_low }, true };
+				//get upper bits
+				operand_t dst_high = {dst.type, 12, dst.value + dst.width - 16, NULL};
+				// move zeros into upper bits
+				operand_t immediate = { IMM_INT_TYPE, 12, 0 , NULL};
+				rinstr[1] = { op_assign, dst_high, 1, { immediate }, true };
+			}
+			else {
+				rinstr = new rinstr_t[1];
+				rinstr[0] = { op_assign, dst_low, 1, { src_low }, true };
+			}
+		}
+		else_bounds;
+
 	case OP_pmuldq:
 		// Kevin - to test
 		if_bounds(2,1){
@@ -1318,6 +1345,7 @@ Return
 bool is_instr_handled(uint32_t opcode){
 
 	switch (opcode){
+	case OP_movss:
 	case OP_pmuldq:
 	case OP_push_imm:
 	case OP_push:
