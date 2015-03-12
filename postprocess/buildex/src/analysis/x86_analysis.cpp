@@ -328,6 +328,7 @@ rinstr_t * cinstr_to_rinstrs(cinstr_t * cinstr, int &amount, std::string disasm,
 	case OP_movapd:
 	case OP_movdqa:
 	case OP_mov_seg:
+	case OP_movaps: // Kevin - to test
 
 	case OP_cvttsd2si:
 		// dst[0] <- src[0]
@@ -1347,6 +1348,7 @@ Return
 bool is_instr_handled(uint32_t opcode){
 
 	switch (opcode){
+	case OP_movaps:
 	case OP_xorps:
 	case OP_movss:
 	case OP_pmuldq:
