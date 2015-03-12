@@ -439,6 +439,7 @@ rinstr_t * cinstr_to_rinstrs(cinstr_t * cinstr, int &amount, std::string disasm,
 		}
 		else_bounds;
 
+	case OP_xorps:// KEVIN - test
 	case OP_xor:
 	case OP_sub:
 	case OP_pxor:
@@ -451,6 +452,7 @@ rinstr_t * cinstr_to_rinstrs(cinstr_t * cinstr, int &amount, std::string disasm,
 
 			uint32_t operation;
 			switch (cinstr->opcode){
+			case OP_xorps: // KEVIN -test
 			case OP_xor:
 			case OP_pxor:
 				operation = op_xor; break;
@@ -1366,6 +1368,7 @@ Return
 bool is_instr_handled(uint32_t opcode){
 
 	switch (opcode){
+	case OP_xorps:
 	case OP_movss:
 	case OP_pmuldq:
 	case OP_push_imm:
