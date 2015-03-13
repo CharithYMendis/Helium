@@ -67,15 +67,31 @@ void * Tree::traverse_tree(Node * node, void * value, node_mutator mutator, retu
 
 void Tree::canonicalize_tree()
 {
+	uint32_t changed_g = 1;
 	/* first congregate the tree and then order the nodes */
-	traverse_tree(head,this,
-		[](Node * node, void * value)->void* {
+	while (changed_g){
+		cout << "came canc" << endl;
+		changed_g = (uint32_t)traverse_tree(head, this,
+			[](Node * node, void * value)->void* {
 
-		Tree * tree = static_cast<Tree *>(value);
-		node->congregate_node(tree->get_head());
-		return NULL;
+			Tree * tree = static_cast<Tree *>(value);
+			uint32_t changed = node->congregate_node(tree->get_head());
+			return (void *)changed;
 
-	}, empty_ret_mutator);
+		}, [](void * node_value, std::vector<void *> traverse_value, void * value)->void*{
+
+			uint32_t changed = (uint32_t)node_value;
+			if (changed) return (void *)changed;
+
+			for (int i = 0; i < traverse_value.size(); i++){
+				changed = (uint32_t)traverse_value[i];
+				if (changed) return (void *)changed;
+			}
+
+			return (void *)changed;
+
+		});
+	}
 
 	traverse_tree(head, NULL,
 		[](Node * node, void * value)->void* {
@@ -364,6 +380,51 @@ bool Tree::are_trees_similar(std::vector<Node *> node)
 	}
 	
 	return true;
+
+}
+
+
+void Tree::remove_assign_nodes()
+{
+
+
+	cleanup_visit();
+
+	traverse_tree(head, head, [](Node * dst, void * value)->void*{
+
+
+		Node * head = (Node *)value;
+
+		if (dst->operation == op_assign && dst != head){
+			
+
+			ASSERT_MSG((dst->srcs.size() == 1), ("ERROR: assign should only have one source\n"));
+			Node * src = dst->srcs[0]; 
+
+			for (int i = 0; i < dst->prev.size(); i++){
+
+				src->prev.push_back(dst->prev[i]);
+				src->pos.push_back(dst->pos[i]);
+				dst->prev[i]->srcs[dst->pos[i]] = src;
+
+			}
+
+		}
+
+		return NULL;
+
+	}, empty_ret_mutator);
+}
+
+std::vector<mem_regions_t *> Tree::identify_intermediate_buffers(std::vector<mem_regions_t *> mem)
+{
+
+
+	vector<mem_regions_t *> regions;
+
+
+
+	return regions;
 
 }
 

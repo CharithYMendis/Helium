@@ -106,10 +106,6 @@ void build_conc_tree_helper(
 		delete[] rinstr;
 	}
 
-	//print_vector(lines,disasm);
-	//remove_po_node(tree->get_head(), tree->get_head(), NULL, 0);
-	//order_tree(tree->get_head());
-	tree->canonicalize_tree();
 }
 
 
@@ -200,6 +196,9 @@ void build_conc_tree(uint64_t destination,
 
 	}
 	
+
+	tree->remove_assign_nodes();
+	tree->canonicalize_tree();
 	DEBUG_PRINT(("build_tree_multi_func(concrete) - done\n"), 2);
 
 }
@@ -353,6 +352,7 @@ void build_conc_tree_single_func(uint64_t destination,
 	//print_vector(lines,disasm);
 	//remove_po_node(tree->get_head(), tree->get_head(), NULL, 0);
 	//order_tree(tree->get_head());
+	tree->remove_assign_nodes();
 	tree->canonicalize_tree();
 
 }

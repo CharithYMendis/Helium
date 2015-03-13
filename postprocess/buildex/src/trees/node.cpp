@@ -219,11 +219,13 @@ bool sort_function(pair<Node *, uint32_t> first_node, pair<Node *, uint32_t> sec
 	return (first_node.first->symbol->value < second_node.first->symbol->value);
 }
 
-void Node::congregate_node(Node * head)
+bool Node::congregate_node(Node * head)
 {
 
 	/* This removes the current node and lifts its children to the parent node */
 	DEBUG_PRINT(("entered canc.node \n"), 4);
+
+	bool ret = false;
 
 	for (int i = 0; i < (int)this->prev.size(); i++){
 		//cout << node->prev[i]->operation << " " << node->operation << endl;
@@ -238,12 +240,14 @@ void Node::congregate_node(Node * head)
 					prev_node->add_forward_ref(this->srcs[j]);
 				}
 				i--;
+				ret = true;
 			}
-
 		}
 	}
 
 	this->safely_delete(head);
+
+	return ret;
 }
 
 void Node::order_node()

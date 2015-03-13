@@ -473,7 +473,7 @@ bool Conc_Tree::update_depandancy_backward(rinstr_t * instr, cinstr_t * cinstr, 
 
 		DEBUG_PRINT(("src - %s\n", opnd_to_string(src->symbol).c_str()), 4);
 
-		if ((instr->num_srcs == 1) && (instr->operation == op_assign)){  //this is just an assign then remove the current node and place the new src node -> compiler didn't optimize for this?
+		/*if ((instr->num_srcs == 1) && (instr->operation == op_assign)){  //this is just an assign then remove the current node and place the new src node -> compiler didn't optimize for this?
 
 			uint num_references = dst->prev.size();
 
@@ -502,7 +502,7 @@ bool Conc_Tree::update_depandancy_backward(rinstr_t * instr, cinstr_t * cinstr, 
 			if (assign_opt)  delete dst;  //we have broken all linkages, so just delete it 
 
 
-		}
+		}*/
 
 		/* update the tree + backward references */
 
@@ -544,7 +544,7 @@ bool Conc_Tree::update_depandancy_backward(rinstr_t * instr, cinstr_t * cinstr, 
 		//simplify_identity_mul(dst);
 
 		/* do we need to do this? can't we do it outside */
-		dst->congregate_node(this->get_head());
+		//dst->congregate_node(this->get_head());
 		
 	}
 

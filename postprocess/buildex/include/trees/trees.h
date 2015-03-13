@@ -66,11 +66,13 @@ void * empty_ret_mutator(void * value, vector<void *> values, void * ori_value);
 	 
 	 void cleanup_visit();
 
+
+	 /* some tree transformations */
+	 void remove_assign_nodes();
+	 std::vector<mem_regions_t *> identify_intermediate_buffers(std::vector<mem_regions_t *> mem);
+
 	 
  };
-
- 
-
 
 
  /* Conc_Tree - expression tree from the instruction trace */
@@ -84,7 +86,7 @@ void * empty_ret_mutator(void * value, vector<void *> values, void * ori_value);
 		 Node ** bucket;
 		 int amount;
 	 };
-	 
+	 mem_regions_t * head_region;
 
 	 frontier_t * frontier;  /*this is actually a hash table keeping pointers to the Nodes already allocated */
 	 std::vector<uint32_t> mem_in_frontier; /* memoization structures for partial mem and reg writes and reads */

@@ -74,7 +74,7 @@
 		/* node canonicalizing routines */
 	public:
 		
-		void congregate_node(Node * head); /* congregate nodes with associative operations */
+		bool congregate_node(Node * head); /* congregate nodes with associative operations */
 		void order_node();  /* order the srcs of the node */
 		
 
