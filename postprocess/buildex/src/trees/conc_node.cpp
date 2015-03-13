@@ -35,7 +35,21 @@ Conc_Node::Conc_Node(operand_t * symbol)
 
 	this->line = 0;
 	this->pc = 0;
+	region = NULL;
 	
+}
+
+void assign_mem_region(Conc_Node * node, vector<mem_regions_t *> regions){
+
+	if (node->symbol->type == MEM_HEAP_TYPE || node->symbol->type == MEM_STACK_TYPE){
+		node->region = get_mem_region(node->symbol->value, regions);
+	}
+
+}
+
+
+Conc_Node::Conc_Node(operand_t * symbol, vector<mem_regions_t *> &regions) : Conc_Node(symbol){
+	assign_mem_region(this, regions);
 }
 
 Conc_Node::Conc_Node(uint32_t type, uint64_t value, uint32_t width, float float_value)
@@ -62,6 +76,7 @@ Conc_Node::Conc_Node(uint32_t type, uint64_t value, uint32_t width, float float_
 
 	this->line = 0;
 	this->pc = 0;
+	region = NULL;
 	
 }
 

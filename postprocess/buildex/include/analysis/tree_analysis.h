@@ -22,7 +22,8 @@ void build_conc_tree(uint64_t destination,
 				int start_trace, 
 				int end_trace, 
 				Conc_Tree * tree,
-				vec_cinstr &instrs);
+				vec_cinstr &instrs,
+				std::vector<mem_regions_t *> &regions);
 	
 
 void build_conc_tree(uint64_t destination, 
@@ -31,12 +32,14 @@ void build_conc_tree(uint64_t destination,
 				int start_trace, 
 				int end_trace, 
 				Conc_Tree * tree,
-				std::ifstream &file);
+				std::ifstream &file,
+				std::vector<mem_regions_t *> &regions);
 	
 void build_conc_trees_for_conditionals(
 				std::vector<uint32_t> start_points, 
 				Conc_Tree * tree, 
-				vec_cinstr &instrs);
+				vec_cinstr &instrs,
+				std::vector<mem_regions_t *> &regions);
 
 /* tree clustering and other categorizing */				
 				
@@ -44,7 +47,8 @@ std::vector< std::vector<Conc_Tree *> >  categorize_trees(
 				std::vector<Conc_Tree * > trees);
 				
 std::vector<Conc_Tree *> get_similar_trees(
-				std::vector<mem_regions_t *> image_regions, 
+				std::vector<mem_regions_t *> image_regions,
+				std::vector<mem_regions_t *> total_regions,	
 				uint32_t seed, 
 				uint32_t * stride, 
 				std::vector<uint32_t> start_points,
@@ -54,6 +58,7 @@ std::vector<Conc_Tree *> get_similar_trees(
 
 std::vector< std::vector <Conc_Tree *> > cluster_trees
 				(std::vector<mem_regions_t *> mem_regions, 
+				std::vector<mem_regions_t *> total_regions,
 				std::vector<uint32_t> start_points, 
 				vec_cinstr &instrs, 
 				std::string output_folder);

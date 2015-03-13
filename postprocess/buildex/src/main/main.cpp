@@ -550,10 +550,10 @@
 
 		 //Node * node = create_tree_for_dest(dest, stride, instrace_file, start_points, start_trace, end_trace, disasm)->get_head();
 		 Conc_Tree * tree = new Conc_Tree();
-		 build_conc_tree(dest, stride, start_points, start_trace, end_trace, tree, instrs_backward);
+		 build_conc_tree(dest, stride, start_points, start_trace, end_trace, tree, instrs_backward, total_mem_regions);
 		 tree->print_conditionals();
 		 cout << "creating conditional trees" << endl;
-		 build_conc_trees_for_conditionals(start_points, tree, instrs_backward);
+		 build_conc_trees_for_conditionals(start_points, tree, instrs_backward, total_mem_regions);
 		 for (int i = 0; i < tree->conditionals.size(); i++){
 			 conc_trees.push_back(tree->conditionals[i]->tree);
 
@@ -572,7 +572,7 @@
 		 for (int i = 0; i < nbd_locations.size(); i++){
 
 			 Conc_Tree * tree = new Conc_Tree();
-			 build_conc_tree(nbd_locations[i], stride, start_points, FILE_BEGINNING, end_trace, tree, instrs_backward);
+			 build_conc_tree(nbd_locations[i], stride, start_points, FILE_BEGINNING, end_trace, tree, instrs_backward, total_mem_regions);
 			 //identify_parameters(tree->get_head(), pc_mem_info);
 			 //exit(0);
 			 conc_trees.push_back(tree);
@@ -585,10 +585,10 @@
 
 	 }
 	 else if (tree_build == BUILD_SIMILAR){
-		 conc_trees = get_similar_trees(image_regions, seed, &stride, start_points, start_trace, end_trace, instrs_backward);
+		 conc_trees = get_similar_trees(image_regions, total_mem_regions, seed, &stride, start_points, start_trace, end_trace, instrs_backward);
 	 }
 	 else if (tree_build == BUILD_CLUSTERS){
-		 clustered_trees = cluster_trees(image_regions, start_points, instrs_backward, output_folder + file_substr);
+		 clustered_trees = cluster_trees(image_regions, total_mem_regions, start_points, instrs_backward, output_folder + file_substr);
 	 }
 
 

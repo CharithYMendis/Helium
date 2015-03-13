@@ -342,18 +342,19 @@ void Conc_Tree::add_address_dependancy(Node * node, operand_t * opnds){
 
 }
 
-bool Conc_Tree::update_depandancy_backward(rinstr_t * instr, cinstr_t * cinstr, Static_Info * info, uint32_t line)
+bool Conc_Tree::update_depandancy_backward(rinstr_t * instr, cinstr_t * cinstr, Static_Info * info, uint32_t line, vector<mem_regions_t *> regions)
 {
 	//TODO: have precomputed nodes for immediate integers -> can we do it for floats as well? -> just need to point to them in future (space optimization)
 	Node * head = get_head();
 	
 	if (head == NULL){
-		head = new Conc_Node(&instr->dst);
+		head = new Conc_Node(&instr->dst, regions);
 		set_head(head);
 		//head->operation = op_assign;
 		int hash = generate_hash(&instr->dst);
 
 		//we cannot have a -1 here! - give out an error in future
+		ASSERT_MSG((hash != -1), ("ERROR: hash cannot be -1\n"));
 		if (hash != -1){
 			int amount = frontier[hash].amount;
 			frontier[hash].bucket[amount] = head;
@@ -365,6 +366,7 @@ bool Conc_Tree::update_depandancy_backward(rinstr_t * instr, cinstr_t * cinstr, 
 				add_address_dependancy(head, instr->dst.addr);
 			}
 		}
+
 
 	}
 
@@ -399,7 +401,7 @@ bool Conc_Tree::update_depandancy_backward(rinstr_t * instr, cinstr_t * cinstr, 
 	/*do we have nodes that are contain within the current dest?*/
 	if (full_overlap_nodes.size() > 0){
 		if (dst == NULL){
-			dst = new Conc_Node(&instr->dst);
+			dst = new Conc_Node(&instr->dst, regions);
 		}
 		for (int i = 0; i < full_overlap_nodes.size(); i++){
 			DEBUG_PRINT(("full overlap - %s\n", opnd_to_string(full_overlap_nodes[i]->symbol).c_str()), 4);
@@ -456,7 +458,7 @@ bool Conc_Tree::update_depandancy_backward(rinstr_t * instr, cinstr_t * cinstr, 
 		bool add_node = false;
 		Node * src;  //now the node can be imme or another 
 		if (hash_src == -1){
-			src = new Conc_Node(&instr->srcs[i]);
+			src = new Conc_Node(&instr->srcs[i], regions);
 		}
 		else{
 			src = search_node(&instr->srcs[i]);
@@ -466,7 +468,7 @@ bool Conc_Tree::update_depandancy_backward(rinstr_t * instr, cinstr_t * cinstr, 
 		//we do not need to check for immediates here as src will point to a brand new Node in that case and hence will not enter 
 		//the if statement
 		if ((src == NULL) || (src == dst)){  //I think now we can remove the src == dst check -> keeping for sanity purposes (why? because we remove the dst from the frontier)
-			src = new Conc_Node(&instr->srcs[i]);
+			src = new Conc_Node(&instr->srcs[i], regions);
 			add_node = true;
 			DEBUG_PRINT(("new node added to the frontier\n"), 4);
 		}

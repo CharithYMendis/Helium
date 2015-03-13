@@ -86,8 +86,12 @@
  class Conc_Node : public Node {
 
  public:
+
+	 mem_regions_t * region;
+
 	 Conc_Node(operand_t * symbol);
 	 Conc_Node(uint32_t type, uint64_t value, uint32_t width, float float_value);
+	 Conc_Node(operand_t * symbol, std::vector<mem_regions_t *> &region);
 	 Conc_Node();
 	 ~Conc_Node();
 

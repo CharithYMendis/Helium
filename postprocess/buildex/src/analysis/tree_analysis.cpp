@@ -71,7 +71,8 @@ void build_conc_tree_helper(
 	int start_trace,
 	int end_trace,
 	Conc_Tree * tree,
-	vec_cinstr &instrs){
+	vec_cinstr &instrs,
+	vector<mem_regions_t *> &regions){
 
 	int32_t no_rinstrs;
 	cinstr_t * instr;
@@ -93,7 +94,7 @@ void build_conc_tree_helper(
 		bool updated = false;
 		bool affected = false;
 		for (int i = no_rinstrs - 1; i >= 0; i--){
-			updated = tree->update_depandancy_backward(&rinstr[i], instrs[curpos].first, instrs[curpos].second, curpos);
+			updated = tree->update_depandancy_backward(&rinstr[i], instrs[curpos].first, instrs[curpos].second, curpos, regions);
 			if (updated){
 				affected = true;
 				lines.push_back(make_pair(curpos, instr->pc));
@@ -115,7 +116,8 @@ void build_conc_tree(uint64_t destination,
 								int start_trace,
 								int end_trace,
 								Conc_Tree * tree,
-								vec_cinstr &instrs){
+								vec_cinstr &instrs,
+								vector<mem_regions_t *> &regions){
 
 	int32_t initial_endtrace = end_trace;
 	
@@ -169,7 +171,7 @@ void build_conc_tree(uint64_t destination,
 	/* build the initial part of the tree */
 	for (int i = index; i >= 0; i--){
 		
-		tree->update_depandancy_backward(&rinstr[i], instrs[curpos].first, instrs[curpos].second, curpos);
+		tree->update_depandancy_backward(&rinstr[i], instrs[curpos].first, instrs[curpos].second, curpos, regions);
 	}
 	delete[] rinstr;
 
@@ -188,7 +190,7 @@ void build_conc_tree(uint64_t destination,
 
 			cout << start_trace << " - " << end_trace << endl;
 
-			build_conc_tree_helper(start_trace, end_trace, tree, instrs);
+			build_conc_tree_helper(start_trace, end_trace, tree, instrs, regions);
 			remove_reg_leaves(tree);
 
 			start_trace = end_trace;
@@ -211,7 +213,8 @@ void build_conc_tree_single_func(uint64_t destination,
 					int start_trace,
 					int end_trace,
 					Conc_Tree * tree,
-					vec_cinstr &instrs){
+					vec_cinstr &instrs,
+					vector<mem_regions_t *> &regions){
 
 	DEBUG_PRINT(("build_tree(concrete)....\n"), 2);
 
@@ -289,10 +292,10 @@ void build_conc_tree_single_func(uint64_t destination,
 	//do the initial processing
 	for (int i = index; i >= 0; i--){
 		if (instrs[curpos].second != NULL){
-			tree->update_depandancy_backward(&rinstr[i], instrs[curpos].first, instrs[curpos].second, curpos);
+			tree->update_depandancy_backward(&rinstr[i], instrs[curpos].first, instrs[curpos].second, curpos, regions);
 		}
 		else{
-			tree->update_depandancy_backward(&rinstr[i], instrs[curpos].first, NULL, curpos);
+			tree->update_depandancy_backward(&rinstr[i], instrs[curpos].first, NULL, curpos, regions);
 		}
 	}
 
@@ -326,10 +329,10 @@ void build_conc_tree_single_func(uint64_t destination,
 			bool affected = false;
 			for (int i = no_rinstrs - 1; i >= 0; i--){
 				if (instrs[curpos].second != NULL){
-					updated = tree->update_depandancy_backward(&rinstr[i], instrs[curpos].first, instrs[curpos].second, curpos);
+					updated = tree->update_depandancy_backward(&rinstr[i], instrs[curpos].first, instrs[curpos].second, curpos, regions);
 				}
 				else{
-					updated = tree->update_depandancy_backward(&rinstr[i], instrs[curpos].first, NULL, curpos);
+					updated = tree->update_depandancy_backward(&rinstr[i], instrs[curpos].first, NULL, curpos, regions);
 				}
 
 				if (updated){
@@ -429,7 +432,8 @@ void build_conc_tree(uint64_t destination,
 	int start_trace,
 	int end_trace,
 	Conc_Tree * tree,
-	std::ifstream &file){
+	std::ifstream &file,
+	vector<mem_regions_t *> &regions){
 
 }
 
@@ -437,7 +441,8 @@ void build_conc_tree(uint64_t destination,
 void build_conc_trees_for_conditionals(
 	std::vector<uint32_t> start_points,
 	Conc_Tree * tree,
-	vec_cinstr &instrs){
+	vec_cinstr &instrs,
+	vector<mem_regions_t *> &regions){
 
 
 	for (int i = 0; i < tree->conditionals.size(); i++){
@@ -475,7 +480,7 @@ void build_conc_trees_for_conditionals(
 					ASSERT_MSG((dst_line != 0), ("ERROR: couldn't find the conditional destination\n"));
 
 					Conc_Tree * cond_tree = new Conc_Tree();
-					build_conc_tree(instr->srcs[j].value, instr->srcs[j].width, start_points, dst_line + 1, FILE_ENDING, cond_tree, instrs);
+					build_conc_tree(instr->srcs[j].value, instr->srcs[j].width, start_points, dst_line + 1, FILE_ENDING, cond_tree, instrs, regions);
 					cond_trees.push_back(cond_tree);
 
 				}
@@ -546,6 +551,7 @@ void build_conc_trees_for_conditionals(
 
 std::vector<Conc_Tree *> get_similar_trees(
 	std::vector<mem_regions_t *> image_regions,
+	std::vector<mem_regions_t *> total_regions,
 	uint32_t seed,
 	uint32_t * stride,
 	std::vector<uint32_t> start_points,
@@ -574,7 +580,7 @@ std::vector<Conc_Tree *> get_similar_trees(
 
 	/* build the expression tree for this node */
 	Conc_Tree * main_tree = new Conc_Tree();
-	build_conc_tree(mem_location, *stride, start_points, FILE_BEGINNING, end_trace, main_tree, instrs);
+	build_conc_tree(mem_location, *stride, start_points, FILE_BEGINNING, end_trace, main_tree, instrs, total_regions);
 	nodes.push_back(main_tree);
 
 	uint32_t nodes_needed = random_mem_region->dimensions + 2;
@@ -632,7 +638,7 @@ std::vector<Conc_Tree *> get_similar_trees(
 
 			if (success){
 				Conc_Tree * created_tree = new Conc_Tree();
-				build_conc_tree(mem_location, random_mem_region->bytes_per_pixel, start_points, FILE_BEGINNING, end_trace, created_tree, instrs);
+				build_conc_tree(mem_location, random_mem_region->bytes_per_pixel, start_points, FILE_BEGINNING, end_trace, created_tree, instrs, total_regions);
 
 				created_tree->print_tree(cout);
 				cout << endl;
@@ -671,6 +677,7 @@ std::vector<Conc_Tree *> get_similar_trees(
 
 std::vector< std::vector <Conc_Tree *> > cluster_trees
 		(std::vector<mem_regions_t *> mem_regions,
+		std::vector<mem_regions_t *> total_regions,
 		std::vector<uint32_t> start_points,
 		vec_cinstr &instrs,
 		std::string output_folder){
@@ -685,8 +692,8 @@ std::vector< std::vector <Conc_Tree *> > cluster_trees
 		DEBUG_PRINT(("building tree for location %llx - %u\n", i, i - mem->start), 2);
 		Conc_Tree * tree = new Conc_Tree();
 		tree->tree_num = i - mem->start;
-		build_conc_tree(i, mem->bytes_per_pixel, start_points, FILE_BEGINNING, FILE_ENDING, tree, instrs);
-		build_conc_trees_for_conditionals(start_points, tree, instrs);			
+		build_conc_tree(i, mem->bytes_per_pixel, start_points, FILE_BEGINNING, FILE_ENDING, tree, instrs, total_regions);
+		build_conc_trees_for_conditionals(start_points, tree, instrs, total_regions);			
 		trees.push_back(tree);
 	}
 

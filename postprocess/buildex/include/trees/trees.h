@@ -86,7 +86,6 @@ void * empty_ret_mutator(void * value, vector<void *> values, void * ori_value);
 		 Node ** bucket;
 		 int amount;
 	 };
-	 mem_regions_t * head_region;
 
 	 frontier_t * frontier;  /*this is actually a hash table keeping pointers to the Nodes already allocated */
 	 std::vector<uint32_t> mem_in_frontier; /* memoization structures for partial mem and reg writes and reads */
@@ -123,7 +122,8 @@ void * empty_ret_mutator(void * value, vector<void *> values, void * ori_value);
 	 void add_to_frontier(int hash, Node * node);
 	 void remove_registers_from_frontier();
 
-	 bool update_depandancy_backward(rinstr_t * instr, cinstr_t * cinstr, Static_Info * info, uint32_t line);
+	 //bool update_depandancy_backward(rinstr_t * instr, cinstr_t * cinstr, Static_Info * info, uint32_t line);
+	 bool update_depandancy_backward(rinstr_t * instr, cinstr_t * cinstr, Static_Info * info, uint32_t line, vector<mem_regions_t *> region);
 	 bool update_dependancy_forward(rinstr_t * instr, uint32_t pc, std::string disasm, uint32_t line);
 	 bool update_dependancy_forward_with_indirection(rinstr_t * instr, uint32_t pc, std::string disasm, uint32_t line);
 

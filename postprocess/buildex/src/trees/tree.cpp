@@ -70,7 +70,6 @@ void Tree::canonicalize_tree()
 	uint32_t changed_g = 1;
 	/* first congregate the tree and then order the nodes */
 	while (changed_g){
-		cout << "came canc" << endl;
 		changed_g = (uint32_t)traverse_tree(head, this,
 			[](Node * node, void * value)->void* {
 
