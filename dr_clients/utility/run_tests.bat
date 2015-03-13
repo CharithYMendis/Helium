@@ -30,14 +30,14 @@ set FILTER_FILE=%EXALGO_FILTER_FOLDER%\%FILTER_FILENAME%
 
 if "%DR_PHASE%" == "profile_memtrace" (
 
-	del %EXALGO_OUTPUT_FOLDER%\memtrace_%TEST_NAME%.exe_%IN_IMAGE%*	
+	del %EXALGO_OUTPUT_FOLDER%\memtrace_%TEST_NAME%_%IN_IMAGE%*	
 	call run_client %ARCH% %EXEC% %TEST_NAME% %DEBUG% "profile memtrace" %FILTER_FILE% %FILTER_MODE_STRING% %INSTRACE_MODE_STRING%	
 )
 
 
 if "%DR_PHASE%" == "memtrace" (
 
-	del %EXALGO_OUTPUT_FOLDER%\memtrace_%TEST_NAME%.exe_%IN_IMAGE%*	
+	del %EXALGO_OUTPUT_FOLDER%\memtrace_%TEST_NAME%_%IN_IMAGE%*	
 	call run_client %ARCH% %EXEC% %TEST_NAME% %DEBUG% "funcwrap memtrace" %FILTER_FILE% %FILTER_MODE_STRING% %INSTRACE_MODE_STRING%	
 )
 
@@ -53,37 +53,37 @@ if "%DR_PHASE%" == "funcreplace" (
 )
 
 if "%DR_PHASE%" == "profile" (
-	del %EXALGO_OUTPUT_FOLDER%\profile_%TEST_NAME%.exe_%IN_IMAGE%*
+	del %EXALGO_OUTPUT_FOLDER%\profile_%TEST_NAME%_%IN_IMAGE%*
 	call run_client %ARCH% %EXEC% %TEST_NAME% %DEBUG% "profile" %FILTER_FILE% %FILTER_MODE_STRING% %INSTRACE_MODE_STRING%
 )
 
 if "%DR_PHASE%" == "opndtrace" (
-	del %EXALGO_OUTPUT_FOLDER%\instrace_%TEST_NAME%.exe_%IN_IMAGE%_opnd*
+	del %EXALGO_OUTPUT_FOLDER%\instrace_%TEST_NAME%_%IN_IMAGE%_opnd*
 	call run_client %ARCH% %EXEC% %TEST_NAME% %DEBUG% "funcwrap instrace" %FILTER_FILE% %FILTER_MODE_STRING% opndtrace
 )
 
 if "%DR_PHASE%" == "opcodetrace" (
-	del %EXALGO_OUTPUT_FOLDER%\instrace_%TEST_NAME%.exe_%IN_IMAGE%_opcode*
+	del %EXALGO_OUTPUT_FOLDER%\instrace_%TEST_NAME%_%IN_IMAGE%_opcode*
 	call run_client %ARCH% %EXEC% %TEST_NAME% %DEBUG% "funcwrap instrace" %FILTER_FILE% %FILTER_MODE_STRING% opcodetrace
 )
 
 if "%DR_PHASE%" == "disasmtrace" (
-	del %EXALGO_OUTPUT_FOLDER%\instrace_%TEST_NAME%.exe_%IN_IMAGE%_disasm*
+	del %EXALGO_OUTPUT_FOLDER%\instrace_%TEST_NAME%_%IN_IMAGE%_disasm*
 	call run_client %ARCH% %EXEC% %TEST_NAME% %DEBUG% "funcwrap instrace" %FILTER_FILE% %FILTER_MODE_STRING% disasmtrace
 )
 
 if "%DR_PHASE%" == "ins_distrace" (
-	del %EXALGO_OUTPUT_FOLDER%\instrace_%TEST_NAME%.exe_%IN_IMAGE%_asm_instr*
+	del %EXALGO_OUTPUT_FOLDER%\instrace_%TEST_NAME%_%IN_IMAGE%_asm_instr*
 	call run_client %ARCH% %EXEC% %TEST_NAME% %DEBUG% "funcwrap instrace" %FILTER_FILE% %FILTER_MODE_STRING% ins_distrace
 )
 
 if "%DR_PHASE%" == "funcwrap" (
-	del %EXALGO_OUTPUT_FOLDER%\instrace_%TEST_NAME%.exe_%IN_IMAGE%_instr*
+	del %EXALGO_OUTPUT_FOLDER%\instrace_%TEST_NAME%_%IN_IMAGE%_instr*
 	call run_client %ARCH% %EXEC% %TEST_NAME% %DEBUG% "funcwrap" %FILTER_FILE% %FILTER_MODE_STRING% instrace
 )
 
 if "%DR_PHASE%" == "instrace" (
-	del %EXALGO_OUTPUT_FOLDER%\instrace_%TEST_NAME%.exe_%IN_IMAGE%_instr*
+	del %EXALGO_OUTPUT_FOLDER%\instrace_%TEST_NAME%_%IN_IMAGE%_instr*
 	call run_client %ARCH% %EXEC% %TEST_NAME% %DEBUG% "funcwrap instrace" %FILTER_FILE% %FILTER_MODE_STRING% instrace
 )
 
@@ -94,7 +94,7 @@ if "%DR_PHASE%" == "memdump" (
 
 
 if "%DR_PHASE%" == "instrace_memdump" (
-	del %EXALGO_OUTPUT_FOLDER%\instrace_%TEST_NAME%.exe_%IN_IMAGE%_instr*
+	del %EXALGO_OUTPUT_FOLDER%\instrace_%TEST_NAME%_%IN_IMAGE%_instr*
 	del %EXALGO_OUTPUT_FOLDER%\memdump*
 	call run_client %ARCH% %EXEC% %TEST_NAME% %DEBUG% "funcwrap instrace memdump" %FILTER_FILE% %FILTER_MODE_STRING% instrace
 )

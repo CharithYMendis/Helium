@@ -10,6 +10,8 @@
 #include "analysis/x86_analysis.h"
 #include "utility/defines.h"
 
+#include "utilities.h"
+
 using namespace std;
 
 void update_jump_conditionals(Conc_Tree * tree,
@@ -46,6 +48,7 @@ pair<int32_t, int32_t> get_start_and_end_points(vector<uint32_t> start_points, u
 		for (int i = 0; i < start_points.size(); i++){
 			if (start <= start_points[i]){
 				end = start_points[i];
+				break;
 			}
 		}
 	}
@@ -57,8 +60,153 @@ pair<int32_t, int32_t> get_start_and_end_points(vector<uint32_t> start_points, u
 
 }
 
-/* conc tree building routine */
+
+void remove_reg_leaves(Conc_Tree * tree){
+
+	DEBUG_PRINT(("WARNING: unimplemented\n"), 1);
+
+}
+
+void build_conc_tree_helper(
+	int start_trace,
+	int end_trace,
+	Conc_Tree * tree,
+	vec_cinstr &instrs){
+
+	int32_t no_rinstrs;
+	cinstr_t * instr;
+	rinstr_t * rinstr;
+	int32_t curpos = start_trace;
+
+	vector<pair<uint32_t, uint32_t> > lines;
+
+	//do the rest of expression tree building
+	for (; curpos < end_trace; curpos++) {
+
+		instr = instrs[curpos].first;
+		rinstr = NULL;
+		DEBUG_PRINT(("->line - %d\n", curpos), 3);
+		DEBUG_PRINT(("%s\n", instrs[curpos].second->disassembly.c_str()), 3);
+		rinstr = cinstr_to_rinstrs(instr, no_rinstrs, instrs[curpos].second->disassembly, curpos);
+		if (debug_level >= 4){ print_rinstrs(rinstr, no_rinstrs); }
+
+		bool updated = false;
+		bool affected = false;
+		for (int i = no_rinstrs - 1; i >= 0; i--){
+			updated = tree->update_depandancy_backward(&rinstr[i], instrs[curpos].first, instrs[curpos].second, curpos);
+			if (updated){
+				affected = true;
+				lines.push_back(make_pair(curpos, instr->pc));
+			}
+		}
+
+		if (affected){  /* that is this instr affects the frontier */
+			update_jump_conditionals(tree, instrs, curpos);
+		}
+		delete[] rinstr;
+	}
+
+	//print_vector(lines,disasm);
+	//remove_po_node(tree->get_head(), tree->get_head(), NULL, 0);
+	//order_tree(tree->get_head());
+	tree->canonicalize_tree();
+}
+
+
 void build_conc_tree(uint64_t destination,
+								uint32_t stride,
+								std::vector<uint32_t> start_points,
+								int start_trace,
+								int end_trace,
+								Conc_Tree * tree,
+								vec_cinstr &instrs){
+
+	int32_t initial_endtrace = end_trace;
+	
+	DEBUG_PRINT(("build_tree_multi_func(concrete)....\n"), 2);
+
+	/* get the initial starting and ending positions */
+	uint curpos;
+
+	pair<int32_t, int32_t> points = get_start_and_end_points(start_points, destination, stride, start_trace, end_trace, instrs);
+
+	start_trace = points.first;
+	end_trace = points.second;
+
+	cout << "from get start " << start_trace << " end " << end_trace << endl;
+
+	if (end_trace != FILE_ENDING) { ASSERT_MSG((end_trace >= start_trace), ("ERROR: trace end should be greater than the trace start\n")); }
+	else { end_trace = instrs.size(); }
+	
+	if (start_trace != FILE_BEGINNING){
+		ASSERT_MSG((start_trace < instrs.size()), ("ERROR: trace start should be within the limits of the file"));
+		start_trace = start_trace - 1;
+	}
+	else{ start_trace = 0; }
+
+	curpos = start_trace;
+
+	cinstr_t * instr;
+	rinstr_t * rinstr;
+	int no_rinstrs;
+
+	//now we need to read the next line and start from the correct destination
+	bool dest_present = false;
+	int index = -1;
+
+	//major assumption here is that reg and mem 'value' fields do not overlap. This is assumed in all other places as well. can have an assert for this
+	instr = instrs[curpos].first;
+	DEBUG_PRINT(("starting from instr - %s\n", instrs[curpos].second->disassembly.c_str()), 3);
+	rinstr = cinstr_to_rinstrs(instr, no_rinstrs, instrs[curpos].second->disassembly, curpos);
+
+	for (int i = no_rinstrs - 1; i >= 0; i--){
+		if (rinstr[i].dst.value == destination){
+			ASSERT_MSG((rinstr[i].dst.type != IMM_FLOAT_TYPE) && (rinstr[i].dst.type != IMM_INT_TYPE), ("ERROR: dest cannot be an immediate\n"));
+			index = i;
+			dest_present = true;
+			break;
+		}
+	}
+
+	ASSERT_MSG((dest_present == true) && (index >= 0), ("ERROR: couldn't find the dest to start trace\n")); //we should have found the destination
+
+	/* build the initial part of the tree */
+	for (int i = index; i >= 0; i--){
+		
+		tree->update_depandancy_backward(&rinstr[i], instrs[curpos].first, instrs[curpos].second, curpos);
+	}
+	delete[] rinstr;
+
+	start_trace++;
+	index = -1;
+	/* find the end_trace location in the start points */
+	for (int i = 0; i < start_points.size(); i++){
+		if (start_points[i] == end_trace) index = i;
+	}
+
+	ASSERT_MSG((index != -1), ("ERROR: should find end trace in start points\n"));
+
+
+	/* ok now build the tree */
+	while (start_trace != instrs.size() && start_trace != initial_endtrace){
+
+			cout << start_trace << " - " << end_trace << endl;
+
+			build_conc_tree_helper(start_trace, end_trace, tree, instrs);
+			remove_reg_leaves(tree);
+
+			start_trace = end_trace;
+			if (index + 1 < start_points.size()) end_trace = start_points[++index];
+
+	}
+	
+	DEBUG_PRINT(("build_tree_multi_func(concrete) - done\n"), 2);
+
+}
+
+
+/* conc tree building routine */
+void build_conc_tree_single_func(uint64_t destination,
 					uint32_t stride,
 					std::vector<uint32_t> start_points,
 					int start_trace,
@@ -107,9 +255,7 @@ void build_conc_tree(uint64_t destination,
 	int index = -1;
 
 	//major assumption here is that reg and mem 'value' fields do not overlap. This is assumed in all other places as well. can have an assert for this
-
 	instr = instrs[curpos].first;
-	//cout << instr->pc << endl;
 
 
 	ASSERT_MSG((instr != NULL), ("ERROR: you have given a line no beyond this file\n"));

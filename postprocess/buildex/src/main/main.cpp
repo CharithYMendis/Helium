@@ -522,8 +522,8 @@
 	 vector<uint32_t> start_points;
 	 vector<uint32_t> start_points_forward;
 	 if (end_trace == FILE_ENDING){
-		 start_points = get_instrace_startpoints(instrs_backward, start_pc);
-		 start_points_forward = get_instrace_startpoints(instrs_forward, start_pc);
+		 start_points = get_instrace_startpoints(instrs_backward, start_pcs);
+		 start_points_forward = get_instrace_startpoints(instrs_forward, start_pcs);
 		 DEBUG_PRINT(("no of funcs captured - %d\n start points : \n", start_points.size()), 1);
 		 for (int i = 0; i < start_points.size(); i++){
 			 DEBUG_PRINT(("%d-", start_points[i]), 1);

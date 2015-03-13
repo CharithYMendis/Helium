@@ -82,6 +82,23 @@ void Conc_Tree::add_to_frontier(int hash, Node * node)
 	}
 }
 
+void Conc_Tree::remove_registers_from_frontier(){
+
+
+	for (int i = 0; i < MAX_FRONTIERS; i++){
+		int size = frontier[i].amount;
+		for (int j = 0; j < size; j++){
+			Node * current = frontier[i].bucket[j];
+			if (current->symbol->type == REG_TYPE){  /* need to remove this */
+				remove_from_frontier(current->symbol);
+			}
+		}
+	}
+
+
+
+}
+
 Node * Conc_Tree::create_or_get_node(operand_t * opnd)
 {
 	Node * node = search_node(opnd);

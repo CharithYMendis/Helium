@@ -15,6 +15,7 @@ void filter_disasm_vector(vec_cinstr &instrs, std::vector<Static_Info *> &static
 					
 /* information gathtering routines */
 std::vector<uint32_t> get_instrace_startpoints(vec_cinstr &instrs, uint32_t pc);
+std::vector<uint32_t> get_instrace_startpoints(vec_cinstr &instrs, std::vector<uint32_t> pcs);
 
 vec_cinstr filter_instr_trace(uint32_t start_pc, uint32_t end_pc, vec_cinstr &unfiltered_instrs);
 vec_cinstr filter_instr_trace(std::vector<uint32_t> start_pcs, std::vector<uint32_t> end_pcs, vec_cinstr &unfiltered_instrs);
