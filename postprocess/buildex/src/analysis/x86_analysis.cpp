@@ -1181,6 +1181,8 @@ void update_floating_point_regs(vec_cinstr &instrs, uint32_t direction, vector<S
 
 	for (int i = 0; i < instrs.size(); i++){
 
+		cout << i << endl;
+
 		cinstr_t * cinstr = instrs[i].first;
 		bool unhandled = false;
 		string disasm = get_disasm_string(static_info, cinstr->pc);
@@ -1387,6 +1389,7 @@ bool is_instr_handled(uint32_t opcode){
 	case OP_fnstcw:
 	case OP_stmxcsr:
 	case OP_nop:
+	case OP_adc:
 		return true;
 	default:
 		return false;
