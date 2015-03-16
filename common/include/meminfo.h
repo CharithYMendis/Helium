@@ -7,8 +7,9 @@
 #include <set>
 
 //directions
-#define MEM_INPUT		0x1
-#define MEM_OUTPUT		0x2
+#define MEM_INPUT			0x1
+#define MEM_OUTPUT			0x2
+#define MEM_INTERMEDIATE	0x3
 
 //linking mode
 #define GREEDY			1

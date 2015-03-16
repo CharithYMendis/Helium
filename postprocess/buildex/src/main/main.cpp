@@ -425,7 +425,7 @@
 	 mem_regions_t * output_mem_region = NULL;
 
 	 for (int i = 0; i < image_regions.size(); i++){
-		 if (image_regions[i]->type == IMAGE_INPUT){
+		 if (image_regions[i]->direction == MEM_INPUT){
 			 input_mem_region = image_regions[i]; break;
 		 }
 	 }
@@ -433,7 +433,7 @@
 	 ASSERT_MSG((input_mem_region != NULL), ("ERROR: a input memory region cannot be located\n"));
 
 	 for (int i = 0; i < image_regions.size(); i++){
-		 if (image_regions[i]->type == IMAGE_OUTPUT){
+		 if (image_regions[i]->direction == MEM_OUTPUT){
 			 output_mem_region = image_regions[i]; break;
 		 }
 	 }

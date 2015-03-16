@@ -180,7 +180,7 @@ mem_regions_t* get_random_output_region(vector<mem_regions_t *> regions){
 	/*get the number of intermediate and output regions*/
 	uint32_t no_regions = 0;
 	for (int i = 0; i < regions.size(); i++){
-		if (regions[i]->type == IMAGE_INTERMEDIATE || regions[i]->type == IMAGE_OUTPUT){
+		if (regions[i]->direction == MEM_INTERMEDIATE || regions[i]->direction == MEM_OUTPUT){
 			no_regions++;
 		}
 	}
@@ -190,7 +190,7 @@ mem_regions_t* get_random_output_region(vector<mem_regions_t *> regions){
 	no_regions = 0;
 
 	for (int i = 0; i < regions.size(); i++){
-		if (regions[i]->type == IMAGE_INTERMEDIATE || regions[i]->type == IMAGE_OUTPUT){
+		if (regions[i]->direction == MEM_INTERMEDIATE || regions[i]->direction == MEM_OUTPUT){
 			if (no_regions == random){
 				DEBUG_PRINT(("random output region seleted\n"), 1);
 				return regions[i];
@@ -293,10 +293,10 @@ static void print_mem_regions(mem_regions_t * region){
 
 
 	cout << "type = ";
-	switch (region->type){
-	case IMAGE_INPUT:  cout << "image input" << endl; break;
-	case IMAGE_OUTPUT: cout << "image output" << endl; break;
-	case IMAGE_INTERMEDIATE: cout << "image intermediate" << endl; break;
+	switch (region->direction){
+	case MEM_INPUT:  cout << "image input" << endl; break;
+	case MEM_OUTPUT: cout << "image output" << endl; break;
+	case MEM_INTERMEDIATE: cout << "image intermediate" << endl; break;
 	}
 
 

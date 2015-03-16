@@ -23,10 +23,10 @@ Abs_Node::Abs_Node(Conc_Node * conc_node, vector<mem_regions_t *> &mem_regions) 
 		this->symbol = conc_node->symbol;
 		this->para_num = conc_node->para_num;
 
-		switch (mem->type){
-		case IMAGE_INPUT: this->type = INPUT_NODE; break;
-		case IMAGE_OUTPUT: this->type = OUTPUT_NODE; break;
-		case IMAGE_INTERMEDIATE: this->type = INTERMEDIATE_NODE; break;
+		switch (mem->direction){
+		case MEM_INPUT: this->type = INPUT_NODE; break;
+		case MEM_OUTPUT: this->type = OUTPUT_NODE; break;
+		case MEM_INTERMEDIATE: this->type = INTERMEDIATE_NODE; break;
 		}
 
 

@@ -47,11 +47,11 @@ vector<mem_regions_t *> merge_instrace_and_dump_regions(vector<mem_regions_t *> 
 			if (is_overlapped(mem_regions[i]->start, mem_regions[i]->end, mem_info[j]->start, mem_info[j]->end)){
 
 				merged_mem_info[j] = true;
-				mem_regions[i]->type = 0;
+				mem_regions[i]->direction = 0;
 
 
-				if ((mem_info[j]->direction  & MEM_INPUT) == MEM_INPUT){ cout << "image input" << endl;  mem_regions[i]->type |= IMAGE_INPUT; }
-				if ((mem_info[j]->direction & MEM_OUTPUT) == MEM_OUTPUT){ cout << "image output" << endl;  mem_regions[i]->type |= IMAGE_OUTPUT; }
+				if ((mem_info[j]->direction  & MEM_INPUT) == MEM_INPUT){ cout << "image input" << endl;  mem_regions[i]->direction |= MEM_INPUT; }
+				if ((mem_info[j]->direction & MEM_OUTPUT) == MEM_OUTPUT){ cout << "image output" << endl;  mem_regions[i]->direction |= MEM_OUTPUT; }
 
 				/* debug information about the merging */
 				if (debug && debug_level >= 2){
@@ -150,9 +150,9 @@ vector<mem_regions_t *> merge_instrace_and_dump_regions(vector<mem_regions_t *> 
 				//mem->extents[0] = (mem->end - mem->start + 1)/ mem->strides[0];
 				mem->padding_filled = 0;
 
-				mem->type = 0;
-				if ((mem_info[i]->direction  & MEM_INPUT) == MEM_INPUT){ mem->type |= IMAGE_INPUT; }
-				if ((mem_info[i]->direction & MEM_OUTPUT) == MEM_OUTPUT){ mem->type |= IMAGE_OUTPUT; }
+				mem->direction = 0;
+				if ((mem_info[i]->direction  & MEM_INPUT) == MEM_INPUT){ mem->direction |= MEM_INPUT; }
+				if ((mem_info[i]->direction & MEM_OUTPUT) == MEM_OUTPUT){ mem->direction |= MEM_OUTPUT; }
 
 				total_regions.push_back(mem);
 
@@ -167,13 +167,13 @@ vector<mem_regions_t *> merge_instrace_and_dump_regions(vector<mem_regions_t *> 
 	int outputs = 0;
 
 	for (int i = 0; i < total_regions.size(); i++){
-		if (total_regions[i]->type == IMAGE_INPUT){
+		if (total_regions[i]->direction == MEM_INPUT){
 			total_regions[i]->name = "input_" + to_string(++inputs);
 		}
-		else if (total_regions[i]->type == IMAGE_OUTPUT){
+		else if (total_regions[i]->direction == MEM_OUTPUT){
 			total_regions[i]->name = "output_" + to_string(++outputs);
 		}
-		else if (total_regions[i]->type == IMAGE_INTERMEDIATE){
+		else if (total_regions[i]->direction == MEM_INTERMEDIATE){
 			total_regions[i]->name = "inter_" + to_string(++intermediates);
 		}
 	}
@@ -193,11 +193,10 @@ vector<mem_regions_t *> get_image_regions_from_instrace(vector<mem_info_t *> &me
 
 }
 
-void  mark_regions_input_output(vector<mem_regions_t *> regions,vector<mem_regions_t *> input){
+/*void  mark_regions_input_output(vector<mem_regions_t *> regions,vector<mem_regions_t *> input){
 
 }
 
-/* we should be concerned with */
 
 vector<mem_regions_t *> get_input_output_regions(vector<mem_regions_t *> &image_regions, vector<mem_regions_t *> &total_regions, 
 	vector<pc_mem_region_t* > &pc_mems, vector<uint32_t> app_pc){
@@ -219,14 +218,12 @@ vector<mem_regions_t *> get_input_output_regions(vector<mem_regions_t *> &image_
 		}
 	}
 
-	/* filter based on candidate instructions */
 	vector<pc_mem_region_t *> candidate_pc_mem;
 	for (int i = 0; i < app_pc.size(); i++){
 		candidate_pc_mem.push_back(get_pc_mem_region(pc_mems, app_pc[i]));
 	}
 
 
-	/* select candidate output and input locations if dump fails for output and input */
 	vector<mem_regions_t *> candidate_output;
 	vector<mem_regions_t *> candidate_input;
 
@@ -257,14 +254,11 @@ vector<mem_regions_t *> get_input_output_regions(vector<mem_regions_t *> &image_
 
 	}
 
-	/* input there; output can't find
-	Then - use forward dependancy to find a heap dependancy; assign the last heap dependancy as the output location
-	*/
+	
 	if (output_mem_region == NULL && input_mem_region != NULL){
 
 	}
-	/* output there; input can't find; build a tree for output
-	*/
+	
 	else if (output_mem_region != NULL && input_mem_region == NULL){
 
 	}
@@ -275,4 +269,4 @@ vector<mem_regions_t *> get_input_output_regions(vector<mem_regions_t *> &image_
 	return ret;
 
 
-}
+}*/

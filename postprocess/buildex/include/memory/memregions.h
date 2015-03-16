@@ -10,10 +10,9 @@
 
 #define DIMENSIONS 3
 
-/* type options */
-#define IMAGE_INPUT			0x1
-#define IMAGE_OUTPUT		0x2
-#define IMAGE_INTERMEDIATE	0x3
+#define INPUT_BUFFER			0x1
+#define OUTPUT_BUFFER			0x2
+#define INTERMEDIATE_BUFFER		0x4
 
 
 struct mem_regions_t {
@@ -22,7 +21,13 @@ struct mem_regions_t {
 	uint32_t bytes_per_pixel;
 
 	/* characteristics of the memory region */
-	uint32_t type;							//image input, output or intermediate
+
+	/* this gives if it is mem read/write or both for a particular buffer */
+	uint32_t direction;							
+	
+	/* this gives the memory region type based on dependancy analysis */
+	uint32_t type;
+
 
 	bool buffer;
 
