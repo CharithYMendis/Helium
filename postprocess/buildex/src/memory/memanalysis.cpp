@@ -5,6 +5,8 @@
 #include "utilities.h"
 #include "memory/memanalysis.h"
 
+#include "meminfo.h"
+
 
 using namespace std;
 
@@ -188,5 +190,89 @@ vector<mem_regions_t *> merge_instrace_and_dump_regions(vector<mem_regions_t *> 
 vector<mem_regions_t *> get_image_regions_from_instrace(vector<mem_info_t *> &mem, ifstream &config, image_t * in_image, image_t * out_image){
 
 	ASSERT_MSG(false, ("ERROR: function not implemented\n"));
+
+}
+
+void  mark_regions_input_output(vector<mem_regions_t *> regions,vector<mem_regions_t *> input){
+
+}
+
+/* we should be concerned with */
+
+vector<mem_regions_t *> get_input_output_regions(vector<mem_regions_t *> &image_regions, vector<mem_regions_t *> &total_regions, 
+	vector<pc_mem_region_t* > &pc_mems, vector<uint32_t> app_pc){
+
+	vector<mem_regions_t *> ret;
+	mem_regions_t * input_mem_region = NULL;
+	mem_regions_t * output_mem_region = NULL;
+
+	for (int i = 0; i < image_regions.size(); i++){
+		if (image_regions[i]->type == IMAGE_INPUT){
+			input_mem_region = image_regions[i]; break;
+		}
+	}
+
+
+	for (int i = 0; i < image_regions.size(); i++){
+		if (image_regions[i]->type == IMAGE_OUTPUT){
+			output_mem_region = image_regions[i]; break;
+		}
+	}
+
+	/* filter based on candidate instructions */
+	vector<pc_mem_region_t *> candidate_pc_mem;
+	for (int i = 0; i < app_pc.size(); i++){
+		candidate_pc_mem.push_back(get_pc_mem_region(pc_mems, app_pc[i]));
+	}
+
+
+	/* select candidate output and input locations if dump fails for output and input */
+	vector<mem_regions_t *> candidate_output;
+	vector<mem_regions_t *> candidate_input;
+
+	if (output_mem_region == NULL && input_mem_region == NULL){
+
+		ASSERT_MSG((app_pc.size() != 0), ("ERROR: cannot find output/input from dump; please pass in the app_pc file\n"));
+
+		for (int i = 0; i < total_regions.size(); i++){
+			bool found = false;
+			if (total_regions[i]->buffer){
+				for (int j = 0; j < candidate_pc_mem.size(); j++){
+					for (int k = 0; k < candidate_pc_mem[j]->regions.size(); j++){
+						mem_info_t * info = candidate_pc_mem[j]->regions[k];
+						if (is_overlapped(info->start, info->end, total_regions[i]->start, total_regions[i]->end)){
+							if ((total_regions[i]->type & IMAGE_OUTPUT) == IMAGE_OUTPUT){
+								candidate_output.push_back(total_regions[i]);
+							}
+							if ((total_regions[i]->type & IMAGE_INPUT) == IMAGE_INPUT){
+								candidate_input.push_back(total_regions[i]);
+							}
+							found = true; break;
+						}
+					}
+					if (found) break;
+				}
+			}
+		}
+
+	}
+
+	/* input there; output can't find
+	Then - use forward dependancy to find a heap dependancy; assign the last heap dependancy as the output location
+	*/
+	if (output_mem_region == NULL && input_mem_region != NULL){
+
+	}
+	/* output there; input can't find; build a tree for output
+	*/
+	else if (output_mem_region != NULL && input_mem_region == NULL){
+
+	}
+
+	ret.push_back(output_mem_region);
+	ret.push_back(input_mem_region);
+
+	return ret;
+
 
 }

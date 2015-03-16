@@ -7,6 +7,8 @@
 #include "analysis/x86_analysis.h"
 #include "analysis/staticinfo.h"
 
+#include "meminfo.h"
+
 
 using namespace std;
 
@@ -120,7 +122,11 @@ vec_cinstr filter_instr_trace(vector<uint32_t> start_pc, vector<uint32_t> end_pc
 			if (index != -1) start = true;
 		}
 
-		if (start) instrs.push_back(unfiltered_instrs[i]);
+		if (start){
+			instrs.push_back(unfiltered_instrs[i]);
+			unfiltered_instrs[i].second->example_line = instrs.size() - 1; //check this??
+		}
+
 		if (start && unfiltered_instrs[i].first->pc == end_pc[index]){
 			start = false;
 		}
@@ -130,6 +136,7 @@ vec_cinstr filter_instr_trace(vector<uint32_t> start_pc, vector<uint32_t> end_pc
 
 
 }
+
 
 
 

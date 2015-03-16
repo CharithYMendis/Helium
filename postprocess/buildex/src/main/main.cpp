@@ -416,6 +416,9 @@
 	 vector<vector<uint32_t> > app_pc_vec;
 
 	 vector<Jump_Info * > cond_app_pc;
+
+	 /* get possible buffers */
+	 mark_possible_buffers(pc_mem_info, total_mem_regions, static_info, instrs_forward);
  
 	 /* need to find a (not the) input and output image region for forward and backward analysis */
 	 mem_regions_t * input_mem_region = NULL;

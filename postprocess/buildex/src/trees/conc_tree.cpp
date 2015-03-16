@@ -529,7 +529,23 @@ bool Conc_Tree::update_depandancy_backward(rinstr_t * instr, cinstr_t * cinstr, 
 		}
 
 		/* update the frontiers - include the sources to the frontier if new nodes created */
-		if (add_node) add_to_frontier(hash_src, src);
+		if (add_node){
+			
+			/* first if we have a recurrance we don't want to expand any more*/
+			Conc_Node * head_conc = (Conc_Node *)head;
+			Conc_Node * src_conc = (Conc_Node *)src;
+			if (head_conc->region != NULL && head_conc->region != src_conc->region){
+
+				/* now we need to see if this is a valid intermediate buffer */
+
+
+			}
+
+
+
+			add_to_frontier(hash_src, src);
+
+		}
 
 		DEBUG_PRINT(("completed adding a src\n"), 4);
 

@@ -4,6 +4,9 @@
 #include <stdint.h>
 #include <string>
 #include <vector>
+#include "meminfo.h"
+#include "analysis\staticinfo.h"
+#include "analysis\x86_analysis.h"
 
 #define DIMENSIONS 3
 
@@ -20,6 +23,8 @@ struct mem_regions_t {
 
 	/* characteristics of the memory region */
 	uint32_t type;							//image input, output or intermediate
+
+	bool buffer;
 
 	uint32_t dimensions;
 
@@ -41,7 +46,14 @@ struct mem_regions_t {
 	/* pcs which reference this region */
 	std::vector<uint32_t > pcs;
 
+	mem_regions_t(){
+		buffer = false;
+	}
+
 };
+
+/* updating mem_region properties */
+void mark_possible_buffers(std::vector<pc_mem_region_t *> &pc_mem, std::vector<mem_regions_t *> &mem_regions, std::vector<Static_Info *> &info, vec_cinstr &instrs);
 
 /* extracting random locations, memregions */
 std::vector<uint64_t> get_nbd_of_random_points(std::vector<mem_regions_t *> image_regions, uint32_t seed, uint32_t * stride);

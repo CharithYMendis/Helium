@@ -69,6 +69,7 @@ std::vector<mem_info_t *> extract_mem_regions(std::vector<pc_mem_region_t *> &pc
 
 void				 populate_memory_dependancies(std::vector<pc_mem_region_t *> &regions);
 void				 rank_pc_mems_from_highest(std::vector<pc_mem_region_t *> &pc_mems);
+pc_mem_region_t*	 get_pc_mem_region(std::vector<pc_mem_region_t *> regions, uint32_t pc);
 
 /* mem info related functions */
 void				 update_mem_regions(std::vector<mem_info_t *> &mem_info, mem_input_t * input); /* done */

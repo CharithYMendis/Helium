@@ -1134,3 +1134,13 @@ void populate_memory_dependancies(vector<pc_mem_region_t *> &regions){
 }
 
 
+pc_mem_region_t* get_pc_mem_region(vector<pc_mem_region_t *> regions, uint32_t pc){
+
+	for (int i = 0; i < regions.size(); i++){
+		if (regions[i]->pc == pc) return regions[i];
+	}
+	return NULL;
+
+}
+
+

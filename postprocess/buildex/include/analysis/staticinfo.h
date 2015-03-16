@@ -8,6 +8,8 @@ all the static information found about dynamically executed instructions */
 #include <stdint.h>
 #include <vector>
 
+//#include "analysis/x86_analysis.h"
+
 struct Jump_Info {
 
 	uint32_t jump_pc; // the pc of the conditional jump
@@ -44,6 +46,8 @@ public:
 
 	Instr_type type; // type of the instruction
 	std::vector< std::pair<Jump_Info *, bool> > conditionals; // are there any input dependent conditionals?
+
+	int example_line; //example line for this instruction in the instrace
 	
 	Static_Info();
 	~Static_Info();

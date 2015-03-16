@@ -9,6 +9,7 @@ using namespace std;
 
 Static_Info::Static_Info(){
 	type = NONE;
+	example_line = -1;
 }
 
 Static_Info::~Static_Info(){

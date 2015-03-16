@@ -3,7 +3,12 @@
 #include <string>
 
 #include "memory/memregions.h"
+#include "analysis/x86_analysis.h"
 #include "common_defines.h"
+
+#include "meminfo.h"
+#include "utilities.h"
+#include "utility\defines.h"
 
 using namespace std;
 
@@ -323,6 +328,79 @@ void print_mem_regions(vector<mem_regions_t *> regions){
 
 	for (int i = 0; i < regions.size(); i++){
 		print_mem_regions(regions[i]);
+	}
+
+}
+
+void mark_possible_buffers(vector<pc_mem_region_t *> &pc_mem, vector<mem_regions_t *> &mem_regions, vector<Static_Info *> &info, vec_cinstr &instrs){
+
+	for (int i = 0; i < mem_regions.size(); i++){
+
+		bool found = false;
+
+		for (int j = 0; j < pc_mem.size(); j++){
+			bool printed = true;
+			vector<mem_info_t *> mem_info = pc_mem[j]->regions;
+			for (int k = 0; k < mem_info.size(); k++){
+				if (is_overlapped(mem_regions[i]->start, mem_regions[i]->end, mem_info[k]->start, mem_info[k]->end)){
+					cinstr_t * instr = instrs[get_static_info(info, pc_mem[j]->pc)->example_line].first;
+					if (!printed){
+						cout << i << " " << mem_regions[i]->start << " " << get_static_info(info, pc_mem[j]->pc)->disassembly << endl;
+						print_cinstr(instr);
+						cout << pc_mem[j]->pc << endl;
+						printed = true;
+
+					}
+
+					if ( (mem_info[k]->direction & MEM_OUTPUT) == MEM_OUTPUT){
+						for (int dsts = 0; dsts < instr->num_dsts; dsts++){
+							operand_t opnd = instr->dsts[dsts];
+							if (opnd.type == MEM_HEAP_TYPE || opnd.type == MEM_STACK_TYPE){
+								
+								for (int addr = 0; addr < 2; addr++){
+									if (opnd.addr[addr].value != 0){
+										if (mem_range_to_reg(&opnd.addr[addr]) != DR_REG_RBP &&
+											mem_range_to_reg(&opnd.addr[addr]) != DR_REG_RSP){
+												mem_regions[i]->buffer = true;
+												found = true; break;
+										}
+									}
+								}
+									
+
+								
+							}
+						}
+					}
+
+					if ( (mem_info[k]->direction & MEM_INPUT) == MEM_INPUT){
+						for (int srcs = 0; srcs < instr->num_srcs; srcs++){
+							operand_t opnd = instr->srcs[srcs];
+							if (opnd.type == MEM_HEAP_TYPE || opnd.type == MEM_STACK_TYPE){
+
+								for (int addr = 0; addr < 2; addr++){
+									if (opnd.addr[addr].value != 0){
+										if (mem_range_to_reg(&opnd.addr[addr]) != DR_REG_RBP &&
+											mem_range_to_reg(&opnd.addr[addr]) != DR_REG_RSP){
+											mem_regions[i]->buffer = true;
+											found = true; break;
+										}
+									}
+								}
+
+							}
+						}
+					}
+
+
+				}
+				if (found) break;
+			}
+			if (found) break;
+		}
+
+		if (!found) print_mem_regions(mem_regions[i]);
+
 	}
 
 }
