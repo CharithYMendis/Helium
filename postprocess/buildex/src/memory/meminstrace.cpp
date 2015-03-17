@@ -28,6 +28,22 @@ void create_mem_layout(std::ifstream &in, vector<mem_info_t *> &mem_info, uint32
 
 			for (int i = 0; i < instr->num_srcs; i++){
 				if (instr->srcs[i].type == MEM_HEAP_TYPE || instr->srcs[i].type == MEM_STACK_TYPE){
+					
+					bool skip = true;
+					if (instr->srcs[i].type == MEM_STACK_TYPE){
+						operand_t opnd = instr->srcs[i];
+						for (int addr = 0; addr < 2; addr++){
+							uint32_t reg = opnd.addr[addr].value;
+							if (reg != 0 && reg != DR_REG_EBP && reg != DR_REG_ESP) skip = false;
+
+						}
+					}
+					else{
+						skip = false;
+					}
+
+					if (skip) continue;
+
 					input->mem_addr = instr->srcs[i].value;
 					input->stride = instr->srcs[i].width;
 					input->write = false;
@@ -39,6 +55,22 @@ void create_mem_layout(std::ifstream &in, vector<mem_info_t *> &mem_info, uint32
 			}
 			for (int i = 0; i < instr->num_dsts; i++){
 				if (instr->dsts[i].type == MEM_HEAP_TYPE || instr->dsts[i].type == MEM_STACK_TYPE){
+					
+					bool skip = true;
+					if (instr->dsts[i].type == MEM_STACK_TYPE){
+						operand_t opnd = instr->dsts[i];
+						for (int addr = 0; addr < 2; addr++){
+							uint32_t reg = opnd.addr[addr].value;
+							if (reg != 0 && reg != DR_REG_EBP && reg != DR_REG_ESP) skip = false;
+						}
+					}
+					else{
+						skip = false;
+					}
+
+					if (skip) continue;
+
+
 					input->mem_addr = instr->dsts[i].value;
 					input->stride = instr->dsts[i].width;
 					input->write = true;
@@ -82,6 +114,22 @@ void create_mem_layout(std::ifstream &in, vector<pc_mem_region_t *> &mem_info, u
 
 			for (int i = 0; i < instr->num_srcs; i++){
 				if (instr->srcs[i].type == MEM_HEAP_TYPE || instr->srcs[i].type == MEM_STACK_TYPE){
+
+					bool skip = true;
+					if (instr->srcs[i].type == MEM_STACK_TYPE){
+						operand_t opnd = instr->srcs[i];
+						for (int addr = 0; addr < 2; addr++){
+							uint32_t reg = opnd.addr[addr].value;
+							if (reg != 0 && reg != DR_REG_EBP && reg != DR_REG_ESP) skip = false;
+							
+						}
+					}
+					else{
+						skip = false;
+					}
+
+					if (skip) continue;
+
 					input->pc = instr->pc;
 					input->mem_addr = instr->srcs[i].value;
 					input->stride = instr->srcs[i].width;
@@ -94,6 +142,22 @@ void create_mem_layout(std::ifstream &in, vector<pc_mem_region_t *> &mem_info, u
 			}
 			for (int i = 0; i < instr->num_dsts; i++){
 				if (instr->dsts[i].type == MEM_HEAP_TYPE || instr->dsts[i].type == MEM_STACK_TYPE){
+
+					bool skip = true;
+					if (instr->dsts[i].type == MEM_STACK_TYPE){
+						operand_t opnd = instr->dsts[i];
+						for (int addr = 0; addr < 2; addr++){
+							uint32_t reg = opnd.addr[addr].value;
+							if (reg != 0 && reg != DR_REG_EBP && reg != DR_REG_ESP) skip = false;
+						}
+					}
+					else{
+						skip = false;
+					}
+
+					if (skip) continue;
+
+
 					input->pc = instr->pc;
 					input->mem_addr = instr->dsts[i].value;
 					input->stride = instr->dsts[i].width;
