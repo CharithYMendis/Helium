@@ -502,6 +502,7 @@ vector<mem_regions_t *> get_image_regions_from_dump(vector<string> filenames, st
 			start = end;
 
 			if (mem != NULL){
+				mem->dump_type = write ? OUTPUT_BUFFER : INPUT_BUFFER;
 				mem->start += base_pc;
 				mem->end += base_pc;
 				DEBUG_PRINT(("region found(%u) - start %llx end %llx padding %u\n", write, mem->start, mem->end, mem->padding[0]), 2);

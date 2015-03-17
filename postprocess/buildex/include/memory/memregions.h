@@ -28,8 +28,9 @@ struct mem_regions_t {
 	/* this gives the memory region type based on dependancy analysis */
 	uint32_t type;
 
+	/* type of the memory region based on dump */
+	uint32_t dump_type;
 
-	bool buffer;
 
 	uint32_t dimensions;
 
@@ -52,13 +53,17 @@ struct mem_regions_t {
 	std::vector<uint32_t > pcs;
 
 	mem_regions_t(){
-		buffer = false;
+		type = 0;
+		direction = 0;
+		dump_type = 0;
 	}
 
 };
 
 /* updating mem_region properties */
 void mark_possible_buffers(std::vector<pc_mem_region_t *> &pc_mem, std::vector<mem_regions_t *> &mem_regions, std::vector<Static_Info *> &info, vec_cinstr &instrs);
+void remove_possible_stack_frames(std::vector<pc_mem_region_t *> &pc_mem, std::vector<mem_info_t *> &mem, std::vector<Static_Info *> &info, vec_cinstr &instrs);
+
 
 /* extracting random locations, memregions */
 std::vector<uint64_t> get_nbd_of_random_points(std::vector<mem_regions_t *> image_regions, uint32_t seed, uint32_t * stride);
@@ -74,6 +79,7 @@ bool is_within_mem_region(mem_regions_t* mem, uint64_t value);
 
 /* prints out the identified mem regions */
 void print_mem_regions(std::vector<mem_regions_t *> regions);
+void print_mem_regions(mem_regions_t * region);
 
 
 #endif

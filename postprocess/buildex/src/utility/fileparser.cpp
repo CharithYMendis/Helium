@@ -242,6 +242,7 @@ vec_cinstr walk_file_and_get_instructions(ifstream &file, vector<Static_Info *> 
 		
 		if (instr != NULL){
 			info = get_static_info(static_info, instr->pc);
+			ASSERT_MSG((info != NULL), ("ERROR: static disassembly not found\n"));
 			instrs.push_back(make_pair(instr, info));
 		}
 	}

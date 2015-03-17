@@ -40,11 +40,11 @@ vector< vector<uint32_t> > find_dependant_statements_with_indirection(vec_cinstr
 		bool direct_dependant = false;
 		bool indirect_dependant = false;
 
-		for (int i = 0; i < amount; i++){
-			if (direct_tree->update_dependancy_forward(&rinstr[i], instr->pc, para, i + 1)){
+		for (int j = 0; j < amount; j++){
+			if (direct_tree->update_dependancy_forward(&rinstr[j], instr->pc, para, i + 1)){
 				direct_dependant = true;
 			}
-			if (indirect_tree->update_dependancy_forward_with_indirection(&rinstr[i], instr->pc, para, i + 1)){
+			if (indirect_tree->update_dependancy_forward_with_indirection(&rinstr[j], instr->pc, para, i + 1)){
 				indirect_dependant = true;
 			}
 		}

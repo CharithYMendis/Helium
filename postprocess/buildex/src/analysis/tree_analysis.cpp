@@ -688,7 +688,7 @@ std::vector< std::vector <Conc_Tree *> > cluster_trees
 	vector<Conc_Tree *> trees;
 
 	/*BUG - incrementing by +1 is not general; should increment by the stride */
-	for (uint64 i = mem->start; i < mem->end; i++){
+	for (uint64 i = mem->start; i < mem->end; i+= mem->bytes_per_pixel){
 		DEBUG_PRINT(("building tree for location %llx - %u\n", i, i - mem->start), 2);
 		Conc_Tree * tree = new Conc_Tree();
 		tree->tree_num = i - mem->start;

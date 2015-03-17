@@ -628,70 +628,101 @@ vector< vector< mem_info_t * > > get_merge_opportunities(vector<mem_info_t *> me
 
 	for (int i = 0; i < pc_mems.size(); i++){
 
-		set<mem_info_t *> overlapped_set;
+		vector<mem_info_t *> overlapped;
+
+		vector<mem_info_t *> pc_mem_info = pc_mems[i]->regions;
 
 		for (int j = 0; j < mem_info.size(); j++){
-			vector<mem_info_t *> pc_mem_info = pc_mems[i]->regions;
 			for (int k = 0; k < pc_mem_info.size(); k++){
 				if (is_overlapped(pc_mem_info[k]->start, pc_mem_info[k]->end, mem_info[j]->start, mem_info[j]->end)){
-					overlapped_set.insert(mem_info[j]);
-				}
-			}
-		}
-
-		
-
-
-
-		vector<mem_info_t *> overlapped(overlapped_set.begin(),overlapped_set.end());
-		
-
-		log_file << pc_mems[i]->pc << " - " << endl;
-
-		for (int j = 0; j < overlapped.size(); j++){
-			log_file << overlapped[j]->start << ",";
-		}
-		log_file << endl;
-
-
-
-		if (overlapped_set.size() >= 2){
-
-			bool added = false;
-
-			for (int j = 0; j < ret.size(); j++){
-
-				/* 1000 is just a heuristic value of the set size() -> make it dynamic for more resilience*/
-				vector<mem_info_t *> temp(1000);
-				vector<mem_info_t *>::iterator it;
-				
-
-
-				it = set_intersection(overlapped.begin(), overlapped.end(), ret[j].begin(), ret[j].end(), temp.begin());
-				if (it != temp.begin()){
-
-					it = set_union(overlapped.begin(), overlapped.end(), ret[j].begin(), ret[j].end(), temp.begin());
-					temp.resize(it - temp.begin());
-					ret[j] = temp;
-					added = true;
+					overlapped.push_back(mem_info[j]);
 					break;
 				}
-
-			}
-
-			if (!added){
-				ret.push_back(overlapped);
 			}
 		}
 
+		vector< vector< mem_info_t *> > regions;
+		vector<mem_info_t *> temp_info;
+		/* find sequences which are fairly close to each other */
+		for (int j = 1; j < overlapped.size(); j++){
+			uint32_t first_dim = get_number_dimensions(overlapped[j - 1]);
+			uint32_t first_extent = get_extents(overlapped[j - 1], first_dim, first_dim);
+			uint32_t first_stride = get_stride(overlapped[j - 1], first_dim, first_dim);
+			uint32_t right_first = overlapped[j - 1]->end + first_extent*first_stride;
+
+			uint32_t second_dim = get_number_dimensions(overlapped[j]);
+			uint32_t second_extent = get_extents(overlapped[j], second_dim, second_dim);
+			uint32_t second_stride = get_stride(overlapped[j], second_dim, second_dim);
+			uint32_t left_second = overlapped[j]->start - second_extent*second_stride;
+
+			if (j == 1){
+				if (right_first >= left_second){
+					temp_info.push_back(overlapped[j - 1]);
+				}
+			}
+			else{
+				if (right_first < left_second){
+					vector<mem_info_t *> temp(temp_info);
+					regions.push_back(temp);
+					temp_info.clear();
+				}
+			}
+			temp_info.push_back(overlapped[j]);
+		}
+
+		log_file << pc_mems[i]->pc << " - " << endl;
+		/*for (int j = 0; j < overlapped.size(); j++){
+			log_file << overlapped[j]->start << ",";
+		}
+		log_file << endl;*/
+
+		log_file << "regions" << endl;
+		for (int j = 0; j < regions.size(); j++){
+			for (int k = 0; k < regions[j].size(); k++){
+				log_file << regions[j][k]->start << ",";
+			}
+			log_file << endl;
+		}
+
+		for (int k = 0; k < regions.size(); k++){
+
+			sort(regions[k].begin(), regions[k].end());
+
+			if (regions[k].size() >= 2){
+
+				bool added = false;
+
+				for (int j = 0; j < ret.size(); j++){
+
+					/* 1000 is just a heuristic value of the set size() -> make it dynamic for more resilience*/
+					vector<mem_info_t *> temp(1000);
+					vector<mem_info_t *>::iterator it;
+
+					it = set_intersection(regions[k].begin(), regions[k].end(), ret[j].begin(), ret[j].end(), temp.begin());
+					if (it != temp.begin()){
+						it = set_union(regions[k].begin(), regions[k].end(), ret[j].begin(), ret[j].end(), temp.begin());
+						temp.resize(it - temp.begin());
+						ret[j] = temp;
+						added = true;
+						break;
+					}
+
+				}
+
+				if (!added){
+					ret.push_back(regions[k]);
+				}
+			}
+		}
 	}
+	
 
 
 	for (int i = 0; i < ret.size(); i++){
 		for (int j = 0; j < ret[i].size(); j++){
-			cout << ret[i][j]->start << ",";
+			log_file << ret[i][j]->start << ",";
 		}
-		cout << endl;
+		log_file << endl;
 	}
 
 	return ret;

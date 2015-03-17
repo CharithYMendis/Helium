@@ -347,23 +347,12 @@
 
 	 link_mem_regions_greedy_dim(mem_info, 0);
 	 
-
 	 print_mem_layout(log_file, pc_mem_info);
 	 log_file << "*********** mem_info *************" << endl;
 	 print_mem_layout(log_file, mem_info);
 
 	 vector<vector<mem_info_t *> > mergable = get_merge_opportunities(mem_info, pc_mem_info);
 	 merge_mem_regions_pc(mergable, mem_info);
-
-	 //exit(0);
-	
-	 /* if dump is false, we should use the candidate instructions to come with the output buffers */
-
-	 /* merge these two information - instrace mem info + mem dump info */
-	 vector<mem_regions_t *> total_mem_regions;
-	 vector<mem_regions_t *> image_regions = merge_instrace_and_dump_regions(total_mem_regions, mem_info, dump_regions);
-
-	 print_mem_regions(image_regions);
 
 	 if (mode == MEM_INFO_STAGE){
 		 exit(0);
@@ -389,6 +378,7 @@
 	 /* need to filter unwanted instrs from the file we got */
 	 vec_cinstr instrs_forward = filter_instr_trace(start_pcs, end_pcs, instrs_forward_unfiltered);
 
+
 	 /* make a copy for the backwards analysis */
 	 vec_cinstr instrs_backward;
 	 for (int i = instrs_forward.size() - 1; i >= 0; i--){
@@ -396,6 +386,7 @@
 		 pair<cinstr_t *, Static_Info *> instr_string = make_pair(new_cinstr, instrs_forward[i].second);
 		 instrs_backward.push_back(instr_string);
 	 }
+
 
 	 DEBUG_PRINT(("number of dynamic instructions : %d\n", instrs_backward.size()), 2);
 
@@ -408,38 +399,40 @@
 	 update_floating_point_regs(instrs_forward, FORWARD_ANALYSIS, static_info, start_pcs);
 	 DEBUG_PRINT(("updated forward instr's floating point regs\n"), 2);
 
+	 /*******************************************more memory and input/output selection********************************************************/
 	 
+	 vector<uint32_t> candidate_ins;
+	 vector<uint32_t> start_points_mem;
+	 start_points_mem = get_instrace_startpoints(instrs_forward, start_pcs);
+
+	 mem_regions_t * input_mem_region = NULL;
+	 mem_regions_t * output_mem_region = NULL;
+
+	 remove_possible_stack_frames(pc_mem_info, mem_info, static_info, instrs_forward);
+	 
+	 /* merge these two information - instrace mem info + mem dump info */
+	 vector<mem_regions_t *> total_mem_regions;
+	 vector<mem_regions_t *> image_regions = merge_instrace_and_dump_regions(total_mem_regions, mem_info, dump_regions);
+
+	 /* get possible buffers */
+	 mark_possible_buffers(pc_mem_info, total_mem_regions, static_info, instrs_forward);
+	 
+	 vector<mem_regions_t*> regions = get_input_output_regions(image_regions, total_mem_regions, pc_mem_info, candidate_ins, instrs_forward, start_points_mem);
+	 
+	 input_mem_region = regions[0];
+	 output_mem_region = regions[1];
+
+	 image_regions.push_back(output_mem_region);
+
+	 print_mem_regions(image_regions);
+
+
 	 /**************************** forward analysis for conditionals, indirection *************************************************************/
 	 
 	 vector<uint32_t> app_pc;
 	 vector<uint32_t> app_pc_indirect;
 	 vector<vector<uint32_t> > app_pc_vec;
-
 	 vector<Jump_Info * > cond_app_pc;
-
-	 /* get possible buffers */
-	 mark_possible_buffers(pc_mem_info, total_mem_regions, static_info, instrs_forward);
- 
-	 /* need to find a (not the) input and output image region for forward and backward analysis */
-	 mem_regions_t * input_mem_region = NULL;
-	 mem_regions_t * output_mem_region = NULL;
-
-	 for (int i = 0; i < image_regions.size(); i++){
-		 if (image_regions[i]->direction == MEM_INPUT){
-			 input_mem_region = image_regions[i]; break;
-		 }
-	 }
-
-	 ASSERT_MSG((input_mem_region != NULL), ("ERROR: a input memory region cannot be located\n"));
-
-	 for (int i = 0; i < image_regions.size(); i++){
-		 if (image_regions[i]->direction == MEM_OUTPUT){
-			 output_mem_region = image_regions[i]; break;
-		 }
-	 }
-
-
-	 ASSERT_MSG((input_mem_region != NULL), ("ERROR: a output memory region cannot be located\n"));
 
 
 	cout << "before filter static ins : " << static_info.size() << endl;
@@ -541,6 +534,7 @@
 		 if (start_trace == FILE_BEGINNING){
 			 mem_regions_t * random_mem_region = get_random_output_region(image_regions);
 			 uint64 mem_location = get_random_mem_location(random_mem_region, seed);
+			 //mem_location = 234813344;
 			 DEBUG_PRINT(("random mem location we got - %llx\n", mem_location), 1);
 			 dest = mem_location;
 			 stride = random_mem_region->bytes_per_pixel;
@@ -625,6 +619,16 @@
 		 ofstream conc_file(output_folder + file_substr + "_conctree_" + to_string(i) + ".dot", ofstream::out);
 		 conc_trees[i]->print_dot(conc_file,"conc",i);
 		 
+	 }
+
+	 if (clustered_trees.size() > 0){
+		 for (int i = 0; i < clustered_trees.size(); i++){
+			 cout << i << " size: " << clustered_trees[i].size() << endl;
+			 DEBUG_PRINT(("printing to dot file...\n"), 2);
+			 ofstream conc_file(output_folder + file_substr + "_conctree_" + to_string(i) + ".dot", ofstream::out);
+			 clustered_trees[i][0]->print_dot(conc_file, "conc", i);
+			 cout << "conditionals: " << clustered_trees[i][0]->conditionals.size() << endl;
+		 }
 	 }
 
 	 if (mode == TREE_BUILD_STAGE){

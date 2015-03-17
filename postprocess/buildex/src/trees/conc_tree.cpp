@@ -537,13 +537,13 @@ bool Conc_Tree::update_depandancy_backward(rinstr_t * instr, cinstr_t * cinstr, 
 			if (head_conc->region != NULL && head_conc->region != src_conc->region){
 
 				/* now we need to see if this is a valid intermediate buffer */
-
+				add_to_frontier(hash_src, src);
 
 			}
 
 
 
-			add_to_frontier(hash_src, src);
+			
 
 		}
 
@@ -567,6 +567,67 @@ bool Conc_Tree::update_depandancy_backward(rinstr_t * instr, cinstr_t * cinstr, 
 	}
 
 	return true;
+
+}
+
+bool Conc_Tree::update_depandancy_forward_with_src(rinstr_t * instr, uint32_t pc, std::string disasm, uint32_t line, bool * src_dep){
+
+	bool ret = false;
+
+	for (int i = 0; i < instr->num_srcs; i++){
+
+		/* check if this source is there, full o/l'ed, partial o/l'ed */
+		vector<operand_t *> srcs;
+
+		srcs.push_back(&instr->srcs[i]);
+		if (instr->srcs[i].addr != NULL){
+			for (int j = 0; j < 4; j++){
+				srcs.push_back(&instr->srcs[i].addr[j]);
+			}
+		}
+		if (instr->dst.addr != NULL){
+			for (int j = 0; j < 4; j++){
+				srcs.push_back(&instr->dst.addr[j]);
+			}
+		}
+		src_dep[i] = false;
+		for (int j = 0; j < srcs.size(); j++){
+
+			if (srcs[j]->type == IMM_FLOAT_TYPE || srcs[j]->type == IMM_INT_TYPE) continue;
+			if (srcs[j]->type == REG_TYPE && srcs[j]->value == 0) continue; //NULL registers
+
+			Node * src_node = search_node(srcs[j]);
+
+
+			vector<Node *> full_overlaps;
+			vector<pair<Node *, vector<Node *> > > partial_overlaps;
+
+			get_full_overlap_nodes(full_overlaps, srcs[j]);
+			get_partial_overlap_nodes(partial_overlaps, srcs[j]);
+
+			if ((src_node != NULL) || (full_overlaps.size() > 0) || (partial_overlaps.size() > 0)){
+				if (!ret){
+					Node * dst_node = search_node(&instr->dst);
+					if (dst_node == NULL){
+						add_to_frontier(generate_hash(&instr->dst), new Conc_Node(&instr->dst));
+					}
+					ret = true;
+				}
+				src_dep[i] = true;
+			}
+			
+		}
+
+	}
+
+	/*if no src is found, we should remove the dst, if it is already there*/
+	if (ret) return true;
+
+	Node * dst_node = search_node(&instr->dst);
+	if (dst_node != NULL) remove_from_frontier(&instr->dst);
+
+	return false;
+
 
 }
 

@@ -16,7 +16,14 @@ Abs_Node::Abs_Node() : Node()
 
 Abs_Node::Abs_Node(Conc_Node * conc_node, vector<mem_regions_t *> &mem_regions) : Node(*conc_node) {
 
-	if (conc_node->symbol->type == MEM_HEAP_TYPE){
+
+
+	mem_regions_t * mem = NULL;
+	if (conc_node->symbol->type == MEM_STACK_TYPE || conc_node->symbol->type == MEM_HEAP_TYPE){
+		mem = get_mem_region(conc_node->symbol->value, mem_regions);
+	}
+
+	if (mem != NULL){
 
 		mem_regions_t * mem = get_mem_region(conc_node->symbol->value, mem_regions);
 		this->operation = conc_node->operation;

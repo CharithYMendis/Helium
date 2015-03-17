@@ -1,4 +1,5 @@
 #include <iostream>
+#include <map>
 
 #include "utility/defines.h"
 #include "common_defines.h"
@@ -6,6 +7,8 @@
 #include "memory/memanalysis.h"
 
 #include "meminfo.h"
+#include "trees/trees.h"
+
 
 
 using namespace std;
@@ -47,12 +50,8 @@ vector<mem_regions_t *> merge_instrace_and_dump_regions(vector<mem_regions_t *> 
 			if (is_overlapped(mem_regions[i]->start, mem_regions[i]->end, mem_info[j]->start, mem_info[j]->end)){
 
 				merged_mem_info[j] = true;
-				mem_regions[i]->direction = 0;
-
-
-				if ((mem_info[j]->direction  & MEM_INPUT) == MEM_INPUT){ cout << "image input" << endl;  mem_regions[i]->direction |= MEM_INPUT; }
-				if ((mem_info[j]->direction & MEM_OUTPUT) == MEM_OUTPUT){ cout << "image output" << endl;  mem_regions[i]->direction |= MEM_OUTPUT; }
-
+				mem_regions[i]->direction = mem_info[j]->direction;
+				
 				/* debug information about the merging */
 				if (debug && debug_level >= 2){
 					cout << "mem region:" << endl;
@@ -150,9 +149,7 @@ vector<mem_regions_t *> merge_instrace_and_dump_regions(vector<mem_regions_t *> 
 				//mem->extents[0] = (mem->end - mem->start + 1)/ mem->strides[0];
 				mem->padding_filled = 0;
 
-				mem->direction = 0;
-				if ((mem_info[i]->direction  & MEM_INPUT) == MEM_INPUT){ mem->direction |= MEM_INPUT; }
-				if ((mem_info[i]->direction & MEM_OUTPUT) == MEM_OUTPUT){ mem->direction |= MEM_OUTPUT; }
+				mem->direction = mem_info[i]->direction;
 
 				total_regions.push_back(mem);
 
@@ -184,6 +181,8 @@ vector<mem_regions_t *> merge_instrace_and_dump_regions(vector<mem_regions_t *> 
 
 	DEBUG_PRINT((" merge_instrace_and_dump_regions - done\n"), 2);
 
+	cout << dec;
+
 	return final_regions;
 }
 
@@ -193,80 +192,190 @@ vector<mem_regions_t *> get_image_regions_from_instrace(vector<mem_info_t *> &me
 
 }
 
-/*void  mark_regions_input_output(vector<mem_regions_t *> regions,vector<mem_regions_t *> input){
 
-}
+void  mark_regions_type(vector<mem_regions_t *> regions, vector<mem_regions_t *> input, vec_cinstr &instrs, 
+	map< uint32_t, vector<mem_regions_t *> > maps, uint32_t start, uint32_t end){
 
+	Conc_Tree * tree = new Conc_Tree();
 
-vector<mem_regions_t *> get_input_output_regions(vector<mem_regions_t *> &image_regions, vector<mem_regions_t *> &total_regions, 
-	vector<pc_mem_region_t* > &pc_mems, vector<uint32_t> app_pc){
-
-	vector<mem_regions_t *> ret;
-	mem_regions_t * input_mem_region = NULL;
-	mem_regions_t * output_mem_region = NULL;
-
-	for (int i = 0; i < image_regions.size(); i++){
-		if (image_regions[i]->type == IMAGE_INPUT){
-			input_mem_region = image_regions[i]; break;
+	bool input_given = input.size() > 0;
+	
+	for (int j = 0; j < input.size(); j++){
+		mem_regions_t * mem = input[j];
+		for (uint64_t i = mem->start; i < mem->end; i += mem->bytes_per_pixel){
+			operand_t opnd = { MEM_HEAP_TYPE, mem->bytes_per_pixel, i };
+			tree->add_to_frontier(tree->generate_hash(&opnd), new Conc_Node(&opnd));
 		}
 	}
+	
+	int amount = 0;
+	bool * srcs_dep = new bool[2];
+	srcs_dep[0] = false; srcs_dep[1] = false;
 
 
-	for (int i = 0; i < image_regions.size(); i++){
-		if (image_regions[i]->type == IMAGE_OUTPUT){
-			output_mem_region = image_regions[i]; break;
-		}
-	}
+#define WRITTEN	2
+#define READ	1
 
-	vector<pc_mem_region_t *> candidate_pc_mem;
-	for (int i = 0; i < app_pc.size(); i++){
-		candidate_pc_mem.push_back(get_pc_mem_region(pc_mems, app_pc[i]));
-	}
+	map<uint64_t, uint32_t> memory_map;
 
+	for (uint32_t i = start; i < end; i++){
 
-	vector<mem_regions_t *> candidate_output;
-	vector<mem_regions_t *> candidate_input;
+		if (i % 10000 == 0) cout << "->" << i << endl;
 
-	if (output_mem_region == NULL && input_mem_region == NULL){
+		cinstr_t * instr = instrs[i].first;
+		rinstr_t * rinstr;
+		string para = instrs[i].second->disassembly;
 
-		ASSERT_MSG((app_pc.size() != 0), ("ERROR: cannot find output/input from dump; please pass in the app_pc file\n"));
+		rinstr = cinstr_to_rinstrs_eflags(instr, amount, para, i + 1);
 
-		for (int i = 0; i < total_regions.size(); i++){
-			bool found = false;
-			if (total_regions[i]->buffer){
-				for (int j = 0; j < candidate_pc_mem.size(); j++){
-					for (int k = 0; k < candidate_pc_mem[j]->regions.size(); j++){
-						mem_info_t * info = candidate_pc_mem[j]->regions[k];
-						if (is_overlapped(info->start, info->end, total_regions[i]->start, total_regions[i]->end)){
-							if ((total_regions[i]->type & IMAGE_OUTPUT) == IMAGE_OUTPUT){
-								candidate_output.push_back(total_regions[i]);
+		vector<mem_regions_t *> regions = maps[instr->pc];
+
+		if (!input_given){
+			for (int j = 0; j < instr->num_srcs; j++){
+				if ((instr->srcs[j].type == MEM_HEAP_TYPE || instr->srcs[j].type == MEM_STACK_TYPE) && ((memory_map[instr->srcs[j].value] & WRITTEN) != WRITTEN)){
+					for (int k = 0; k < regions.size(); k++){
+						if (is_overlapped(regions[k]->start, regions[k]->end, instr->srcs[j].value, instr->srcs[j].value)){ 
+							regions[k]->type |= INPUT_BUFFER;
+							memory_map[instr->srcs[j].value] |= READ;
+							if (tree->search_node(&instr->srcs[j]) == NULL){
+								tree->add_to_frontier(tree->generate_hash(&instr->srcs[j]), new Conc_Node(&instr->srcs[j]));
 							}
-							if ((total_regions[i]->type & IMAGE_INPUT) == IMAGE_INPUT){
-								candidate_input.push_back(total_regions[i]);
-							}
-							found = true; break;
 						}
 					}
-					if (found) break;
+				}
+			}
+		}
+
+
+
+		for (int j = 0; j < amount; j++){
+			if (tree->update_depandancy_forward_with_src(&rinstr[j], instr->pc, instrs[i].second->disassembly, i + 1, srcs_dep)){
+
+				for (int k = 0; k < rinstr[j].num_srcs; k++){
+					if ((rinstr[j].srcs[k].type == MEM_STACK_TYPE || rinstr[j].srcs[k].type == MEM_HEAP_TYPE) && srcs_dep[k]){
+						for (int m = 0; m < regions.size(); m++){
+							if (is_overlapped(regions[m]->start, regions[m]->end, rinstr->srcs[k].value, rinstr->srcs[k].value)){ 
+								memory_map[instr->srcs[k].value] |= READ;
+								if ( (regions[m]->type & OUTPUT_BUFFER) == OUTPUT_BUFFER ) regions[m]->type |= INTERMEDIATE_BUFFER;
+								else regions[m]->type |= INPUT_BUFFER;
+							}
+						}
+					}
+				}
+
+				if ((rinstr[j].dst.type == MEM_STACK_TYPE || rinstr[j].dst.type == MEM_HEAP_TYPE)){
+					for (int m = 0; m < regions.size(); m++){
+						if (is_overlapped(regions[m]->start, regions[m]->end, rinstr->dst.value, rinstr->dst.value)){ 
+							memory_map[rinstr->dst.value] |= WRITTEN;
+							regions[m]->type |= OUTPUT_BUFFER;
+						}
+					}
 				}
 			}
 		}
 
 	}
 
+}
+
+
+vector<mem_regions_t *> get_input_output_regions(vector<mem_regions_t *> &image_regions, vector<mem_regions_t *> &total_regions, 
+	vector<pc_mem_region_t* > &pc_mems, vector<uint32_t> app_pc, vec_cinstr &instrs, vector<uint32_t> start_points){
+
+
+	vector<mem_regions_t *> ret;
+	mem_regions_t * input_mem_region = NULL;
+	mem_regions_t * output_mem_region = NULL;
+
+	for (int i = 0; i < image_regions.size(); i++){
+		if (image_regions[i]->dump_type == INPUT_BUFFER){
+			input_mem_region = image_regions[i]; break;
+		}
+	}
+
+
+	for (int i = 0; i < image_regions.size(); i++){
+		if (image_regions[i]->dump_type == OUTPUT_BUFFER){
+			output_mem_region = image_regions[i]; break;
+		}
+	}
+
+	if (input_mem_region != NULL && output_mem_region != NULL){
+		ret.push_back(input_mem_region);
+		ret.push_back(output_mem_region);
+		return ret;
+	}
+
+	/* mapping */
+	map< uint32_t, vector<mem_regions_t *> > region_map;
+	for (int i = 0; i < pc_mems.size(); i++){
+		for (int k = 0; k < total_regions.size(); k++){
+			for (int j = 0; j < pc_mems[i]->regions.size(); j++){
+				if (is_overlapped(pc_mems[i]->regions[j]->start, pc_mems[i]->regions[j]->end, total_regions[k]->start, total_regions[k]->end)){
+					region_map[pc_mems[i]->pc].push_back(total_regions[k]);
+					break;
+				}
+			}
+		}
+	}
+
+
+	vector<mem_regions_t *> input_regions;
+	if (input_mem_region != NULL){
+		input_regions.push_back(input_mem_region);
+	}
+
+	uint32_t start = 0;
+	uint32_t end = 0;
+
+	for (int i = 0; i < start_points.size(); i++){
+		if (i != start_points.size() - 1) end = start_points[i + 1];
+		else end = instrs.size();
+		cout << end << endl;
+		mark_regions_type(total_regions, input_regions, instrs, region_map, start, end);
+		start = end;
+	}
+
+
+	/*for (int i = 0; i < total_regions.size(); i++){
+		if ( (total_regions[i]->type & INPUT_BUFFER) == INPUT_BUFFER){
+			cout << "INPUT" << endl;
+			print_mem_regions(total_regions[i]);
+		}
+		if ( (total_regions[i]->type & OUTPUT_BUFFER) == OUTPUT_BUFFER){
+			cout << "OUTPUT" << endl;
+			print_mem_regions(total_regions[i]);
+		}
+		if ( (total_regions[i]->type & INTERMEDIATE_BUFFER) == INTERMEDIATE_BUFFER){
+			cout << "INTERMEDIATE " << endl;
+			print_mem_regions(total_regions[i]);
+		}
+	}*/
+
 	
-	if (output_mem_region == NULL && input_mem_region != NULL){
+
+	if (output_mem_region == NULL && input_mem_region == NULL){
+
+		
 
 	}
-	
+	else if (output_mem_region == NULL && input_mem_region != NULL){
+		for (int i = 0; i < total_regions.size(); i++){
+			if ( (total_regions[i]->type & OUTPUT_BUFFER) == OUTPUT_BUFFER){
+				output_mem_region = total_regions[i];
+				break;
+			}
+		}
+
+	}	
 	else if (output_mem_region != NULL && input_mem_region == NULL){
 
 	}
 
-	ret.push_back(output_mem_region);
 	ret.push_back(input_mem_region);
+	ret.push_back(output_mem_region);
 
 	return ret;
 
 
-}*/
+}

@@ -156,13 +156,13 @@ uint64_t get_random_mem_location(mem_regions_t *  region, uint32_t seed){
 
 	for (int i = 0; i < region->dimensions; i++){
 		base.push_back(random_num % region->extents[i]);
-		//cout << dec << base[i] << endl;
-		//cout << "reg extents : " << region->extents[i] << endl;
+		cout << dec << base[i] << endl;
+		cout << "reg extents : " << region->extents[i] << endl;
 	}
 
 	for (int i = 0; i < region->dimensions; i++){
-		//cout << "strides: " << region->strides[i] << endl;
-		//cout << "extent: " << region->extents[i] << endl;
+		cout << "strides: " << region->strides[i] << endl;
+		cout << "extent: " << region->extents[i] << endl;
 	}
 
 	bool success;
@@ -283,7 +283,7 @@ bool is_within_mem_region(mem_regions_t* mem, uint64_t value){
 }
 
 /* printing functions - debug */
-static void print_mem_regions(mem_regions_t * region){
+void print_mem_regions(mem_regions_t * region){
 
 	cout << "bytes per color = " << region->bytes_per_pixel << endl;
 
@@ -332,6 +332,71 @@ void print_mem_regions(vector<mem_regions_t *> regions){
 
 }
 
+
+void remove_possible_stack_frames(vector<pc_mem_region_t *> &pc_mem, vector<mem_info_t *> &mem, vector<Static_Info *> &info, vec_cinstr &instrs){
+
+	for (int i = 0; i < mem.size(); i++){
+
+		bool found = false;
+
+		for (int j = 0; j < pc_mem.size(); j++){
+			vector<mem_info_t *> mem_info = pc_mem[j]->regions;
+			for (int k = 0; k < mem_info.size(); k++){
+				if (is_overlapped(mem[i]->start, mem[i]->end, mem_info[k]->start, mem_info[k]->end)){
+					Static_Info * static_info = get_static_info(info, pc_mem[j]->pc);
+					if (static_info->example_line == -1) continue;
+					cinstr_t * instr = instrs[static_info->example_line].first;
+				
+					if ((mem_info[k]->direction & MEM_OUTPUT) == MEM_OUTPUT){
+						for (int dsts = 0; dsts < instr->num_dsts; dsts++){
+							operand_t opnd = instr->dsts[dsts];
+							if (opnd.type == MEM_HEAP_TYPE || opnd.type == MEM_STACK_TYPE){
+
+								for (int addr = 0; addr < 2; addr++){
+									if (opnd.addr[addr].value != 0){
+										if (mem_range_to_reg(&opnd.addr[addr]) != DR_REG_RBP &&
+											mem_range_to_reg(&opnd.addr[addr]) != DR_REG_RSP){
+											found = true; break;
+										}
+									}
+								}
+							}
+						}
+					}
+
+					if ((mem_info[k]->direction & MEM_INPUT) == MEM_INPUT){
+						for (int srcs = 0; srcs < instr->num_srcs; srcs++){
+							operand_t opnd = instr->srcs[srcs];
+							if (opnd.type == MEM_HEAP_TYPE || opnd.type == MEM_STACK_TYPE){
+
+								for (int addr = 0; addr < 2; addr++){
+									if (opnd.addr[addr].value != 0){
+										if (mem_range_to_reg(&opnd.addr[addr]) != DR_REG_RBP &&
+											mem_range_to_reg(&opnd.addr[addr]) != DR_REG_RSP){
+											found = true; break;
+										}
+									}
+								}
+
+							}
+						}
+					}
+
+
+				}
+				if (found) break;
+			}
+			if (found) break;
+		}
+
+		if (!found){
+			mem.erase(mem.begin() + i--);
+		}
+
+	}
+
+}
+
 void mark_possible_buffers(vector<pc_mem_region_t *> &pc_mem, vector<mem_regions_t *> &mem_regions, vector<Static_Info *> &info, vec_cinstr &instrs){
 
 	for (int i = 0; i < mem_regions.size(); i++){
@@ -343,7 +408,9 @@ void mark_possible_buffers(vector<pc_mem_region_t *> &pc_mem, vector<mem_regions
 			vector<mem_info_t *> mem_info = pc_mem[j]->regions;
 			for (int k = 0; k < mem_info.size(); k++){
 				if (is_overlapped(mem_regions[i]->start, mem_regions[i]->end, mem_info[k]->start, mem_info[k]->end)){
-					cinstr_t * instr = instrs[get_static_info(info, pc_mem[j]->pc)->example_line].first;
+					Static_Info * ind = get_static_info(info, pc_mem[j]->pc);
+					if (ind->example_line == -1) continue;
+					cinstr_t * instr = instrs[ind->example_line].first;
 					if (!printed){
 						cout << i << " " << mem_regions[i]->start << " " << get_static_info(info, pc_mem[j]->pc)->disassembly << endl;
 						print_cinstr(instr);
@@ -361,14 +428,10 @@ void mark_possible_buffers(vector<pc_mem_region_t *> &pc_mem, vector<mem_regions
 									if (opnd.addr[addr].value != 0){
 										if (mem_range_to_reg(&opnd.addr[addr]) != DR_REG_RBP &&
 											mem_range_to_reg(&opnd.addr[addr]) != DR_REG_RSP){
-												mem_regions[i]->buffer = true;
 												found = true; break;
 										}
 									}
 								}
-									
-
-								
 							}
 						}
 					}
@@ -382,7 +445,6 @@ void mark_possible_buffers(vector<pc_mem_region_t *> &pc_mem, vector<mem_regions
 									if (opnd.addr[addr].value != 0){
 										if (mem_range_to_reg(&opnd.addr[addr]) != DR_REG_RBP &&
 											mem_range_to_reg(&opnd.addr[addr]) != DR_REG_RSP){
-											mem_regions[i]->buffer = true;
 											found = true; break;
 										}
 									}
@@ -399,7 +461,7 @@ void mark_possible_buffers(vector<pc_mem_region_t *> &pc_mem, vector<mem_regions
 			if (found) break;
 		}
 
-		if (!found) print_mem_regions(mem_regions[i]);
+		ASSERT_MSG(found, ("ERROR: all buffers should are captured\n"));
 
 	}
 
