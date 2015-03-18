@@ -547,15 +547,18 @@
 
 		 //Node * node = create_tree_for_dest(dest, stride, instrace_file, start_points, start_trace, end_trace, disasm)->get_head();
 		 Conc_Tree * tree = new Conc_Tree();
-		 build_conc_tree(dest, stride, start_points, start_trace, end_trace, tree, instrs_backward, total_mem_regions);
+		 Conc_Tree * initial = build_conc_tree(dest, stride, start_points, start_trace, end_trace, tree, instrs_backward, total_mem_regions);
 		 tree->print_conditionals();
 		 cout << "creating conditional trees" << endl;
 		 build_conc_trees_for_conditionals(start_points, tree, instrs_backward, total_mem_regions);
 		 for (int i = 0; i < tree->conditionals.size(); i++){
 			 conc_trees.push_back(tree->conditionals[i]->tree);
-
 		 }
 		 conc_trees.push_back(tree);
+		 if (initial != NULL){
+			 build_conc_trees_for_conditionals(start_points, initial, instrs_backward, total_mem_regions);
+			 conc_trees.push_back(initial);
+		 }
 
 	 }
 	 else if (tree_build == BUILD_RANDOM_SET){
@@ -569,10 +572,17 @@
 		 for (int i = 0; i < nbd_locations.size(); i++){
 
 			 Conc_Tree * tree = new Conc_Tree();
-			 build_conc_tree(nbd_locations[i], stride, start_points, FILE_BEGINNING, end_trace, tree, instrs_backward, total_mem_regions);
+			 Conc_Tree * initial = build_conc_tree(nbd_locations[i], stride, start_points, FILE_BEGINNING, end_trace, tree, instrs_backward, total_mem_regions);
+			 build_conc_trees_for_conditionals(start_points, tree, instrs_backward, total_mem_regions);
+
 			 //identify_parameters(tree->get_head(), pc_mem_info);
 			 //exit(0);
 			 conc_trees.push_back(tree);
+			 if (initial != NULL){
+				 build_conc_trees_for_conditionals(start_points, initial, instrs_backward, total_mem_regions);
+				 conc_trees.push_back(initial);
+			 }
+
 
 		 }
 
@@ -694,9 +704,11 @@
 	 else{
 		 for (int i = 0; i < abs_trees.size(); i++){
 			 if (abs_trees[i]->is_recursive){
+				 cout << "red func populated" << endl;
 				 halide->populate_red_funcs(abs_trees[i]->tree, abs_trees[i]->extents, abs_trees[i]->red_node);
 			 }
 			 else{
+				 cout << "pure func populated" << endl;
 				 halide->populate_pure_funcs(abs_trees[i]->tree); 
 			 }
 		 }

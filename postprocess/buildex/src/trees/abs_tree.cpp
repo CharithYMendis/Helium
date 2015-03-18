@@ -18,21 +18,23 @@ Abs_Tree::~Abs_Tree()
 
 }
 
-Node * abs_node_from_conc_node(void * node, void * peripheral_data){
+Node * abs_node_from_conc_node(void * head, void * node, void * peripheral_data){
 
 	vector<mem_regions_t *> regions = *(vector<mem_regions_t *> *)peripheral_data;
-	Abs_Node * new_node = new Abs_Node(static_cast<Conc_Node *>(node), regions);
+	Abs_Node * new_node = new Abs_Node(static_cast<Conc_Node *>(head),static_cast<Conc_Node *>(node), regions);
 	return new_node;
 
 }
 
 void Abs_Tree::build_abs_tree_unrolled(Conc_Tree * tree, std::vector<mem_regions_t *> &mem_regions)
 {
+	this->recursive = tree->recursive;
 	copy_unrolled_tree_structure(tree, &mem_regions, abs_node_from_conc_node);
 }
 
 void Abs_Tree::build_abs_tree_exact(Conc_Tree * tree, std::vector<mem_regions_t *> &mem_regions){
 
+	this->recursive = tree->recursive;
 	copy_exact_tree_structure(tree, &mem_regions, abs_node_from_conc_node);
 
 }
@@ -281,6 +283,31 @@ void Abs_Tree::print_dot_algebraic(std::ostream &file, std::string name, uint32_
 	delete indexes;
 
 
+
+}
+
+
+
+Abs_Node * Abs_Tree::find_indirect_node(Abs_Node * node){
+
+	if (node->srcs.size() == 0){
+		if (node->mem_info.associated_mem != NULL){
+			return node;
+		}
+		else{
+			return NULL;
+		}
+	}
+
+	Abs_Node * ret;
+
+	for (int i = 0; i < node->srcs.size(); i++){
+		ret = find_indirect_node((Abs_Node *)node->srcs[i]);
+		if (ret != NULL) break;
+	}
+
+
+	return ret;
 
 }
 

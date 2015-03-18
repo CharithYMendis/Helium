@@ -16,6 +16,7 @@ Tree::Tree(){
 	head = NULL;
 	num_nodes = 0;
 	tree_num = -1;
+	recursive = false;
 
 }
 
@@ -288,7 +289,7 @@ void Tree::copy_exact_tree_structure(Tree * tree, void * peripheral_data, node_t
 	for (int i = 0; i < new_tree_map.size(); i++){
 
 		new_tree_map.push_back(make_pair(
-			node_creation(tree_map[i].first, peripheral_data),
+			node_creation(tree->get_head(),tree_map[i].first, peripheral_data),
 			tree_map[i].second)
 			);
 	}
@@ -313,19 +314,19 @@ void Tree::copy_exact_tree_structure(Tree * tree, void * peripheral_data, node_t
 
 void Tree::copy_unrolled_tree_structure(Tree * tree, void * peripheral_data, node_to_node node_creation){
 
-	set_head(node_creation(tree->get_head(),peripheral_data));
-	copy_unrolled_tree_structure(tree->get_head(), get_head(), peripheral_data, node_creation);
+	set_head(node_creation(tree->get_head(),tree->get_head(),peripheral_data));
+	copy_unrolled_tree_structure(tree->get_head(),tree->get_head(), get_head(), peripheral_data, node_creation);
 
 }
 
-void Tree::copy_unrolled_tree_structure(Node * from, Node * to, void * peripheral_data, node_to_node node_creation){
+void Tree::copy_unrolled_tree_structure(Node * head, Node * from, Node * to, void * peripheral_data, node_to_node node_creation){
 
 	for (int i = 0; i < from->srcs.size(); i++){
-		Node * new_node = node_creation(from->srcs[i], peripheral_data);
+		Node * new_node = node_creation(head, from->srcs[i], peripheral_data);
 		to->srcs.push_back(new_node);
 		new_node->prev.push_back(to);
 		new_node->pos.push_back(i);
-		copy_unrolled_tree_structure(from->srcs[i], new_node, peripheral_data, node_creation);
+		copy_unrolled_tree_structure(head,from->srcs[i], new_node, peripheral_data, node_creation);
 	}
 
 }
@@ -426,6 +427,44 @@ std::vector<mem_regions_t *> Tree::identify_intermediate_buffers(std::vector<mem
 	return regions;
 
 }
+
+Node * Tree::is_tree_indirect(){
+
+	for (int i = 0; i < head->srcs.size(); i++){
+		if (head->srcs[i]->operation == op_indirect){
+			return head->srcs[i];
+		}
+	}
+
+	return NULL;
+
+
+}
+
+bool Tree::is_recursive(Node * node, vector<mem_regions_t *> &regions){
+
+	if (head != node){
+
+		if (node->symbol->type == MEM_HEAP_TYPE || node->symbol->type == MEM_STACK_TYPE){
+			if (get_mem_region(head->symbol->value, regions) == get_mem_region(node->symbol->value, regions)){
+				return true;
+			}
+		}
+		
+	}
+
+	bool ret = false;
+	for (int i = 0; i < node->srcs.size(); i++){
+		ret = is_recursive(node->srcs[i], regions);
+		if (ret){ break; }
+	}
+
+	return ret;
+
+}
+
+
+
 
 
 

@@ -247,7 +247,7 @@ vector<int> get_mem_position(mem_regions_t * mem_region, uint64_t mem_value){
 	uint64_t offset = mem_value - mem_region->start;
 	//uint64_t offset = mem_region->end - mem_value;
 
-	cout << "mem position: " << dec << offset << " start " << mem_region->start << " end " << mem_region->end << " value " << mem_value << endl;
+	//cout << "mem position: " << dec << offset << " start " << mem_region->start << " end " << mem_region->end << " value " << mem_value << endl;
  
 
 	for (int i = mem_region->dimensions - 1; i >= 0; i--){
@@ -255,7 +255,7 @@ vector<int> get_mem_position(mem_regions_t * mem_region, uint64_t mem_value){
 		if (point_offset >= mem_region->extents[i]){ point_offset = -1; }
 		r_pos.push_back(point_offset);
 		offset -= point_offset * mem_region->strides[i];
-		cout << offset << endl;
+		//cout << offset << endl;
 	}
 
 	pos.assign(r_pos.rbegin(), r_pos.rend());

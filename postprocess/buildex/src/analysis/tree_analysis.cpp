@@ -109,8 +109,93 @@ void build_conc_tree_helper(
 
 }
 
+void build_tree_intial_update(uint64_t destination, 
+					   uint32_t stride, 
+					   std::vector<uint32_t> start_points, 
+					   Conc_Tree * tree, 
+					   vec_cinstr &instrs, 
+					   vector<mem_regions_t *> &regions){
 
-void build_conc_tree(uint64_t destination,
+	rinstr_t * rinstr = NULL;
+	cinstr_t * instr = NULL;
+	int amount;
+	int index = -1;
+	int curpos = -1;
+
+	/* get the first assignment to the destination */
+	for (int i = instrs.size() - 1; i >= 0; i--){
+		instr = instrs[i].first;
+		bool found = false;
+		for (int j = 0; j < instr->num_dsts; j++){
+			operand_t opnd = instr->dsts[j];
+			if (is_overlapped(destination, destination + stride - 1 , opnd.value, opnd.value + opnd.width - 1)){
+				rinstr = cinstr_to_rinstrs_eflags(instr, amount, instrs[i].second->disassembly, i);
+				for (int k = amount - 1; k >= 0; k--){
+					if (rinstr[k].dst.value == opnd.value && rinstr[k].dst.width == opnd.width){
+						found = true;
+						index = k;
+						break;
+					}
+				}
+				break;
+			}
+		}
+		if (found) {
+			curpos = i;
+			break;
+		}
+
+	}
+
+
+	ASSERT_MSG((index != -1), ("ERROR: could not find the destination or overlap\n"));
+
+	for (int i = index; i >= 0; i--){
+		tree->update_depandancy_backward(&rinstr[i], instr, instrs[curpos].second, curpos, regions);
+	}
+	delete[] rinstr;
+
+
+	uint32_t start_trace = curpos + 1;
+	uint32_t end_trace = 0;
+	index = -1;
+	/* find the end_trace location in the start points */
+	for (int i = 0; i < start_points.size(); i++){
+		if (start_points[i] > start_trace){
+			end_trace = start_points[i];
+			index = i;
+			break;
+		}
+	}
+
+	
+	ASSERT_MSG((index != -1), ("ERROR: should find end trace in start points\n"));
+
+
+	/* ok now build the tree */
+	while (start_trace != instrs.size()){
+
+		cout << start_trace << " - " << end_trace << endl;
+
+		build_conc_tree_helper(start_trace, end_trace, tree, instrs, regions);
+		remove_reg_leaves(tree);
+
+		start_trace = end_trace;
+		if (index + 1 < start_points.size()) end_trace = start_points[++index];
+
+	}
+
+	/*ofstream conc_file(get_standard_folder("output") + "\\initial.dot");
+	tree->number_tree_nodes();
+	tree->print_dot(conc_file, "conc", 0);
+	exit(0);*/
+
+	
+
+}
+
+
+Conc_Tree * build_conc_tree(uint64_t destination,
 								uint32_t stride,
 								std::vector<uint32_t> start_points,
 								int start_trace,
@@ -197,11 +282,25 @@ void build_conc_tree(uint64_t destination,
 			if (index + 1 < start_points.size()) end_trace = start_points[++index];
 
 	}
+
+	Conc_Tree * initial_tree = NULL;
+
+	if (tree->recursive){
+		initial_tree = new Conc_Tree();
+		/* ok we need to build a tree for the initial update definition */
+		build_tree_intial_update(destination, stride, start_points, initial_tree, instrs, regions);
+
+		initial_tree->remove_assign_nodes();
+		initial_tree->canonicalize_tree();
+
+	}
 	
 
 	tree->remove_assign_nodes();
 	tree->canonicalize_tree();
 	DEBUG_PRINT(("build_tree_multi_func(concrete) - done\n"), 2);
+
+	return initial_tree;
 
 }
 
@@ -580,8 +679,9 @@ std::vector<Conc_Tree *> get_similar_trees(
 
 	/* build the expression tree for this node */
 	Conc_Tree * main_tree = new Conc_Tree();
-	build_conc_tree(mem_location, *stride, start_points, FILE_BEGINNING, end_trace, main_tree, instrs, total_regions);
+	Conc_Tree * initial_tree = build_conc_tree(mem_location, *stride, start_points, FILE_BEGINNING, end_trace, main_tree, instrs, total_regions);
 	nodes.push_back(main_tree);
+	if (initial_tree != NULL) nodes.push_back(initial_tree);
 
 	uint32_t nodes_needed = random_mem_region->dimensions + 2;
 	int32_t sign = 1;
@@ -638,8 +738,7 @@ std::vector<Conc_Tree *> get_similar_trees(
 
 			if (success){
 				Conc_Tree * created_tree = new Conc_Tree();
-				build_conc_tree(mem_location, random_mem_region->bytes_per_pixel, start_points, FILE_BEGINNING, end_trace, created_tree, instrs, total_regions);
-
+				initial_tree = build_conc_tree(mem_location, random_mem_region->bytes_per_pixel, start_points, FILE_BEGINNING, end_trace, created_tree, instrs, total_regions); 
 				created_tree->print_tree(cout);
 				cout << endl;
 				main_tree->print_tree(cout);
@@ -647,6 +746,7 @@ std::vector<Conc_Tree *> get_similar_trees(
 
 				if (main_tree->are_trees_similar(created_tree)){
 					nodes.push_back(created_tree);
+					if (initial_tree != NULL) nodes.push_back(initial_tree);
 					dims[affected_dim]++;
 					sign = -1 * sign * (int)ceil((i + 1) / (double)random_mem_region->dimensions);
 					cout << ceil((i + 1) / (double)random_mem_region->dimensions) << endl;
@@ -655,6 +755,7 @@ std::vector<Conc_Tree *> get_similar_trees(
 					break;
 				}
 				else{
+					delete initial_tree;
 					delete created_tree;
 				}
 			}
@@ -692,9 +793,13 @@ std::vector< std::vector <Conc_Tree *> > cluster_trees
 		DEBUG_PRINT(("building tree for location %llx - %u\n", i, i - mem->start), 2);
 		Conc_Tree * tree = new Conc_Tree();
 		tree->tree_num = i - mem->start;
-		build_conc_tree(i, mem->bytes_per_pixel, start_points, FILE_BEGINNING, FILE_ENDING, tree, instrs, total_regions);
-		build_conc_trees_for_conditionals(start_points, tree, instrs, total_regions);			
+		Conc_Tree * initial_tree = build_conc_tree(i, mem->bytes_per_pixel, start_points, FILE_BEGINNING, FILE_ENDING, tree, instrs, total_regions);
+		build_conc_trees_for_conditionals(start_points, tree, instrs, total_regions);
 		trees.push_back(tree);
+		if (initial_tree != NULL){
+			build_conc_trees_for_conditionals(start_points, initial_tree, instrs, total_regions);
+			trees.push_back(initial_tree);
+		}
 	}
 
 	DEBUG_PRINT(("clustering trees\n"), 2);
@@ -843,6 +948,8 @@ vector<Abs_Tree_Charac *> build_abs_trees(
 	/* for each cluster */
 	for (int i = 0; i < clusters.size(); i++){
 
+		cout << "cluster " << i << endl;
+
 		/* get the abstract tree for the computational path */
 		Abs_Tree * abs_tree = abstract_the_trees(clusters[i], no_trees, skip, total_regions, pc_mem);
 		/* get the conditional trees*/
@@ -850,11 +957,31 @@ vector<Abs_Tree_Charac *> build_abs_trees(
 
 
 		/* check if the trees are recursive*/
-		if (abs_tree->is_tree_recursive()){  /* if yes, then try to get the reduction domain */
+		if (abs_tree->recursive){  /* if yes, then try to get the reduction domain */
 
-			ASSERT_MSG(false, ("build_abs_tree: not yet implemented\n"));
+
+			Abs_Tree_Charac * charac = new Abs_Tree_Charac();
+			/* ok now determine whether this is indirect */
+			Node * indirect_node = abs_tree->is_tree_indirect();
+			charac->red_node = NULL;
+			if (indirect_node != NULL){
+				Abs_Node * abs_node = abs_tree->find_indirect_node((Abs_Node *)indirect_node);
+				charac->red_node = abs_node;
+			}
+			else{
+				ASSERT_MSG(false, ("build_abs_tree: not yet implemented\n"));
+			}
+
+			cout << "red func built" << endl;
+
+			charac->tree = abs_tree;
+			charac->is_recursive = true;
+			tree_characs.push_back(charac);
+
 		}
 		else{ /* if no, then populate pure functions */
+
+			cout << "pure function built" << endl;
 
 			Abs_Tree_Charac * charac = new Abs_Tree_Charac();
 			charac->tree = abs_tree;
@@ -862,6 +989,11 @@ vector<Abs_Tree_Charac *> build_abs_trees(
 			tree_characs.push_back(charac);
 
 		}
+
+		ofstream abs_file(folder + "\\hello_cluster_rec_abs_" + to_string(i) + ".dot", ofstream::out);
+		uint32_t max_dimensions = abs_tree->get_maximum_dimensions();
+		abs_tree->number_tree_nodes();
+		abs_tree->print_dot_algebraic(abs_file, "alg", 0, get_vars("x", max_dimensions));
 	
 	}
 

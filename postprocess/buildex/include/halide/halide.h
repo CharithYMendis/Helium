@@ -119,6 +119,8 @@ private:
 	std::string print_rdom(RDom * rdom, std::vector<std::string> variables);
 	int32_t get_rdom_location(Func *func, RDom *rdom);
 
+	/* very crude change*/
+	std::string get_indirect_string(Abs_Node * node, Abs_Node * head, std::vector<std::string> vars);
 
 
 

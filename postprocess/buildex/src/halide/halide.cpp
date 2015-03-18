@@ -116,15 +116,18 @@ void Halide_Program::populate_vars(uint32_t dim){
 Halide_Program::Func * Halide_Program::check_function(mem_regions_t * mem){
 
 	for (int i = 0; i < funcs.size(); i++){
-		Abs_Node * node = static_cast<Abs_Node *>(funcs[i]->pure_trees[0]->get_head());
-		if (node->mem_info.associated_mem == mem){
-			return funcs[i];
+
+		if (funcs[i]->pure_trees.size() > 0){
+			Abs_Node * node = static_cast<Abs_Node *>(funcs[i]->pure_trees[0]->get_head());
+			if (node->mem_info.associated_mem == mem){
+				return funcs[i];
+			}
 		}
 		
 		for (int j = 0; j < funcs[i]->reduction_trees.size(); j++){
 			vector<Abs_Tree *> trees = funcs[i]->reduction_trees[j].second;
 			for (int k = 0; k < trees.size(); k++){
-				node = static_cast<Abs_Node *>(trees[k]->get_head());
+				Abs_Node * node = static_cast<Abs_Node *>(trees[k]->get_head());
 				if (node->mem_info.associated_mem == mem){
 					return funcs[i];
 				}
@@ -225,13 +228,15 @@ void Halide_Program::populate_red_funcs(Abs_Tree * tree,
 	std::vector< std::pair<int32_t, int32_t > > boundaries, Abs_Node * node){
 
 	RDom * rdom = new RDom();
-	if (node == NULL){
+	if (node != NULL){
 		rdom->red_node = node;
 		rdom->type = INDIRECT_REF;
+		cout << "indirect ref populated" << endl;
 	}
 	else{
 		rdom->extents = boundaries;
 		rdom->type = EXTENTS;
+		cout << "extents populated" << endl;
 	}
 
 	Abs_Node * head = static_cast<Abs_Node *>(tree->get_head());
@@ -474,9 +479,40 @@ string print_select_statement(Halide_Program::Select_Expr * current_expr,Halide_
 	
 }
 
+Abs_Node * get_indirect_node(Abs_Node * node){
+	Abs_Node * base = (Abs_Node *)node->srcs[0]->srcs[0];
+	Abs_Node * index = (Abs_Node *)node->srcs[0]->srcs[1];
+	if (base->type == Abs_Node::OPERATION_ONLY){
+		return index;
+	}
+	else{
+		return base;
+	}
+
+}
+
 string print_output_func_def(Abs_Node * head, vector<string> vars){
+
 	mem_regions_t * mem = head->mem_info.associated_mem;
+
+	bool indirect = false;
+	uint32_t pos = 0;
+	/* check whether this is a indirect node */
+	for (int i = 0; i < head->srcs.size(); i++){
+		if (head->srcs[i]->operation == op_indirect){
+			indirect = true; pos = i;
+			break;
+		}
+	}
+
 	string ret = mem->name + "(";
+
+	if (indirect){
+		Abs_Node * indirect = get_indirect_node((Abs_Node *)head->srcs[pos]);
+		ret += indirect->mem_info.associated_mem->name + "(";
+		head = indirect;
+	}
+
 	for (int i = 0; i < head->mem_info.dimensions; i++){
 		ret += vars[i];
 		if (i == head->mem_info.dimensions - 1){
@@ -486,6 +522,11 @@ string print_output_func_def(Abs_Node * head, vector<string> vars){
 			ret += ",";
 		}
 	}
+	
+	if (indirect){
+		ret += ")";
+	}
+
 	return ret;
 }
 
@@ -539,6 +580,7 @@ string Halide_Program::print_rdom(RDom * rdom, vector<string> variables){
 
 	string name = rvars[rvars.size() - 1];
 	string ret = "RDom " + name + "(";
+	cout << "rdom type " << rdom->type << endl;
 	if (rdom->type == INDIRECT_REF){
 		ret += rdom->red_node->mem_info.associated_mem->name;
 	}
@@ -573,8 +615,8 @@ std::string Halide_Program::print_red_trees(Func * func, vector<string> red_vari
 	for (int i = 0; i < func->reduction_trees.size(); i++){
 		string name = "r_" + to_string(rvars.size());
 		rvars.push_back(name);
-		ret += print_rdom(func->reduction_trees[0].first, red_variables) + "\n";
-		ret += print_predicated_tree(func->reduction_trees[0].second, "_r" + to_string(i) + "_", get_reduction_index_variables(name));
+		ret += print_rdom(func->reduction_trees[i].first, red_variables) + "\n";
+		ret += print_predicated_tree(func->reduction_trees[i].second, "_r" + to_string(i) + "_", get_reduction_index_variables(name));
 	
 	}
 
@@ -597,6 +639,28 @@ std::string Halide_Program::print_function(Func * func, vector<string> red_varia
 	return ret;
 	
 }
+
+
+/* Need to revamp these routines based on how the trees are transformed */
+/* very crude printing */
+std::string Halide_Program::get_indirect_string(Abs_Node * node, Abs_Node * head, vector<string> vars){
+
+	if (node->srcs[0]->operation == op_add){
+		Abs_Node * base = (Abs_Node *)node->srcs[0]->srcs[0]; 
+		Abs_Node * index = (Abs_Node *)node->srcs[0]->srcs[1];
+
+		if (base->type == Abs_Node::OPERATION_ONLY){
+			return print_abs_tree(index, head, vars);
+		}
+		else{
+			return print_abs_tree(base, head, vars);
+		}
+	}
+
+	return "";
+
+}
+
 
 std::string Halide_Program::print_abs_tree(Node * nnode, Node * head ,vector<string> vars){
 
@@ -623,6 +687,11 @@ std::string Halide_Program::print_abs_tree(Node * nnode, Node * head ,vector<str
 			ret += " ( ";
 			ret += print_abs_tree(node->srcs[0],head, vars);
 			ret += " ) & " + to_string((node->srcs[0]->symbol->width / 2) * 8);
+		}
+		else if (node->operation == op_indirect){
+			ret += "(";
+			ret += get_indirect_string(node, (Abs_Node *)head, vars);
+			ret += ")";
 		}
 		else if (node->srcs.size() == 1){
 			ret += " " + node->get_symbolic_string(vars) + " ";
@@ -657,10 +726,33 @@ std::string Halide_Program::print_abs_tree(Node * nnode, Node * head ,vector<str
 	}*/
 	else {
 
+
+		bool indirect = false;
+		uint32_t pos = 0;
+		/* check whether this is a indirect node */
+		for (int i = 0; i < node->srcs.size(); i++){
+			if (node->srcs[i]->operation == op_indirect){
+				indirect = true; pos = i;
+				break;
+			}
+		}
+
 		if (node != head){
-			ret += node->get_symbolic_string(vars) + " ";
+			if (indirect){
+				ret += node->mem_info.associated_mem->name ;
+				ret += print_abs_tree(node->srcs[pos],head,vars);
+			}
+			else{
+				ret += node->get_symbolic_string(vars) + " ";
+			}
 		}
 		else{
+
+			Node * indirect_node = node->srcs[pos];
+			if (indirect){
+				node->srcs.erase(node->srcs.begin() + pos);
+			}
+
 			if (node->operation != op_assign){  /* the node contains some other operation */
 				uint32_t ori_type = node->type;
 				node->type = Abs_Node::OPERATION_ONLY;
@@ -669,6 +761,10 @@ std::string Halide_Program::print_abs_tree(Node * nnode, Node * head ,vector<str
 			}
 			else{
 				ret += print_abs_tree(node->srcs[0], head, vars);
+			}
+
+			if (indirect){
+				node->srcs.insert(node->srcs.begin() + pos, indirect_node);
 			}
 
 		}

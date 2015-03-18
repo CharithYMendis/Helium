@@ -540,10 +540,10 @@ bool Conc_Tree::update_depandancy_backward(rinstr_t * instr, cinstr_t * cinstr, 
 				add_to_frontier(hash_src, src);
 
 			}
+			else if (head_conc->region != NULL && head_conc->region == src_conc->region){
+				recursive = true;
+			}
 
-
-
-			
 
 		}
 

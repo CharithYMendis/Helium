@@ -169,7 +169,7 @@
 
 	 //add the copy constructor when needed
 	 Abs_Node();
-	 Abs_Node(Conc_Node * conc_node, std::vector<mem_regions_t *> &mem_regions);
+	 Abs_Node(Conc_Node * head, Conc_Node * conc_node, std::vector<mem_regions_t *> &mem_regions);
 	 ~Abs_Node();
 
 	 std::string get_symbolic_string(std::vector<std::string> vars);

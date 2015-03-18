@@ -16,7 +16,7 @@
 
 /* conc_tree building */
 
-void build_conc_tree(uint64_t destination, 
+Conc_Tree * build_conc_tree(uint64_t destination, 
 				uint32_t stride, 
 				std::vector<uint32_t> start_points, 
 				int start_trace, 

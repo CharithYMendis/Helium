@@ -9,7 +9,7 @@
 
 typedef void *  (*node_mutator) (Node * node, void * value);
 typedef void *  (*return_mutator) (void * node_value, std::vector<void *> traverse_value, void * value);
-typedef Node *  (*node_to_node)(void * node, void * peripheral_data);
+typedef Node *  (*node_to_node)(void * head, void * node, void * peripheral_data);
 
 void * empty_ret_mutator(void * value, vector<void *> values, void * ori_value);
 
@@ -25,7 +25,7 @@ void * empty_ret_mutator(void * value, vector<void *> values, void * ori_value);
 
 	 void print_tree_recursive(Node * node, std::ostream &file);
 	 void collect_all_nodes(Node * node, std::vector<Node *> &nodes);
-	 static void copy_unrolled_tree_structure(Node * from, Node * to, void * peripheral_data, node_to_node node_creation);
+	 static void copy_unrolled_tree_structure(Node * head,Node * from, Node * to, void * peripheral_data, node_to_node node_creation);
 	 static bool are_trees_similar(std::vector<Node *> node);
 
  protected:
@@ -38,6 +38,7 @@ void * empty_ret_mutator(void * value, vector<void *> values, void * ori_value);
 
 	 uint32_t num_nodes;
 	 int32_t tree_num; /* this is for numbering the tree (most porabably based on output location - used in tree clustering) */
+	 bool recursive;
 
 
 	 Tree();
@@ -63,6 +64,8 @@ void * empty_ret_mutator(void * value, vector<void *> values, void * ori_value);
 
 	 bool are_trees_similar(Tree * tree);
 	 static bool are_trees_similar(std::vector<Tree *> trees);
+	 Node * is_tree_indirect();
+	 bool is_recursive(Node * node, std::vector<mem_regions_t *> &regions);
 	 
 	 void cleanup_visit();
 
@@ -71,7 +74,6 @@ void * empty_ret_mutator(void * value, vector<void *> values, void * ori_value);
 	 void remove_assign_nodes();
 	 std::vector<mem_regions_t *> identify_intermediate_buffers(std::vector<mem_regions_t *> mem);
 
-	 
  };
 
 
@@ -157,6 +159,7 @@ void * empty_ret_mutator(void * value, vector<void *> values, void * ori_value);
 	 void seperate_intermediate_buffers();
 
 	 bool is_tree_recursive();
+	 Abs_Node * find_indirect_node(Abs_Node * node);
 	 
 	 std::vector<Abs_Node *> collect_input_nodes();
 
@@ -169,7 +172,7 @@ void * empty_ret_mutator(void * value, vector<void *> values, void * ori_value);
 	 uint32_t get_maximum_dimensions();
 
 	 void print_dot_algebraic(std::ostream &file, std::string name, uint32_t number, std::vector<std::string> vars);
-
+	 
  };
 
 
