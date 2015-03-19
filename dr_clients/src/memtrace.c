@@ -273,6 +273,18 @@ memtrace_bb_analysis(void *drcontext, void *tag, instrlist_t *bb,
     return DR_EMIT_DEFAULT;
 }
 
+bool should_memory_be_instrumented(opnd_t opnd){
+
+	reg_id_t reg;
+
+	reg = opnd_get_base(opnd);
+	if (reg != 0 && reg != DR_REG_XBP && reg != DR_REG_XSP) return true;
+	reg = opnd_get_index(opnd);
+	if (reg != 0 && reg != DR_REG_XBP && reg != DR_REG_XSP) return true;
+	return false;
+
+}
+
 /* event_bb_insert calls instrument_mem to instrument every
  * application memory reference.
  */
@@ -308,14 +320,18 @@ memtrace_bb_instrumentation(void *drcontext, void *tag, instrlist_t *bb,
 			if (instr_reads_memory(instr)) {
 				for (i = 0; i < instr_num_srcs(instr); i++) {
 					if (opnd_is_memory_reference(instr_get_src(instr, i))) {
-						instrument_mem(drcontext, bb, instr, i, false);
+						if (should_memory_be_instrumented(instr_get_src(instr, i))){
+							instrument_mem(drcontext, bb, instr, i, false);
+						}
 					}
 				}
 			}
 			if (instr_writes_memory(instr)) {
 				for (i = 0; i < instr_num_dsts(instr); i++) {
 					if (opnd_is_memory_reference(instr_get_dst(instr, i))) {
-						instrument_mem(drcontext, bb, instr, i, true);
+						if (should_memory_be_instrumented(instr_get_dst(instr, i))){
+							instrument_mem(drcontext, bb, instr, i, true);
+						}
 					}
 				}
 			}
