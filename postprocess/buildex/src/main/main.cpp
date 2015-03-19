@@ -41,6 +41,8 @@
  bool debug = false;
  uint32_t debug_level = 0;
  ofstream log_file;
+
+ uint32_t Tree::num_paras = 0;
  
  void print_usage(){
 	 printf("usage - format -<name> <value>\n");

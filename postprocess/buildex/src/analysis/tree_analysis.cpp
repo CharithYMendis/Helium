@@ -290,12 +290,14 @@ Conc_Tree * build_conc_tree(uint64_t destination,
 		/* ok we need to build a tree for the initial update definition */
 		build_tree_intial_update(destination, stride, start_points, initial_tree, instrs, regions);
 
+		initial_tree->number_parameters(regions);
 		initial_tree->remove_assign_nodes();
 		initial_tree->canonicalize_tree();
 
 	}
 	
 
+	tree->number_parameters(regions);
 	tree->remove_assign_nodes();
 	tree->canonicalize_tree();
 	DEBUG_PRINT(("build_tree_multi_func(concrete) - done\n"), 2);
@@ -454,6 +456,7 @@ void build_conc_tree_single_func(uint64_t destination,
 	//print_vector(lines,disasm);
 	//remove_po_node(tree->get_head(), tree->get_head(), NULL, 0);
 	//order_tree(tree->get_head());
+	tree->number_parameters(regions);
 	tree->remove_assign_nodes();
 	tree->canonicalize_tree();
 
@@ -962,7 +965,14 @@ vector<Abs_Tree_Charac *> build_abs_trees(
 
 			Abs_Tree_Charac * charac = new Abs_Tree_Charac();
 			/* ok now determine whether this is indirect */
-			Node * indirect_node = abs_tree->is_tree_indirect();
+
+			Node * indirect_node = NULL;
+			Node * head = abs_tree->get_head();
+			int32_t pos = head->is_node_indirect();
+			if (pos != -1){
+				indirect_node = head->srcs[pos];
+			}
+
 			charac->red_node = NULL;
 			if (indirect_node != NULL){
 				Abs_Node * abs_node = abs_tree->find_indirect_node((Abs_Node *)indirect_node);

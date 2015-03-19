@@ -263,31 +263,67 @@ void Halide_Program::populate_paras_input_paras(bool para)
 {
 	vector<Abs_Tree *> trees;
 	for (int i = 0; i < funcs.size(); i++){
-		trees = funcs[i]->pure_trees;
+		trees.insert(trees.end(),funcs[i]->pure_trees.begin(), funcs[i]->pure_trees.end());
 		for (int j = 0; j < funcs[i]->reduction_trees.size(); j++){
 			trees.insert(trees.end(), funcs[i]->reduction_trees[j].second.begin(),
-				funcs[i]->reduction_trees[j].second.begin());
+				funcs[i]->reduction_trees[j].second.end());
 		}
 	}
 
+	vector<Abs_Node *> total;
+
 	for (int i = 0; i < trees.size(); i++){
-		vector<Abs_Node *> new_input;
-		vector<Abs_Node *> compare;
+		
+		vector<Abs_Node *> temp;
+		temp = para ? trees[i]->retrieve_parameters() : trees[i]->get_buffer_region_nodes();
+		total.insert(total.end(), temp.begin(), temp.end());
+	}
 
-		new_input = para ? trees[i]->retrieve_parameters() : trees[i]->retrieve_input_nodes();
-		compare = para ? params : inputs;
+	if (para){
 
-		for (int k = 0; k < new_input.size(); k++){
-			for (int j = 0; j < compare.size(); j++){
-				if (compare[i]->mem_info.associated_mem
-					== new_input[k]->mem_info.associated_mem){
+		/* paras we can have duplicates */
+		for (int i = 0; i < total.size(); i++){
+			for (int j = 0; j < total.size(); j++){
+				if (i == j) continue;
+				if ((total[i]->symbol->type == total[j]->symbol->type) &&
+					(total[i]->symbol->value == total[j]->symbol->value) &&
+					(total[i]->symbol->width == total[j]->symbol->width)){
+					total.erase(total.begin() + i--);
 					break;
 				}
 			}
-
-			if (para) params.push_back(new_input[k]);
-			else inputs.push_back(new_input[k]);
 		}
+
+		params = total;
+
+	}
+	else{
+
+		for (int i = 0; i < total.size(); i++){
+			for (int j = 0; j < total.size(); j++){
+				if (i==j) continue;
+				if (total[i]->mem_info.associated_mem == total[j]->mem_info.associated_mem){
+					total.erase(total.begin() + i--);
+					break;
+				}
+			}
+		}
+
+		/* now first populate the outputs */
+		for (int i = 0; i < funcs.size(); i++){
+			output.push_back((Abs_Node *)funcs[i]->pure_trees[0]->get_head());
+		}
+
+		for (int i = 0; i < total.size(); i++){
+			for (int j = 0; j < output.size(); j++){
+				if (total[i]->mem_info.associated_mem == output[j]->mem_info.associated_mem){
+					total.erase(total.begin() + i--);
+					break;
+				}
+			}
+		}
+
+		inputs = total;
 
 	}
 }
@@ -495,22 +531,16 @@ string print_output_func_def(Abs_Node * head, vector<string> vars){
 
 	mem_regions_t * mem = head->mem_info.associated_mem;
 
-	bool indirect = false;
-	uint32_t pos = 0;
-	/* check whether this is a indirect node */
-	for (int i = 0; i < head->srcs.size(); i++){
-		if (head->srcs[i]->operation == op_indirect){
-			indirect = true; pos = i;
-			break;
-		}
-	}
+	int32_t pos = head->is_node_indirect();
+	bool indirect = (pos != -1);
 
 	string ret = mem->name + "(";
 
+	/* assume only one level of indirection */
 	if (indirect){
-		Abs_Node * indirect = get_indirect_node((Abs_Node *)head->srcs[pos]);
-		ret += indirect->mem_info.associated_mem->name + "(";
-		head = indirect;
+		Abs_Node * indirect_node = get_indirect_node((Abs_Node *)head->srcs[pos]);
+		ret += indirect_node->mem_info.associated_mem->name + "(";
+		head = indirect_node;
 	}
 
 	for (int i = 0; i < head->mem_info.dimensions; i++){
@@ -719,28 +749,16 @@ std::string Halide_Program::print_abs_tree(Node * nnode, Node * head ,vector<str
 	else if (node->type == Abs_Node::SUBTREE_BOUNDARY){
 	
 	}
-	/*else if (node->type == Abs_Node::INPUT_NODE || node->type == Abs_Node::OUTPUT_NODE || node->type == Abs_Node::INTERMEDIATE_NODE){
-
-
-		
-	}*/
 	else {
 
 
-		bool indirect = false;
-		uint32_t pos = 0;
-		/* check whether this is a indirect node */
-		for (int i = 0; i < node->srcs.size(); i++){
-			if (node->srcs[i]->operation == op_indirect){
-				indirect = true; pos = i;
-				break;
-			}
-		}
+		int32_t pos = node->is_node_indirect();
+		bool indirect = (pos != -1);
 
 		if (node != head){
 			if (indirect){
 				ret += node->mem_info.associated_mem->name ;
-				ret += print_abs_tree(node->srcs[pos],head,vars);
+				ret += print_abs_tree(node->srcs[pos], head, vars); /* assumes that these nodes are at the leaves */
 			}
 			else{
 				ret += node->get_symbolic_string(vars) + " ";
@@ -748,8 +766,9 @@ std::string Halide_Program::print_abs_tree(Node * nnode, Node * head ,vector<str
 		}
 		else{
 
-			Node * indirect_node = node->srcs[pos];
+			Node * indirect_node;
 			if (indirect){
+				indirect_node = node->srcs[pos];
 				node->srcs.erase(node->srcs.begin() + pos);
 			}
 

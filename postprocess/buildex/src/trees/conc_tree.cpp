@@ -739,6 +739,41 @@ void Conc_Tree::print_conditionals(){
 
 }
 
+void Conc_Tree::number_parameters(Node * node, vector<mem_regions_t *> mem_regions){
+
+	if (node->operation == op_indirect) return;
+
+	Conc_Node * conc_node = (Conc_Node *)node;
+	if (node->srcs.size() == 1){
+		if (conc_node->symbol->type == REG_TYPE){
+			if (conc_node->para_num == -1){
+				conc_node->para_num == Conc_Tree::num_paras++;
+				conc_node->is_para = true;
+			}
+		}
+		else if (conc_node->symbol->type == MEM_HEAP_TYPE || conc_node->symbol->type == MEM_STACK_TYPE){
+			if (get_mem_region(conc_node->symbol->type, mem_regions) == NULL){
+				if (conc_node->para_num == -1){
+					conc_node->para_num == Conc_Tree::num_paras++;
+					conc_node->is_para = true;
+				}
+			}
+		}
+	}
+	else{
+		for (int i = 0; i < node->srcs.size(); i++){
+			number_parameters(node->srcs[i], mem_regions);
+		}
+	}
+
+}
+
+void Conc_Tree::number_parameters(vector<mem_regions_t *> regions){
+
+	number_parameters(head, regions);
+
+}
+
 
 /* to be implemented */
 

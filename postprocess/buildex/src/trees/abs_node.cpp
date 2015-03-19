@@ -16,7 +16,7 @@ Abs_Node::Abs_Node() : Node()
 
 Abs_Node::Abs_Node(Conc_Node * head, Conc_Node * conc_node, vector<mem_regions_t *> &mem_regions) : Node(*conc_node) {
 
-
+	
 
 	mem_regions_t * mem = NULL;
 	this->mem_info.associated_mem = NULL;
@@ -24,12 +24,16 @@ Abs_Node::Abs_Node(Conc_Node * head, Conc_Node * conc_node, vector<mem_regions_t
 		mem = get_mem_region(conc_node->symbol->value, mem_regions);
 	}
 
-	if (mem != NULL){ /* there is a BUG */
+	this->para_num = conc_node->para_num;
+
+	/* mem buffers in the head or in the leaves with at most an indirection */
+	if (mem != NULL){ 
+
+		ASSERT_MSG((conc_node == head || conc_node->srcs.size() <= 1), ("ERROR: mem buffers in the head or in the leaves with at most an indirection\n"));
 
 		mem_regions_t * mem = get_mem_region(conc_node->symbol->value, mem_regions);
 		this->operation = conc_node->operation;
 		this->symbol = conc_node->symbol;
-		this->para_num = conc_node->para_num;
 
 		switch (mem->direction){
 		case MEM_INPUT: this->type = INPUT_NODE; break;
@@ -51,6 +55,8 @@ Abs_Node::Abs_Node(Conc_Node * head, Conc_Node * conc_node, vector<mem_regions_t
 
 	}
 	else if ((conc_node->symbol->type == MEM_STACK_TYPE) || (conc_node->symbol->type == REG_TYPE)){ /*parameters can be here*/
+		this->symbol = conc_node->symbol;
+		ASSERT_MSG((mem == NULL), ("ERROR: we cannot have a buffer here\n"));
 		this->operation = conc_node->operation;
 		if (conc_node->is_para){
 			this->type = PARAMETER;

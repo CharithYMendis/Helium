@@ -395,7 +395,7 @@ void Tree::remove_assign_nodes()
 
 		Node * head = (Node *)value;
 
-		if (dst->operation == op_assign && dst != head){
+		if (dst->operation == op_assign && dst != head && dst->srcs.size() == 1){
 			
 
 			ASSERT_MSG((dst->srcs.size() == 1), ("ERROR: assign should only have one source\n"));
@@ -428,18 +428,6 @@ std::vector<mem_regions_t *> Tree::identify_intermediate_buffers(std::vector<mem
 
 }
 
-Node * Tree::is_tree_indirect(){
-
-	for (int i = 0; i < head->srcs.size(); i++){
-		if (head->srcs[i]->operation == op_indirect){
-			return head->srcs[i];
-		}
-	}
-
-	return NULL;
-
-
-}
 
 bool Tree::is_recursive(Node * node, vector<mem_regions_t *> &regions){
 

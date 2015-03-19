@@ -14,6 +14,8 @@ using namespace std;
 
 /* constructors */
 Node::Node(){
+	para_num = -1;
+	is_para = false;
 	order_num = -1;
 	visited = false;
 }
@@ -306,6 +308,20 @@ bool Node::are_nodes_similar(std::vector<Node *> nodes){
 
 	return true;
 
+}
+
+int32_t Node::is_node_indirect(){
+
+	int32_t pos = -1;
+	/* check whether this is a indirect node */
+	for (int i = 0; i < this->srcs.size(); i++){
+		if (this->srcs[i]->operation == op_indirect){
+			pos = i;
+			break;
+		}
+	}
+
+	return pos;
 }
 
 

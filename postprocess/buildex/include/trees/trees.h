@@ -38,6 +38,7 @@ void * empty_ret_mutator(void * value, vector<void *> values, void * ori_value);
 
 	 uint32_t num_nodes;
 	 int32_t tree_num; /* this is for numbering the tree (most porabably based on output location - used in tree clustering) */
+	 static uint32_t num_paras;
 	 bool recursive;
 
 
@@ -64,7 +65,6 @@ void * empty_ret_mutator(void * value, vector<void *> values, void * ori_value);
 
 	 bool are_trees_similar(Tree * tree);
 	 static bool are_trees_similar(std::vector<Tree *> trees);
-	 Node * is_tree_indirect();
 	 bool is_recursive(Node * node, std::vector<mem_regions_t *> &regions);
 	 
 	 void cleanup_visit();
@@ -75,6 +75,8 @@ void * empty_ret_mutator(void * value, vector<void *> values, void * ori_value);
 	 std::vector<mem_regions_t *> identify_intermediate_buffers(std::vector<mem_regions_t *> mem);
 
  };
+
+
 
 
  /* Conc_Tree - expression tree from the instruction trace */
@@ -100,6 +102,8 @@ void * empty_ret_mutator(void * value, vector<void *> values, void * ori_value);
 	 void get_full_overlap_nodes(std::vector<Node *> &nodes, operand_t * opnd);
 	 void split_partial_overlaps(std::vector < std::pair <Node *, std::vector<Node *> > > &nodes, operand_t * opnd, uint32_t hash);
 	 void get_partial_overlap_nodes(std::vector< std::pair<Node *, std::vector<Node *> > > &nodes, operand_t * opnd);
+
+	 void number_parameters(Node * node, vector<mem_regions_t *> regions);
 
 
  public:
@@ -134,6 +138,7 @@ void * empty_ret_mutator(void * value, vector<void *> values, void * ori_value);
 
 	 void add_address_dependancy(Node * node, operand_t * opnds);
 
+	 void number_parameters(std::vector<mem_regions_t *> regions);
 	 std::string serialize_tree();
 	 void construct_tree(std::string stree);
 	 void print_conditionals();
@@ -149,7 +154,6 @@ void * empty_ret_mutator(void * value, vector<void *> values, void * ori_value);
 	 Abs_Tree();
 	 ~Abs_Tree();
 
-	 static uint32_t num_paras;
 
 
 	 std::vector< std::pair<Abs_Tree *, bool > > conditional_trees;
@@ -169,10 +173,14 @@ void * empty_ret_mutator(void * value, vector<void *> values, void * ori_value);
 	 void tag_parameters();
 	 vector<Abs_Node *> retrieve_input_nodes();
 	 vector<Abs_Node *> retrieve_parameters();
+
+	 vector<Abs_Node *> get_buffer_region_nodes();
+
 	 uint32_t get_maximum_dimensions();
 
 	 void print_dot_algebraic(std::ostream &file, std::string name, uint32_t number, std::vector<std::string> vars);
 	 
+
  };
 
 

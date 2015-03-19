@@ -135,6 +135,47 @@ void Comp_Abs_Tree::build_compound_tree_exact(std::vector<Abs_Tree *> abs_trees)
 
 }
 
+Comp_Abs_Node * get_indirect_access_node(Comp_Abs_Node * node){
+
+
+	if (node->srcs.size() == 0){
+		if (node->nodes[0]->mem_info.associated_mem != NULL){
+			return node;
+		}
+		else{
+			return NULL;
+		}
+	}
+
+	Comp_Abs_Node * ret;
+
+	for (int i = 0; i < node->srcs.size(); i++){
+		ret = get_indirect_access_node((Comp_Abs_Node *)node->srcs[i]);
+		if (ret != NULL) break;
+	}
+
+
+	return ret;
+
+}
+
+int32_t is_indirect_access(Comp_Abs_Node * node){
+
+	int32_t pos = -1;
+	// is this node indirect? 
+	for (int i = 0; i < node->srcs.size(); i++){
+		Comp_Abs_Node * src = (Comp_Abs_Node *)node->srcs[i];
+		if (src->nodes[0]->operation == op_indirect){
+			pos = i;
+			break;
+		}
+	}
+
+	return pos;
+
+}
+
+
 void abstract_buffer_indexes_traversal(Comp_Abs_Node * head, Comp_Abs_Node * node){
 
 	Abs_Node * first = node->nodes[0];
@@ -146,15 +187,7 @@ void abstract_buffer_indexes_traversal(Comp_Abs_Node * head, Comp_Abs_Node * nod
 		node->visited = true;
 	}
 
-	bool indirect = false;
-	// is this node indirect? 
-	for (int i = 0; i < node->srcs.size(); i++){
-		Comp_Abs_Node * src = (Comp_Abs_Node *)node->srcs[i];
-		if (src->nodes[0]->operation == op_indirect){
-			indirect = true; 
-			break;
-		}
-	}
+	bool indirect = (is_indirect_access(node) != -1);
 
 	if ( ((first->type == Abs_Node::INPUT_NODE) || (first->type == Abs_Node::INTERMEDIATE_NODE)) && !indirect ){
 		/*make a system of linear equations and solve them*/
@@ -208,44 +241,16 @@ void abstract_buffer_indexes_traversal(Comp_Abs_Node * head, Comp_Abs_Node * nod
 }
 
 
-Comp_Abs_Node * get_indirect_access_node(Comp_Abs_Node * node){
-
-
-	if (node->srcs.size() == 0){
-		if (node->nodes[0]->mem_info.associated_mem != NULL){
-			return node;
-		}
-		else{
-			return NULL;
-		}
-	}
-
-	Comp_Abs_Node * ret;
-
-	for (int i = 0; i < node->srcs.size(); i++){
-		ret = get_indirect_access_node((Comp_Abs_Node *)node->srcs[i]);
-		if (ret != NULL) break;
-	}
-
-
-	return ret; 
-
-}
 
 void Comp_Abs_Tree::abstract_buffer_indexes()
 {
 	Comp_Abs_Node * act_head = static_cast<Comp_Abs_Node *>(get_head());
 
-
-	for (int i = 0; i < act_head->srcs.size(); i++){
-		Comp_Abs_Node * node = static_cast<Comp_Abs_Node *>(head->srcs[i]);
-		if (node->nodes[0]->operation == op_indirect){
-
-			/*ok this is an indirect access on the head node - use the indirect access as the head node now*/
-			act_head = get_indirect_access_node(node);
-			cout << "indirect head node access" << endl;
-			break;
-		}
+	int32_t pos = is_indirect_access(act_head);
+	if (pos != -1){
+		Comp_Abs_Node * node = static_cast<Comp_Abs_Node *>(act_head->srcs[pos]);
+		act_head = get_indirect_access_node(node);
+		cout << "indirect head node access" << endl;
 	}
 
 	/* assert that the comp node is an input or an intermediate node */

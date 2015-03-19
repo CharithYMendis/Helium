@@ -66,6 +66,7 @@
 		/* checking properties of nodes */
 		virtual bool are_nodes_similar(Node * node) = 0;
 		static bool are_nodes_similar(std::vector<Node *> nodes);
+		int32_t is_node_indirect();
 
    private:
 		bool remove_forward_ref_single(Node * ref);
@@ -77,6 +78,7 @@
 		bool congregate_node(Node * head); /* congregate nodes with associative operations */
 		void order_node();  /* order the srcs of the node */
 		
+
 
 };
 
