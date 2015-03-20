@@ -304,8 +304,6 @@ memtrace_bb_instrumentation(void *drcontext, void *tag, instrlist_t *bb,
 	if (instr_ok_to_mangle(instr)){
 		/* FIXME - need to generalize the filtering library */
 
-
-
 		for (current = instrlist_first(bb); current != NULL; current = instr_get_next(current)){
 			if (instr_ok_to_mangle(current)){
 				first = current;
