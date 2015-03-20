@@ -47,6 +47,10 @@ struct funcinfo_t {
 	uint32_t end_addr;
 	uint32_t freq;
 
+	/* some module info related variables */
+	std::string module_name;
+	uint64_t module_addr;
+
 	std::vector<bbinfo_t *> bbs;
 
 
@@ -82,6 +86,9 @@ uint32_t get_probable_func(moduleinfo_t * head, moduleinfo_t * current, uint32_t
 moduleinfo_t * get_probable_call_targets(moduleinfo_t * head);
 moduleinfo_t * get_probable_callers(moduleinfo_t * head);
 moduleinfo_t * get_call_targets(moduleinfo_t * head);
+
+void populate_function_addr(moduleinfo_t * module);
+moduleinfo_t * move_to_function_composition(moduleinfo_t * pre);
 
 /* informational printing */
 void print_moduleinfo(std::ofstream &file, moduleinfo_t * module);

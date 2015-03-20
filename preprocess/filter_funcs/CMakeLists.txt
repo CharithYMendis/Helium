@@ -44,6 +44,7 @@ src/main.cpp
 src/moduleinfo.cpp
 src/filter_logic.cpp
 src/memlayout.cpp
+src/localize.cpp
 
 ../../common/src/imageinfo.cpp
 ../../common/src/meminfo.cpp

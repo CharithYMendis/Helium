@@ -17,6 +17,8 @@ struct func_composition_t {
 };
 
 std::vector<pc_mem_region_t *> get_mem_regions_from_memtrace(std::vector<std::ifstream *> &memtrace, moduleinfo_t * head);
+std::vector<mem_info_t *> get_mem_info_from_memtrace(std::vector<std::ifstream *> &memtrace, moduleinfo_t * head);
+
 std::vector<func_composition_t *> create_func_composition_func(std::vector<pc_mem_region_t *> &regions, moduleinfo_t * head);
 std::vector<func_composition_t *> create_func_composition_wo_func(std::vector<pc_mem_region_t *> &regions, moduleinfo_t * head);
 

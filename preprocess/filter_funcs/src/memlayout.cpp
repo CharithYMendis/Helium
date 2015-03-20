@@ -10,6 +10,98 @@ using namespace std;
 
 /* read the files and get the mem information recorded */
 
+vector<mem_input_t *> get_memtrace(vector<ifstream *> &memtrace, moduleinfo_t * head){
+
+	vector<mem_input_t *> mem_trace;
+
+	for (int i = 0; i < memtrace.size(); i++){
+		uint32_t count = 0;
+		while (!(*memtrace[i]).eof()){
+
+			string line;
+			getline((*memtrace[i]), line);
+
+			if (!line.empty()){
+				vector<string> tokens = split(line, ',');
+
+				mem_input_t * input = new mem_input_t;
+				moduleinfo_t * module = find_module(head, strtoull(tokens[0].c_str(), NULL, 16));
+
+				if (module != NULL){
+					input->module = module->name;
+					input->pc = strtoul(tokens[1].c_str(), NULL, 16);
+					input->write = tokens[2][0] - '0';
+					input->stride = atoi(tokens[3].c_str());
+					input->type = MEM_HEAP_TYPE;
+					input->mem_addr = strtoull(tokens[4].c_str(), NULL, 16);
+					mem_trace.push_back(input);
+				}
+				else{
+					DEBUG_PRINT(("WARNING: cannot find a module for %s address", tokens[0].c_str()), 1);
+				}
+
+			}
+			print_progress(&count, 100000);
+		}
+		DEBUG_PRINT(("files %d/%d is read\n", i + 1, memtrace.size()), 5);
+	}
+	return mem_trace;
+
+}
+
+vector<mem_info_t *> get_mem_info_from_memtrace(vector<ifstream *> &memtrace, moduleinfo_t * head){
+
+	vector<mem_info_t *> mem_info;
+
+	for (int i = 0; i < memtrace.size(); i++){
+		uint32_t count = 0;
+		while (!(*memtrace[i]).eof()){
+
+			string line;
+			getline((*memtrace[i]), line);
+
+			if (!line.empty()){
+				vector<string> tokens = split(line, ',');
+
+				mem_input_t * input = new mem_input_t;
+
+				moduleinfo_t * module = find_module(head, strtoull(tokens[0].c_str(), NULL, 16));
+
+				if (module != NULL){
+					input->module = module->name;
+					input->pc = strtoul(tokens[1].c_str(), NULL, 16);
+					input->write = tokens[2][0] - '0';
+					input->stride = atoi(tokens[3].c_str());
+					input->type = MEM_HEAP_TYPE;
+					input->mem_addr = strtoull(tokens[4].c_str(), NULL, 16);
+
+					update_mem_regions(mem_info, input);
+				}
+				else{
+					DEBUG_PRINT(("WARNING: cannot find a module for %s address", tokens[0].c_str()), 1);
+				}
+
+				delete input;
+			}
+			print_progress(&count, 100000);
+		}
+
+		DEBUG_PRINT(("files %d/%d is read\n", i + 1, memtrace.size()), 5);
+
+	}
+
+	DEBUG_PRINT(("defragmenting and updating strides....\n"), 5);
+
+	postprocess_mem_regions(mem_info);
+
+	DEBUG_PRINT(("defragmenting and updating strides done\n"), 5);
+
+	return mem_info;
+
+
+
+}
+
 vector<pc_mem_region_t *> get_mem_regions_from_memtrace(vector<ifstream *> &memtrace, moduleinfo_t * head){
 
 	vector<pc_mem_region_t *> pc_mems;

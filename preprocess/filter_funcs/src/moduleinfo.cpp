@@ -6,6 +6,7 @@
 #include <sstream>
 #include <stdio.h>
 #include <assert.h>
+#include <map>
 #include "utilities.h"
 #include <queue>
 
@@ -675,6 +676,85 @@ void print_bb_filter_file(ofstream &file, moduleinfo_t * head){
 		local_head = local_head->next;
 	}
 	
+
+}
+
+
+void populate_function_addr(moduleinfo_t * module){
+
+
+	moduleinfo_t * current = module;
+	while (current != NULL){
+
+		for (int i = 0; i < current->funcs.size(); i++){
+
+			funcinfo_t * func = current->funcs[i];
+			for (int j = 0; j < func->bbs.size(); j++){
+
+				bbinfo_t * bb = func->bbs[j];
+				bb->func_addr = get_probable_func(module, current, bb->start_addr);
+			}
+
+		}
+		current = current->next;
+	}
+
+}
+
+
+
+moduleinfo_t * move_to_function_composition(moduleinfo_t * pre){
+
+	if (pre == NULL) return NULL;
+
+	moduleinfo_t * post = new moduleinfo_t(*pre);
+
+	moduleinfo_t * pre_current = pre;
+	moduleinfo_t * post_current = post;
+	
+	while (pre_current != NULL){
+
+		map<uint32_t, vector<bbinfo_t *> > func_map;
+
+		for (int i = 0; i < pre_current->funcs.size(); i++){
+
+			funcinfo_t * func = pre_current->funcs[i];
+			for (int j = 0; j < func->bbs.size(); j++){
+				bbinfo_t * bbinfo = func->bbs[j];
+				func_map[bbinfo->func_addr].push_back(bbinfo);
+			}
+
+		}
+
+		map<uint32_t, vector<bbinfo_t *> >::iterator it;
+		for (it = func_map.begin(); it != func_map.end(); it++){
+
+			funcinfo_t * new_func = new funcinfo_t();
+			new_func->module_name = pre_current->name;
+			new_func->start_addr = it->first;
+			new_func->module_addr = pre_current->start_addr;
+
+			vector<bbinfo_t *> info = it->second;
+
+			for (int i = 0; i < info.size(); i++){
+				new_func->bbs.push_back(info[i]);
+			}
+			post_current->funcs.push_back(new_func);
+
+		}
+
+		pre_current = pre_current->next;
+		if (pre_current != NULL){
+			moduleinfo_t * new_module = new moduleinfo_t(*pre_current);
+			post_current->next = new_module;
+			post_current = new_module;
+		}
+
+
+	}
+
+	return post;
+
 
 }
 

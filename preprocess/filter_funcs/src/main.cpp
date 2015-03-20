@@ -241,6 +241,11 @@ int main(int argc, char **argv){
 		link_mem_regions(pc_mems, GREEDY);  /* shouldn't this return the linking information? */
 		DEBUG_PRINT(("filtering out insignificant regions... \n"), 5);
 		
+		/* all memory related information */
+		vector<pc_mem_region_t *> total_mem_region = pc_mems;
+		vector<mem_info_t *> total_mem_info = get_mem_info_from_memtrace(memtrace_files[0], module);
+		link_mem_regions_greedy_dim(total_mem_info, 0);
+
 		if (total_size == 0){
 			filter_mem_regions(pc_mems, in_image, out_image, threshold);
 		}
@@ -348,6 +353,13 @@ int main(int argc, char **argv){
 			}
 		}
 		
+		populate_function_addr(module);
+		moduleinfo_t * func_module = move_to_function_composition(module);
+		print_moduleinfo(log_file, func_module);
+
+		
+		
+
 
 		
 	}
