@@ -28,11 +28,16 @@ extern std::ofstream log_file;
 	  } 
 
 #define LOG_PRINT(file,l, ...)		     \
-	if(debug_mode){						 \
+	if(debug){							 \
 		if( l <= debug_level){			 \
 			fprintf(file, __VA_ARGS__);  \
 		}								 \
-	}									 
+	}		
+
+#define LOG(file,...)						\
+	if(debug){								\
+		file << __VA_ARGS__ ;				\
+	}
 
 
 #endif

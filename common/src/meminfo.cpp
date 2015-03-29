@@ -389,6 +389,8 @@ vector<mem_info_t *> extract_mem_regions(vector<pc_mem_region_t *> &pc_mems){
 
 void print_mem_layout(ostream &file, vector<pc_mem_region_t *> &pc_mems){
 	
+	DEBUG_PRINT(("printing pc_meminfo...\n"), 2);
+
 	for (int i = 0; i < pc_mems.size(); i++){
 		if (!pc_mems[i]->module.empty()){
 			file << "module name - " << pc_mems[i]->module.c_str() << endl;
@@ -508,7 +510,7 @@ bool random_dest_select(vector<mem_info_t *> &mem_info, uint64_t * dest, uint32_
 
 void print_mem_layout(ostream &file, vector<mem_info_t *> &mem_info){
 
-	DEBUG_PRINT(("print_mem_layout(mem_info) \n"), 4);
+	DEBUG_PRINT(("print_mem_layout(mem_info) \n"), 2);
 
 	for (int i = 0; i < mem_info.size(); i++){
 		mem_info_t * info = mem_info[i];
@@ -548,7 +550,6 @@ void print_mem_layout(ostream &file, vector<mem_info_t *> &mem_info){
 
 	}
 
-	DEBUG_PRINT(("print_mem_layout(mem_info) - done\n"), 4);
 }
 
 bool compare_mem_regions(mem_info_t * first, mem_info_t * second){
@@ -626,6 +627,9 @@ vector< vector< mem_info_t * > > get_merge_opportunities(vector<mem_info_t *> me
 	vector< vector<mem_info_t *> > ret;
 	sort_mem_info(mem_info);
 
+	DEBUG_PRINT(("getting merge opportunities...\n"), 2);
+	LOG(log_file, "merge opportunities..." << endl);
+
 	for (int i = 0; i < pc_mems.size(); i++){
 
 		vector<mem_info_t *> overlapped;
@@ -670,18 +674,14 @@ vector< vector< mem_info_t * > > get_merge_opportunities(vector<mem_info_t *> me
 			temp_info.push_back(overlapped[j]);
 		}
 
-		log_file << pc_mems[i]->pc << " - " << endl;
-		/*for (int j = 0; j < overlapped.size(); j++){
-			log_file << overlapped[j]->start << ",";
-		}
-		log_file << endl;*/
+		LOG(log_file, pc_mems[i]->pc << " - " << endl);
 
-		log_file << "regions" << endl;
+		LOG(log_file, "regions" << endl);
 		for (int j = 0; j < regions.size(); j++){
 			for (int k = 0; k < regions[j].size(); k++){
-				log_file << regions[j][k]->start << ",";
+				LOG(log_file, regions[j][k]->start << ",");
 			}
-			log_file << endl;
+			LOG(log_file,endl);
 		}
 
 		for (int k = 0; k < regions.size(); k++){
@@ -717,12 +717,12 @@ vector< vector< mem_info_t * > > get_merge_opportunities(vector<mem_info_t *> me
 	}
 	
 
-
+	LOG(log_file, "final mergable regions..." << endl);
 	for (int i = 0; i < ret.size(); i++){
 		for (int j = 0; j < ret[i].size(); j++){
-			log_file << ret[i][j]->start << ",";
+			LOG(log_file,ret[i][j]->start << ",");
 		}
-		log_file << endl;
+		LOG(log_file,endl);
 	}
 
 	return ret;
@@ -732,6 +732,9 @@ vector< vector< mem_info_t * > > get_merge_opportunities(vector<mem_info_t *> me
 
 /* this is for merging regions which may have not coalesced in buffer structure reconstruction; but found through pc analysis */
 void merge_mem_regions_pc(vector < vector< mem_info_t *> > mergable, vector<mem_info_t *> total_regions){
+
+	DEBUG_PRINT(("merging meminfo regions....\n"), 2);
+	LOG(log_file, "merging information" << endl);
 
 	/* take the biggest region and expand - assume that the ghost zones would be minimal compared to the actual buffer sizes accessed */
 	for (int i = 0; i < mergable.size(); i++){
@@ -755,6 +758,12 @@ void merge_mem_regions_pc(vector < vector< mem_info_t *> > mergable, vector<mem_
 		/* check neighbours and if faraway do not merge; for now if not input do not merge */
 		if (merged->direction == MEM_OUTPUT) continue;
 
+		LOG(log_file, "merge_region before: " << merged->start << " " << merged->end << endl);
+		for (int j = 1; j <= dims; j++){
+			uint32_t stride = get_stride(merged, j, dims);
+			uint32_t extents = get_extents(merged, j, dims);
+			LOG(log_file, "dim " << j << " extent " << extents << " strides " << stride << endl);
+		}
 
 		if (index != 0){
 
@@ -800,6 +809,12 @@ void merge_mem_regions_pc(vector < vector< mem_info_t *> > mergable, vector<mem_
 
 		}
 
+		LOG(log_file, "merge_region after: " << merged->start << " " << merged->end << endl);
+		for (int j = 1; j <= dims; j++){
+			LOG(log_file, "dim " << j << " extent " << get_extents(merged, j, dims) << " strides " << get_stride(merged, j, dims) << endl);
+		}
+
+
 
 	}
 
@@ -812,7 +827,8 @@ void merge_mem_regions_pc(vector < vector< mem_info_t *> > mergable, vector<mem_
 /* app_pc is needed when you are merging the regions of a particular pc_mem_region value*/
 bool link_mem_regions_greedy_dim(vector<mem_info_t *> &mem, uint32_t app_pc){
 
-	DEBUG_PRINT(("link_mem_regions_greedy...\n"), 4);
+	DEBUG_PRINT(("link_mem_regions_greedy...\n"), 2);
+	LOG(log_file, "link_mem_regions_greedy....\n");
 
 	sort(mem.begin(), mem.end(), compare_mem_regions);
 
@@ -890,10 +906,10 @@ bool link_mem_regions_greedy_dim(vector<mem_info_t *> &mem, uint32_t app_pc){
 
 				mem.insert(mem.begin() + i, new_mem_info);
 				
-				cout << new_mem_info->start << endl;
-				cout << new_mem_info->end << endl;
-				cout << "dims : " << get_number_dimensions(new_mem_info) << endl;
-				cout << "merged amount : " << new_mem_info->mem_infos.size() << endl;
+				LOG(log_file, "linked infos" << endl);
+				LOG(log_file, new_mem_info->start << "  " << new_mem_info->end << endl);
+				LOG(log_file,"dims : " << get_number_dimensions(new_mem_info) << endl);
+				LOG(log_file,"merged amount : " << new_mem_info->mem_infos.size() << endl);
 				ret = true;
 
 
@@ -901,7 +917,7 @@ bool link_mem_regions_greedy_dim(vector<mem_info_t *> &mem, uint32_t app_pc){
 		}
 	}
 
-	DEBUG_PRINT(("link_mem_regions_greedy - done\n"), 4);
+	DEBUG_PRINT(("link_mem_regions_greedy - done\n"), 2);
 
 	return ret;
 }

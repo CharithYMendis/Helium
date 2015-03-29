@@ -283,57 +283,60 @@ bool is_within_mem_region(mem_regions_t* mem, uint64_t value){
 }
 
 /* printing functions - debug */
-void print_mem_regions(mem_regions_t * region){
+void print_mem_regions(ostream &file, mem_regions_t * region){
 
-	cout << "bytes per color = " << region->bytes_per_pixel << endl;
-
-
-	cout << "start = " << region->start << endl;
-	cout << "end = " << region->end << endl;
+	file << "bytes per color = " << region->bytes_per_pixel << endl;
 
 
-	cout << "type = ";
+	file << "start = " << region->start << endl;
+	file << "end = " << region->end << endl;
+
+
+	file << "type = ";
 	switch (region->direction){
-	case MEM_INPUT:  cout << "image input" << endl; break;
-	case MEM_OUTPUT: cout << "image output" << endl; break;
-	case MEM_INTERMEDIATE: cout << "image intermediate" << endl; break;
+	case MEM_INPUT:  file << "image input" << endl; break;
+	case MEM_OUTPUT: file << "image output" << endl; break;
+	case MEM_INTERMEDIATE: file << "image intermediate" << endl; break;
 	}
 
 
-	cout << "extents : " << endl;
+	file << "extents : " << endl;
 	for (int i = 0; i < region->dimensions; i++){
-		cout << region->extents[i] << endl;
+		file << region->extents[i] << endl;
 	}
 
-	cout << "strides : " << endl;
+	file << "strides : " << endl;
 	for (int i = 0; i < region->dimensions; i++){
-		cout << region->strides[i] << endl;
+		file << region->strides[i] << endl;
 	}
 
-	cout << "padding : " << endl;
+	file << "padding : " << endl;
 	for (int i = 0; i < region->padding_filled; i++){
-		cout << region->padding[i] << endl;
+		file << region->padding[i] << endl;
 	}
 
-	cout << "name = " << region->name << endl;
+	file << "name = " << region->name << endl;
 
-	cout << "-------------------------------------------------------------------" << endl;
+	file << "-------------------------------------------------------------------" << endl;
 
 
 }
 
-void print_mem_regions(vector<mem_regions_t *> regions){
+void print_mem_regions(ostream &file, vector<mem_regions_t *> regions){
 
-	cout << "------------------------------MEM REGIONS ----------------------------" << endl;
+	file << "------------------------------MEM REGIONS ----------------------------" << endl;
 
 	for (int i = 0; i < regions.size(); i++){
-		print_mem_regions(regions[i]);
+		print_mem_regions(file,regions[i]);
 	}
 
 }
 
 
 void remove_possible_stack_frames(vector<pc_mem_region_t *> &pc_mem, vector<mem_info_t *> &mem, vector<Static_Info *> &info, vec_cinstr &instrs){
+
+	DEBUG_PRINT(("removing stack frames and out of scope mem infos\n"), 2);
+	DEBUG_PRINT(("mem info size - %d\n", mem.size()), 2);
 
 	for (int i = 0; i < mem.size(); i++){
 
@@ -394,6 +397,8 @@ void remove_possible_stack_frames(vector<pc_mem_region_t *> &pc_mem, vector<mem_
 		}
 
 	}
+
+	DEBUG_PRINT(("mem info size after - %d\n", mem.size()), 2);
 
 }
 
@@ -461,9 +466,28 @@ void mark_possible_buffers(vector<pc_mem_region_t *> &pc_mem, vector<mem_regions
 			if (found) break;
 		}
 
+		if (!found){
+			LOG(log_file, "region not found to be a buffer" << endl);
+			LOG(log_file, "start : " << mem_regions[i]->start << " end : " << mem_regions[i]->end);
+		}
+
 		ASSERT_MSG(found, ("ERROR: all buffers should are captured\n"));
 
 	}
+
+}
+
+uint64_t get_farthest_mem_access_point(vector<mem_regions_t *> &regions){
+
+	uint64_t max_addr = 0;
+
+	for (int i = 0; i < regions.size(); i++){
+		if (max_addr < regions[i]->end){
+			max_addr = regions[i]->end;
+		}
+	}
+
+	return max_addr + 16;
 
 }
 

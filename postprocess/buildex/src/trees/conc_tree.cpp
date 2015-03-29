@@ -8,6 +8,8 @@
 #include "analysis\x86_analysis.h"
 #include "utility\print_helper.h"
 
+#include "utilities.h"
+
 using namespace std;
 
 #define MAX_FRONTIERS		1000
@@ -217,8 +219,8 @@ void Conc_Tree::split_partial_overlaps(std::vector < std::pair <Node *, std::vec
 			{
 				operand_t * first = new operand_t;
 				operand_t * second = new operand_t;
-				*first = { split_node->symbol->type, opnd->value + width - start, { start } };
-				*second = { split_node->symbol->type, width - first->width, { opnd->value + width } };
+				*first = { split_node->symbol->type, opnd->value + opnd->width - start, { start } };  /* changed width to opnd->width */
+				*second = { split_node->symbol->type, width - first->width, { opnd->value + opnd->width } }; /* changed width to opnd->width */
 
 				splits.push_back(create_or_get_node(first));
 				splits.push_back(create_or_get_node(second));
@@ -248,7 +250,7 @@ void Conc_Tree::split_partial_overlaps(std::vector < std::pair <Node *, std::vec
 				operand_t * second = new operand_t;
 
 				*first = { split_node->symbol->type, opnd->value - start, { start } };
-				*second = { split_node->symbol->type, width - first->width - opnd->width, { opnd->value + width } };
+				*second = { split_node->symbol->type, width - first->width - opnd->width, { opnd->value + opnd->width } }; /* width changed to opnd->width */
 
 				splits.push_back(create_or_get_node(first));
 				splits.push_back(create_or_get_node(opnd));
@@ -300,6 +302,16 @@ void Conc_Tree::add_address_dependancy(Node * node, operand_t * opnds){
 		return;
 	}
 
+	/* should have some index */
+	uint32_t reg1 = mem_range_to_reg(&opnds[0]);
+	uint32_t reg2 = mem_range_to_reg(&opnds[1]);
+
+	if ((reg1 == DR_REG_RSP || reg1 == DR_REG_RBP || reg1 == 0) &&
+		(reg2 == DR_REG_RSP || reg2 == DR_REG_RBP || reg2 == 0)){
+		return;
+	}
+
+
 	Conc_Node * current_node;
 	Conc_Node * indirect_node = new Conc_Node(REG_TYPE, 0, 0, 0.0); //reg_type is used here; it doesn't really matter as this is an operation only node
 	indirect_node->operation = op_indirect;
@@ -309,7 +321,7 @@ void Conc_Tree::add_address_dependancy(Node * node, operand_t * opnds){
 	indirect_node->pos.push_back(node->srcs.size() - 1);
 	current_node = indirect_node;
 
-	if (opnds[0].value != 0 && opnds[1].value != 0){
+	//if (opnds[0].value != 0 && opnds[1].value != 0){
 		Conc_Node * add_node = new Conc_Node(REG_TYPE, 0, 0, 0.0); //reg_type is used here; it doesn't really matter as this is an operation only node
 		add_node->operation = op_add;
 
@@ -317,7 +329,7 @@ void Conc_Tree::add_address_dependancy(Node * node, operand_t * opnds){
 		add_node->prev.push_back(indirect_node);
 		add_node->pos.push_back(indirect_node->srcs.size() - 1);
 		current_node = add_node;
-	}
+	//}
 	
 	/* some special cases to be worried about 
 	1. we don't consider the scale or displacement here; it may be just the access width + constant offset for an addr calc
@@ -340,10 +352,24 @@ void Conc_Tree::add_address_dependancy(Node * node, operand_t * opnds){
 
 	}
 
+	/* remove !!!!!! */
+	Conc_Node * imm = new Conc_Node(IMM_INT_TYPE, opnds[3].value, opnds[3].width, 0.0);
+	current_node->srcs.push_back(imm);
+	imm->prev.push_back(current_node);
+	imm->pos.push_back(current_node->srcs.size() - 1);
+
 }
 
 bool Conc_Tree::update_depandancy_backward(rinstr_t * instr, cinstr_t * cinstr, Static_Info * info, uint32_t line, vector<mem_regions_t *> regions)
 {
+
+
+//#define INTERMEDIATE_BUFFER_ANALYSIS
+#define INDIRECTION
+#define ASSIGN_OPT
+//#define SIMPLIFICATIONS
+
+
 	//TODO: have precomputed nodes for immediate integers -> can we do it for floats as well? -> just need to point to them in future (space optimization)
 	Node * head = get_head();
 	
@@ -361,15 +387,19 @@ bool Conc_Tree::update_depandancy_backward(rinstr_t * instr, cinstr_t * cinstr, 
 			frontier[hash].amount++;
 		}
 
+#ifdef INDIRECTION
 		if ((info->type & Static_Info::INPUT_DEPENDENT_INDIRECT) == Static_Info::INPUT_DEPENDENT_INDIRECT){
-			if (instr->dst.addr != NULL){ /* ok, we have an address calculation dependancy */
-				add_address_dependancy(head, instr->dst.addr);
+			if (instr->dst.addr != NULL){ 
+				for (int buf = 0; buf < regions.size(); buf++){
+					if (is_overlapped(regions[buf]->start, regions[buf]->end, instr->dst.value, instr->dst.value + instr->dst.width)){
+						add_address_dependancy(head, instr->dst.addr);
+						break;
+					}
+				}
 			}
 		}
-
-
+#endif
 	}
-
 
 	vector<Node *> full_overlap_nodes;
 	vector<pair<Node *, vector<Node *> > >  partial_overlap_nodes;
@@ -475,7 +505,8 @@ bool Conc_Tree::update_depandancy_backward(rinstr_t * instr, cinstr_t * cinstr, 
 
 		DEBUG_PRINT(("src - %s\n", opnd_to_string(src->symbol).c_str()), 4);
 
-		/*if ((instr->num_srcs == 1) && (instr->operation == op_assign)){  //this is just an assign then remove the current node and place the new src node -> compiler didn't optimize for this?
+#ifdef ASSIGN_OPT
+		if ((instr->num_srcs == 1) && (instr->operation == op_assign)){  //this is just an assign then remove the current node and place the new src node -> compiler didn't optimize for this?
 
 			uint num_references = dst->prev.size();
 
@@ -504,7 +535,8 @@ bool Conc_Tree::update_depandancy_backward(rinstr_t * instr, cinstr_t * cinstr, 
 			if (assign_opt)  delete dst;  //we have broken all linkages, so just delete it 
 
 
-		}*/
+		}
+#endif
 
 		/* update the tree + backward references */
 
@@ -530,41 +562,58 @@ bool Conc_Tree::update_depandancy_backward(rinstr_t * instr, cinstr_t * cinstr, 
 
 		/* update the frontiers - include the sources to the frontier if new nodes created */
 		if (add_node){
-			
+
 			/* first if we have a recurrance we don't want to expand any more*/
 			Conc_Node * head_conc = (Conc_Node *)head;
 			Conc_Node * src_conc = (Conc_Node *)src;
-			if (head_conc->region != NULL && head_conc->region != src_conc->region){
 
-				/* now we need to see if this is a valid intermediate buffer */
-				add_to_frontier(hash_src, src);
-
-			}
-			else if (head_conc->region != NULL && head_conc->region == src_conc->region){
+#ifndef INTERMEDIATE_BUFFER_ANALYSIS
+			if (head_conc->region != NULL && head_conc->region == src_conc->region){
 				recursive = true;
 			}
-
-
+			else{
+				add_to_frontier(hash_src, src);
+			}
+#else			
+			if (src_conc->region != NULL){
+				if (head_conc->region != NULL && head_conc->region == src_conc->region){
+					recursive = true;
+				}
+			}
+			else{
+				add_to_frontier(hash_src, src);
+			}
+#endif
 		}
 
 		DEBUG_PRINT(("completed adding a src\n"), 4);
 
+#ifdef INDIRECTION
 		if ( (info->type & Static_Info::INPUT_DEPENDENT_INDIRECT) == Static_Info::INPUT_DEPENDENT_INDIRECT){
-			if (instr->srcs[i].addr != NULL){ /* ok, we have an address calculation dependancy */
-				add_address_dependancy(src, instr->srcs[i].addr);
+			if (instr->srcs[i].addr != NULL){ // ok, we have an address calculation dependancy 
+				//make sure this is a buffer
+				for (int buf = 0; buf < regions.size(); buf++){
+					if(is_overlapped(regions[buf]->start, regions[buf]->end, instr->srcs[i].value, instr->srcs[i].value + instr->srcs[i].width)){
+						add_address_dependancy(src, instr->srcs[i].addr);
+						break;
+					}
+				}
+				
 			}
 		}
 
 	}
+#endif
 
+
+#ifdef SIMPLIFICATIONS
 	if (!assign_opt){
 		//simplify_identity_add(dst);
 		//simplify_identity_mul(dst);
-
-		/* do we need to do this? can't we do it outside */
 		//dst->congregate_node(this->get_head());
 		
 	}
+#endif
 
 	return true;
 
@@ -652,21 +701,87 @@ bool Conc_Tree::update_dependancy_forward(rinstr_t * instr, uint32_t pc, std::st
 
 
 		if ((src_node != NULL) || (full_overlaps.size() > 0) || (partial_overlaps.size() > 0)){
-			Node * dst_node = search_node(&instr->dst);
+			/*Node * dst_node = search_node(&instr->dst);
 			if (dst_node == NULL){
 				add_to_frontier(generate_hash(&instr->dst), new Conc_Node(&instr->dst));
-			}
+			}*/
+			process_forward_destination(&instr->dst);
 			return true;
 		}
 
 	}
 
 	/*if no src is found, we should remove the dst, if it is already there*/
-	Node * dst_node = search_node(&instr->dst);
-	if (dst_node != NULL) remove_from_frontier(&instr->dst);
+	/*Node * dst_node = search_node(&instr->dst);
+	if (dst_node != NULL) remove_from_frontier(&instr->dst);*/
 
+	remove_dest_forward(&instr->dst);
 
 	return false;
+}
+
+void Conc_Tree::process_forward_destination(operand_t * opnd){
+
+	/* first get the partial overlaps */
+	vector<pair<Node *, vector<Node *> > > partial_overlaps_dst;
+
+	get_partial_overlap_nodes(partial_overlaps_dst, opnd);
+	for (int i = 0; i < partial_overlaps_dst.size(); i++){
+		remove_from_frontier(partial_overlaps_dst[i].first->symbol);
+		vector<Node *> partials = partial_overlaps_dst[i].second;
+		for (int j = 0; j < partials.size(); j++){
+			add_to_frontier(generate_hash(partials[j]->symbol), partials[j]);
+		}
+	}
+
+	/* if the node was there now it should be found */
+	Node * dst = search_node(opnd);
+
+	vector<Node *> full_overlap_dst;
+	get_full_overlap_nodes(full_overlap_dst, opnd);
+
+	/*do we have nodes that are contain within the current dest?*/
+	for (int i = 0; i < full_overlap_dst.size(); i++){
+		remove_from_frontier(full_overlap_dst[i]->symbol);
+	}
+
+	if (dst == NULL){
+		dst = new Conc_Node(opnd);
+		add_to_frontier(generate_hash(dst->symbol), dst);
+	}
+
+}
+
+void Conc_Tree::remove_dest_forward(operand_t * opnd){
+
+	/* first get the partial overlaps */
+	vector<pair<Node *, vector<Node *> > > partial_overlaps_dst;
+
+	get_partial_overlap_nodes(partial_overlaps_dst, opnd);
+	for (int i = 0; i < partial_overlaps_dst.size(); i++){
+		remove_from_frontier(partial_overlaps_dst[i].first->symbol);
+		vector<Node *> partials = partial_overlaps_dst[i].second;
+		for (int j = 0; j < partials.size(); j++){
+			add_to_frontier(generate_hash(partials[j]->symbol), partials[j]);
+		}
+	}
+	/* if the node was there now it should be found */
+	Node * dst = search_node(opnd);
+
+	vector<Node *> full_overlap_dst;
+	get_full_overlap_nodes(full_overlap_dst, opnd);
+
+	/*do we have nodes that are contain within the current dest?*/
+	if (full_overlap_dst.size() > 0){
+		for (int i = 0; i < full_overlap_dst.size(); i++){
+			remove_from_frontier(full_overlap_dst[i]->symbol);
+		}
+	}
+
+	if (dst != NULL){
+		remove_from_frontier(dst->symbol);
+	}
+
 }
 
 bool Conc_Tree::update_dependancy_forward_with_indirection(rinstr_t * instr, uint32_t pc, std::string disasm, uint32_t line){
@@ -704,24 +819,16 @@ bool Conc_Tree::update_dependancy_forward_with_indirection(rinstr_t * instr, uin
 			get_full_overlap_nodes(full_overlaps, srcs[j]);
 			get_partial_overlap_nodes(partial_overlaps, srcs[j]);
 
-
-
 			if ((src_node != NULL) || (full_overlaps.size() > 0) || (partial_overlaps.size() > 0)){
-				Node * dst_node = search_node(&instr->dst);
-				if (dst_node == NULL){
-					add_to_frontier(generate_hash(&instr->dst), new Conc_Node(&instr->dst));
-				}
+				
+				process_forward_destination(&instr->dst);
 				return true;
 			}
 		}
 
 	}
 
-	/*if no src is found, we should remove the dst, if it is already there*/
-
-
-	Node * dst_node = search_node(&instr->dst);
-	if (dst_node != NULL) remove_from_frontier(&instr->dst);
+	remove_dest_forward(&instr->dst);
 
 	return false;
 

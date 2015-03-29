@@ -31,6 +31,9 @@ struct mem_regions_t {
 	/* type of the memory region based on dump */
 	uint32_t dump_type;
 
+	/* indirect or not */
+	bool indirect;
+
 
 	uint32_t dimensions;
 
@@ -56,6 +59,7 @@ struct mem_regions_t {
 		type = 0;
 		direction = 0;
 		dump_type = 0;
+		indirect = false;
 	}
 
 };
@@ -76,10 +80,11 @@ mem_regions_t * get_mem_region(uint64_t value, std::vector<mem_regions_t *> &mem
 uint64_t get_mem_location(std::vector<int> base, std::vector<int> offset, mem_regions_t * mem_region, bool * success); /*extracting mem locations - given the D-dimensional coordinates this retrieves the memory address */
 std::vector<int> get_mem_position(mem_regions_t * mem_region, uint64_t mem_value); /* given a memory location get the memory position in D-dimensional co-ordinates */
 bool is_within_mem_region(mem_regions_t* mem, uint64_t value);
+uint64_t get_farthest_mem_access_point(std::vector<mem_regions_t *> &regions);
 
 /* prints out the identified mem regions */
-void print_mem_regions(std::vector<mem_regions_t *> regions);
-void print_mem_regions(mem_regions_t * region);
+void print_mem_regions(std::ostream &file, std::vector<mem_regions_t *> regions);
+void print_mem_regions(std::ostream &file, mem_regions_t * region);
 
 
 #endif

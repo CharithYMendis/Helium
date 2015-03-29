@@ -411,6 +411,7 @@ rinstr_t * cinstr_to_rinstrs(cinstr_t * cinstr, int &amount, std::string disasm,
 		else_bounds;
 
 	case OP_cdq:
+		// need to change
 		// edx <- eax
 		if_bounds(1, 1){
 			rinstr = new rinstr_t[1];
@@ -420,6 +421,15 @@ rinstr_t * cinstr_to_rinstrs(cinstr_t * cinstr, int &amount, std::string disasm,
 		}
 		else_bounds;
 
+	case OP_cwde:
+		// eax <- ax
+		if_bounds(1, 1){
+			rinstr = new rinstr_t[1];
+			amount = 1;
+			rinstr[0] = { op_signex, cinstr->dsts[0], 1, { cinstr->srcs[0] }, true };
+
+		}
+		else_bounds;
 
 	case OP_xchg:
 		//exchange the two registers
@@ -1087,6 +1097,8 @@ int mem_range_to_reg(operand_t * opnd){
 
 void update_regs_to_mem_range(vec_cinstr &instrs){
 
+	DEBUG_PRINT(("converting reg to mem\n"), 2);
+
 	for (int i = 0; i < instrs.size(); i++){
 		cinstr_t * instr = instrs[i].first;
 		for (int i = 0; i < instr->num_srcs; i++){
@@ -1234,6 +1246,8 @@ void update_fp_src(cinstr_t * cinstr, string disasm, uint32_t line){
 }
 
 void update_floating_point_regs(vec_cinstr &instrs, uint32_t direction, vector<Static_Info *> static_info, vector<uint32_t> pc){
+
+	DEBUG_PRINT(("updating floating point regs\n"), 2);
 
 	tos = DR_REG_ST8;
 
@@ -1451,6 +1465,7 @@ bool is_instr_handled(uint32_t opcode){
 	case OP_stmxcsr:
 	case OP_nop:
 	case OP_adc:
+	case OP_cwde:
 		return true;
 	default:
 		return false;
@@ -1842,17 +1857,17 @@ static void assert_opnds(int opcode, int needed_src, int needed_dst, int actual_
 	ASSERT_MSG((needed_src == actual_src) && (needed_dst == actual_src), ("ERROR: opcode %d - needed %d(src) %d(dst), actual %d(src) %d(dst)\n", opcode, needed_src, needed_dst, actual_src, actual_dst));
 }
 
-void print_rinstrs(rinstr_t * rinstr, int amount){
-	cout << "canonicalized instrs:" << endl;
+void print_rinstrs(ostream &file, rinstr_t * rinstr, int amount){
+	file << "canonicalized instrs:" << endl;
 	for (int j = 0; j < amount; j++){
-		cout << opnd_to_string(&rinstr[j].dst) << " = ";
+		file << opnd_to_string(&rinstr[j].dst) << " = ";
 		if (rinstr[j].operation != op_assign){
-			cout << operation_to_string(rinstr[j].operation) << " ";
+			file << operation_to_string(rinstr[j].operation) << " ";
 		}
 		for (int i = 0; i < rinstr[j].num_srcs; i++){
-			cout << opnd_to_string(&rinstr[j].srcs[i]) << " ";
+		 file << opnd_to_string(&rinstr[j].srcs[i]) << " ";
 		}
-		cout << endl;
+		file << endl;
 	}
 	
 }

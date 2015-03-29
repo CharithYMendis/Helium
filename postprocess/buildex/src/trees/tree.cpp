@@ -10,6 +10,8 @@ using namespace std;
 #include "utility/defines.h"
 #include "utility/print_helper.h"
 
+#include "utilities.h"
+
 
 Tree::Tree(){
 
@@ -111,6 +113,8 @@ void Tree::simplify_tree() /* simplification routines are not written at the mom
 
 void Tree::print_dot(std::ostream &file, string name, uint32_t number)
 {
+
+	DEBUG_PRINT(("printing tree to dot file\n"), 2);
 
 	/* print the nodes */
 	string nodes = "";
@@ -243,7 +247,9 @@ void * empty_ret_mutator(void * value, vector<void *> values, void * ori_value){
 
 void Tree::number_tree_nodes()
 {
+	DEBUG_PRINT(("numbering tree\n"), 2);
 	traverse_tree(head, &num_nodes, node_numbering, empty_ret_mutator);
+	DEBUG_PRINT(("number of nodes %d\n", num_nodes), 2);
 }
 
 void Tree::cleanup_visit()
@@ -448,6 +454,56 @@ bool Tree::is_recursive(Node * node, vector<mem_regions_t *> &regions){
 	}
 
 	return ret;
+
+}
+
+
+
+void Tree::remove_multiplication(){
+
+	cleanup_visit();
+
+	traverse_tree(head, head, [](Node * dst, void * value)->void*{
+
+		if (!dst->visited){
+
+			dst->visited = true;
+
+			if (dst->operation == op_mul){
+
+				int index = -1;
+				int imm_value = 0;
+
+				for (int i = 0; i < dst->srcs.size(); i++){
+					if (dst->srcs[i]->symbol->type == IMM_INT_TYPE){
+						imm_value = dst->srcs[i]->symbol->value; index = i;
+						break;
+					}
+				}
+
+				if (index != -1 && imm_value < 10 && imm_value >= 0){
+					for (int i = 0; i < dst->prev.size(); i++){
+						for (int j = 0; j < dst->srcs.size(); j++){
+							if (index != j){
+								for (int k = 0; k < imm_value; k++){
+									dst->prev[i]->add_forward_ref(dst->srcs[j]);
+								}
+							}
+						}
+						dst->prev[i]->remove_forward_ref(dst);
+					}
+
+					for (int i = 0; i < dst->srcs.size(); i++){
+						dst->remove_forward_ref(dst->srcs[i]);
+					}
+				}
+			}
+		}
+		return NULL;
+
+	}, empty_ret_mutator);
+
+	cleanup_visit();
 
 }
 

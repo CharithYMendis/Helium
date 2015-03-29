@@ -441,6 +441,7 @@ mem_regions_t * locate_image_CN2_backward(char * values, uint32_t size, uint64_t
 
 vector<mem_regions_t *> get_image_regions_from_dump(vector<string> filenames, string in_image_filename, string out_image_filename){
 
+	DEBUG_PRINT(("analyzing mem dumps....\n"), 1);
 	DEBUG_PRINT(("get_image_regions_from_dump....\n"), 2);
 
 	image_t * in_image = populate_imageinfo(open_image(in_image_filename.c_str()));
@@ -450,12 +451,12 @@ vector<mem_regions_t *> get_image_regions_from_dump(vector<string> filenames, st
 	bool similar = true;
 	for (int i = 0; i < in_image->width * in_image->height; i++){
 		if (in_image->image_array[i] != out_image->image_array[i]){
-			cout << "not similar" << endl;
+			DEBUG_PRINT(("the two images are not similar\n"), 2);
 			similar = false; break;
 			
 		}
 	}
-	if (similar) cout << "two images are similar" << endl;
+	if (similar) DEBUG_PRINT(("the two images are not similar\n"), 2);
 	
 	for (int i = 0; i < filenames.size(); i++){
 

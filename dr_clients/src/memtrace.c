@@ -311,9 +311,7 @@ memtrace_bb_instrumentation(void *drcontext, void *tag, instrlist_t *bb,
 			}
 		}
 
-
 		if ((first != NULL) && filter_from_list(head, first, client_arg->filter_mode)){
-
 
 			if (instr_reads_memory(instr)) {
 				for (i = 0; i < instr_num_srcs(instr); i++) {
@@ -364,13 +362,13 @@ memtrace(void *drcontext)
 	for (i = 0; i < num_refs; i++) {
 		mdata = dr_lookup_module(mem_ref->pc);
 		if (mdata != NULL){
-			if (((uint)mem_ref->addr > data->stack_base) || ((uint)mem_ref->addr < data->stack_limit)){
+			//if (((uint)mem_ref->addr > data->stack_base) || ((uint)mem_ref->addr < data->stack_limit)){
 				dr_fprintf(data->outfile, "%x,%x,%d,%d,"PFX"\n", mdata->start, mem_ref->pc - mdata->start
 					, mem_ref->write ? 1 : 0 , mem_ref->size, mem_ref->addr);
-			}
-			dr_free_module_data(mdata);
+			//}
 		}
-			
+		dr_free_module_data(mdata);
+
 		++mem_ref;
 	}
 

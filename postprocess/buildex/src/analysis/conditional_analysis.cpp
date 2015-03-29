@@ -1,6 +1,7 @@
 #include <vector>
 #include <stdint.h>
 #include <string>
+#include <algorithm>
 
 #include "analysis/conditional_analysis.h"
 #include "analysis/x86_analysis.h"
@@ -56,30 +57,75 @@ std::vector<uint32_t> find_dependant_statements(vec_cinstr &instrs, mem_regions_
 
 void update_merge_points(vec_cinstr &instrs, vector<Jump_Info *> &jumps){
 
+
 	DEBUG_PRINT(("finding merge points\n"), 2);
 	for (int i = 0; i < jumps.size(); i++){
 
-		uint32_t true_line = jumps[i]->taken;
-		uint32_t false_line = jumps[i]->not_taken;
 
-		if (true_line == 0 || false_line == 0) continue;
+		ASSERT_MSG((jumps[i]->target_pc >= jumps[i]->fall_pc), ("ERROR: we only consider forward branches for now\n"));
 
-		int j = 1;
-		while (true){
-			cinstr_t * true_c = instrs[true_line + j].first;
-			cinstr_t * false_c = instrs[false_line + j].first;
-			if (true_c->pc == false_c->pc){
-				jumps[i]->merge_pc = true_c->pc;
+		uint32_t true_line = jumps[i]->taken + 1;
+		uint32_t false_line = jumps[i]->not_taken + 1;
+
+		if (true_line == 1 || false_line == 1){
+			DEBUG_PRINT(("WARNING: either taken or not taken information is missing for this trace for jump %d\n", jumps[i]->jump_pc), 2);
+			continue;
+		}
+
+		vector<uint32_t> not_taken_pc;
+		vector<uint32_t> taken_pc;
+
+		bool merge_done = false;
+
+		while (instrs[false_line].first->pc != jumps[i]->jump_pc){
+			uint32_t cur_pc = instrs[false_line].first->pc;
+			not_taken_pc.push_back(cur_pc);
+			if (cur_pc == jumps[i]->target_pc){
+				jumps[i]->merge_pc = jumps[i]->target_pc;
+				merge_done = true; break;
+			}
+			false_line++;
+			if (false_line == instrs.size()){
+				DEBUG_PRINT(("WARNING: end of instrace hit\n"), 2);
 				break;
 			}
-			j++;
 		}
+
+
+		if (merge_done) continue;
+
+		while (instrs[true_line].first->pc != jumps[i]->jump_pc){
+			uint32_t cur_pc = instrs[true_line].first->pc;
+			taken_pc.push_back(cur_pc);
+			true_line++;
+			if (true_line == instrs.size()){
+				DEBUG_PRINT(("WARNING: end of instrace hit\n"), 2);
+				break;
+			}
+		}
+
+		sort(not_taken_pc.begin(), not_taken_pc.end());
+		sort(taken_pc.begin(), taken_pc.end());
+
+
+		for (int j = 0; j < not_taken_pc.size(); j++){
+			for (int k = 0; k < taken_pc.size(); k++){
+				if (not_taken_pc[j] == taken_pc[k]){
+					jumps[i]->merge_pc = not_taken_pc[j];
+					merge_done = true; break;
+				}
+			}
+			if (merge_done) break;
+		}
+
+
 	}
 
 }
 
 vector<Jump_Info*> find_dependant_conditionals(vector<uint32_t> dep_instrs, vec_cinstr &instrs, vector<Static_Info *> &static_info){
 
+	DEBUG_PRINT(("finding input dependant conditionals\n"), 2);
 
 	vector<Jump_Info *> jumps;
 
@@ -193,6 +239,8 @@ Static_Info * get_instruction_info(vector<Static_Info *> instr, uint32_t pc){
 
 void populate_conditional_instructions(vector<Static_Info *> &static_info, vector<Jump_Info *> jumps){
 
+	DEBUG_PRINT(("populating conditional instructions\n"), 2);
+
 	for (int i = 0; i < static_info.size(); i++){
 
 		uint32_t pc = static_info[i]->pc;
@@ -206,7 +254,9 @@ void populate_conditional_instructions(vector<Static_Info *> &static_info, vecto
 				DEBUG_PRINT(("WARNING: added a non jump sbb/adc\n"), 2);
 			}
 
-			if (jumps[k]->target_pc < jumps[k]->fall_pc) continue; //this is a backward jump? we are only considering fwd jumps
+			if (jumps[k]->target_pc < jumps[k]->fall_pc){
+				ASSERT_MSG(false, ("ERROR: backward jumps still not handled\n"));
+			}
 
 			if (pc >= jumps[k]->fall_pc && pc < jumps[k]->target_pc){
 				static_info[i]->conditionals.push_back(make_pair(jumps[k], false));

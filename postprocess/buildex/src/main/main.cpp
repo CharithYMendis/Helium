@@ -84,6 +84,10 @@
 #define ABSTRACTION_STAGE		4
 #define HALIDE_OUTPUT_STAGE		5
 
+
+ /* some debug defines */
+#define INPUT_ANALYSIS_SKIP
+
  int main(int argc, char ** argv){
 
 	 /* setting up the files and other inputs and outputs for the program */
@@ -322,6 +326,8 @@
 		1. Extraction from the pc_mems and mem_info raw should be the same.
 	 */
 
+	 DEBUG_PRINT(("****************start mem info stage******************\n"), 2);
+
 	 ULONG_PTR token = initialize_image_subsystem();
 
 	 /* analyzing mem dumps for input and output image locations if dump is to be analyzed - if false,
@@ -330,10 +336,12 @@
 	  */
 	 vector<mem_regions_t *> dump_regions;
 	 if (dump){
-		 DEBUG_PRINT(("analyzing mem dumps\n"), 1);
 		 dump_regions = get_image_regions_from_dump(memdump_files, in_image_filename, out_image_filename);
+		 LOG(log_file, "dump regions....." << endl);
+		 print_mem_regions(log_file, dump_regions);
 	 }
 	 
+
 
 	 /* independently create the memory layout from the instrace */
 	 DEBUG_PRINT(("analyzing instrace file - %s\n", instrace_filename.c_str()), 1);
@@ -349,12 +357,16 @@
 
 	 link_mem_regions_greedy_dim(mem_info, 0);
 	 
+	 LOG(log_file, "*********** pc_mem_info *************" << endl);
 	 print_mem_layout(log_file, pc_mem_info);
-	 log_file << "*********** mem_info *************" << endl;
+	 LOG(log_file, "*********** mem_info *************" << endl);
 	 print_mem_layout(log_file, mem_info);
 
+	 
 	 vector<vector<mem_info_t *> > mergable = get_merge_opportunities(mem_info, pc_mem_info);
 	 merge_mem_regions_pc(mergable, mem_info);
+
+	 DEBUG_PRINT(("*******************end of mem info stage*********************\n"), 2);
 
 	 if (mode == MEM_INFO_STAGE){
 		 exit(0);
@@ -363,8 +375,9 @@
 
 	 /******************************gathering instruction trace********************************/
 
+	 DEBUG_PRINT(("*******************instruction gathering/preprocessing stage*********************\n"), 2);
+
 	 /* disassembly of instructions acquired */
-	 DEBUG_PRINT(("getting disassembly trace\n"), 1);
 	 vector<Static_Info *> static_info;
 	 parse_debug_disasm(static_info, disasm_file);
 
@@ -388,21 +401,23 @@
 		 pair<cinstr_t *, Static_Info *> instr_string = make_pair(new_cinstr, instrs_forward[i].second);
 		 instrs_backward.push_back(instr_string);
 	 }
-
-
 	 DEBUG_PRINT(("number of dynamic instructions : %d\n", instrs_backward.size()), 2);
 
 	 /*preprocessing*/
+	 DEBUG_PRINT(("for both forward and backward instr traces\n"), 2);
 	 update_regs_to_mem_range(instrs_backward);
 	 update_regs_to_mem_range(instrs_forward);
 
 	 update_floating_point_regs(instrs_backward, BACKWARD_ANALYSIS, static_info, start_pcs);
-	 DEBUG_PRINT(("updated backward instr's floating point regs\n"), 2);
 	 update_floating_point_regs(instrs_forward, FORWARD_ANALYSIS, static_info, start_pcs);
-	 DEBUG_PRINT(("updated forward instr's floating point regs\n"), 2);
+
+	 DEBUG_PRINT(("*******************end of instruction gathering/preprocessing stage*********************\n"), 2);
 
 	 /*******************************************more memory and input/output selection********************************************************/
 	 
+
+	 DEBUG_PRINT(("******************memory input and output selection********************************\n"), 2);
+
 	 vector<uint32_t> candidate_ins;
 	 vector<uint32_t> start_points_mem;
 	 start_points_mem = get_instrace_startpoints(instrs_forward, start_pcs);
@@ -413,6 +428,7 @@
 	 remove_possible_stack_frames(pc_mem_info, mem_info, static_info, instrs_forward);
 	 
 	 /* merge these two information - instrace mem info + mem dump info */
+
 	 vector<mem_regions_t *> total_mem_regions;
 	 vector<mem_regions_t *> image_regions = merge_instrace_and_dump_regions(total_mem_regions, mem_info, dump_regions);
 
@@ -424,27 +440,58 @@
 	 input_mem_region = regions[0];
 	 output_mem_region = regions[1];
 
-	 image_regions.push_back(output_mem_region);
+	 image_regions.clear();
+	 image_regions.push_back(output_mem_region); /* we do not need to check whether this region is there; can be a duplicate, this is for random tree building */
 
-	 print_mem_regions(image_regions);
+	 DEBUG_PRINT(("-------input -----\n"),2);
+	 print_mem_regions(cout,input_mem_region);
+	 DEBUG_PRINT(("-------output -----\n"), 2);
+	 print_mem_regions(cout,output_mem_region);
 
+	 LOG(log_file, "image regions ----->" << endl);
+	 print_mem_regions(log_file,image_regions);
+	 LOG(log_file, "total memory regions ----->" << endl);
+	 print_mem_regions(log_file,total_mem_regions);
+
+	 DEBUG_PRINT(("******************memory input and output selection done********************************\n"), 2);
 
 	 /**************************** forward analysis for conditionals, indirection *************************************************************/
 	 
 	 vector<uint32_t> app_pc;
 	 vector<uint32_t> app_pc_indirect;
+	 vector<uint32_t> app_pc_total;
 	 vector<vector<uint32_t> > app_pc_vec;
 	 vector<Jump_Info * > cond_app_pc;
 
 
-	cout << "before filter static ins : " << static_info.size() << endl;
+	DEBUG_PRINT(("before filter static ins : %d\n", static_info.size()), 2);
 	filter_disasm_vector(instrs_forward, static_info);
-	cout << "after filter static ins : " << static_info.size() << endl;
+	DEBUG_PRINT(("after filter static ins : %d\n", static_info.size()), 2);
+
+	vector<mem_regions_t *> inputs;
+	for (int i = 0; i < total_mem_regions.size(); i++){
+		if ((total_mem_regions[i]->direction & MEM_INPUT) == MEM_INPUT){
+			inputs.push_back(total_mem_regions[i]);
+		}
+	}
+	/*inputs.push_back(input_mem_region);
+	for (int i = 0; i < total_mem_regions.size(); i++){
+		if (total_mem_regions[i]->start == 144560352){
+			inputs.push_back(total_mem_regions[i]);
+		}
+	}*/
 
 	//app_pc = find_dependant_statements(instrs_forward, input_mem_region, static_info);
-	cout << "finding dependant statements direct and indirect" << endl;
-	app_pc_vec = find_dependant_statements_with_indirection(instrs_forward, input_mem_region, static_info);
+
+#ifndef INPUT_ANALYSIS_SKIP
+	app_pc_vec = find_dependant_statements_with_indirection(instrs_forward, inputs, static_info, start_points_mem);
+#else
+	app_pc_vec.push_back(app_pc);
+	app_pc_vec.push_back(app_pc);
+#endif
+
 	app_pc = app_pc_vec[0];
+	app_pc_total = app_pc_vec[1];
 	app_pc_indirect.resize(app_pc_vec[1].size());
 	vector<uint32_t>::iterator it;
 
@@ -454,53 +501,55 @@
 	it = set_difference(app_pc_vec[1].begin(), app_pc_vec[1].end(), app_pc_vec[0].begin(), app_pc_vec[0].end(), app_pc_indirect.begin());
 	app_pc_indirect.resize(it - app_pc_indirect.begin());
 
-	cout << "dependant statements" << endl;
+	LOG(log_file, "dependant analysis-------->" << endl);
+	LOG(log_file,"dependant statements" << endl);
 	if (debug_level >= 2){
 		for (int i = 0; i < app_pc.size(); i++){
 			string disasm_string = get_disasm_string(static_info, app_pc[i]);
-			cout << app_pc[i] << " " << disasm_string << endl;
+			LOG(log_file,app_pc[i] << " " << disasm_string << endl);
 		}
 	}
 
-	cout << "indirect dependant statements" << endl;
+	LOG(log_file,"indirect dependant statements" << endl);
 	for (int i = 0; i < app_pc_indirect.size(); i++){
 		string disasm_string = get_disasm_string(static_info, app_pc_indirect[i]);
-		cout << app_pc_indirect[i] << " " << disasm_string << endl;
+		LOG(log_file,app_pc_indirect[i] << " " << disasm_string << endl);
 	}
+
 
 	
 
-	cond_app_pc = find_dependant_conditionals(app_pc, instrs_forward, static_info);
+	cond_app_pc = find_dependant_conditionals(app_pc_total, instrs_forward, static_info);
 
-	cout << "dependant conditionals" << endl;
+	LOG(log_file, "dependant conditionals" << endl);
 	for (int i = 0; i < cond_app_pc.size(); i++){
 		string dis_jmp_string = get_disasm_string(static_info, cond_app_pc[i]->jump_pc);
 		string dis_cond_string = get_disasm_string(static_info, cond_app_pc[i]->cond_pc);
 
-		cout << i + 1 << " - conditional " << endl;
-		cout << "jump ";
-		cout << cond_app_pc[i]->jump_pc << " " << dis_jmp_string << endl;
-		cout << "cond_pc ";
-		cout << cond_app_pc[i]->cond_pc << " " << dis_cond_string << endl;
-		cout << "target_pc ";
-		cout << cond_app_pc[i]->target_pc << endl;
-		cout << "fall_pc ";
-		cout << cond_app_pc[i]->fall_pc << endl;
-		cout << "merge_pc ";
-		cout << cond_app_pc[i]->merge_pc << endl;
+		LOG(log_file, i + 1 << " - conditional " << endl);
+		LOG(log_file, "jump ");
+		LOG(log_file, cond_app_pc[i]->jump_pc << " " << dis_jmp_string << endl);
+		LOG(log_file, "cond_pc ");
+		LOG(log_file, cond_app_pc[i]->cond_pc << " " << dis_cond_string << endl);
+		LOG(log_file, "target_pc ");
+		LOG(log_file, cond_app_pc[i]->target_pc << endl);
+		LOG(log_file, "fall_pc ");
+		LOG(log_file, cond_app_pc[i]->fall_pc << endl);
+		LOG(log_file, "merge_pc ");
+		LOG(log_file, cond_app_pc[i]->merge_pc << endl);
 	}
 	 
 	 populate_conditional_instructions(static_info, cond_app_pc);
 	 populate_dependant_indireciton(static_info, app_pc_indirect);
 
-	 cout << "populated cond. instrs" << endl;
+	 LOG(log_file,"populated cond. instrs" << endl);
 	 for (int i = 0; i < static_info.size(); i++){
 		 Static_Info * info = static_info[i];
 		 if (info->conditionals.size() > 0){
-			 cout << info->pc << " " << info->disassembly << endl;
+			  LOG(log_file, "pc : " << info->pc << " " << info->disassembly << endl);
 			 //conditionals
 			 for (int j = 0; j < info->conditionals.size(); j++){
-				 cout << info->conditionals[j].first->cond_pc << " " << info->conditionals[j].second << endl;
+				 LOG(log_file, "cond " << info->conditionals[j].first->cond_pc << "jump " << info->conditionals[j].first->jump_pc  << " taken : " << info->conditionals[j].second << endl);
 			 }
 		 }
 	 }
@@ -532,6 +581,7 @@
 
 	 if (tree_build == BUILD_RANDOM){
 
+		 uint64_t farthest = get_farthest_mem_access_point(total_mem_regions);
 
 		 if (start_trace == FILE_BEGINNING){
 			 mem_regions_t * random_mem_region = get_random_output_region(image_regions);
@@ -549,23 +599,23 @@
 
 		 //Node * node = create_tree_for_dest(dest, stride, instrace_file, start_points, start_trace, end_trace, disasm)->get_head();
 		 Conc_Tree * tree = new Conc_Tree();
-		 Conc_Tree * initial = build_conc_tree(dest, stride, start_points, start_trace, end_trace, tree, instrs_backward, total_mem_regions);
+		 Conc_Tree * initial = build_conc_tree(dest, stride, start_points, start_trace, end_trace, tree, instrs_backward, farthest, total_mem_regions);
 		 tree->print_conditionals();
 		 cout << "creating conditional trees" << endl;
-		 build_conc_trees_for_conditionals(start_points, tree, instrs_backward, total_mem_regions);
+		 build_conc_trees_for_conditionals(start_points, tree, instrs_backward, farthest, total_mem_regions);
 		 for (int i = 0; i < tree->conditionals.size(); i++){
 			 conc_trees.push_back(tree->conditionals[i]->tree);
 		 }
 		 conc_trees.push_back(tree);
 		 if (initial != NULL){
-			 build_conc_trees_for_conditionals(start_points, initial, instrs_backward, total_mem_regions);
+			 build_conc_trees_for_conditionals(start_points, initial, instrs_backward, farthest, total_mem_regions);
 			 conc_trees.push_back(initial);
 		 }
 
 	 }
 	 else if (tree_build == BUILD_RANDOM_SET){
 
-
+		 uint64_t farthest = get_farthest_mem_access_point(total_mem_regions);
 		 /*ok we need find a set of random locations */
 		 vector<uint64_t> nbd_locations = get_nbd_of_random_points(image_regions, seed, &stride);
 		 //exit(0);
@@ -574,14 +624,14 @@
 		 for (int i = 0; i < nbd_locations.size(); i++){
 
 			 Conc_Tree * tree = new Conc_Tree();
-			 Conc_Tree * initial = build_conc_tree(nbd_locations[i], stride, start_points, FILE_BEGINNING, end_trace, tree, instrs_backward, total_mem_regions);
-			 build_conc_trees_for_conditionals(start_points, tree, instrs_backward, total_mem_regions);
+			 Conc_Tree * initial = build_conc_tree(nbd_locations[i], stride, start_points, FILE_BEGINNING, end_trace, tree, instrs_backward, farthest, total_mem_regions);
+			 build_conc_trees_for_conditionals(start_points, tree, instrs_backward,farthest, total_mem_regions);
 
 			 //identify_parameters(tree->get_head(), pc_mem_info);
 			 //exit(0);
 			 conc_trees.push_back(tree);
 			 if (initial != NULL){
-				 build_conc_trees_for_conditionals(start_points, initial, instrs_backward, total_mem_regions);
+				 build_conc_trees_for_conditionals(start_points, initial, instrs_backward, farthest, total_mem_regions);
 				 conc_trees.push_back(initial);
 			 }
 
@@ -594,10 +644,12 @@
 
 	 }
 	 else if (tree_build == BUILD_SIMILAR){
-		 conc_trees = get_similar_trees(image_regions, total_mem_regions, seed, &stride, start_points, start_trace, end_trace, instrs_backward);
+		 uint64_t farthest = get_farthest_mem_access_point(total_mem_regions);
+		 conc_trees = get_similar_trees(image_regions, total_mem_regions, seed, &stride, start_points, start_trace, end_trace, farthest, instrs_backward);
 	 }
 	 else if (tree_build == BUILD_CLUSTERS){
-		 clustered_trees = cluster_trees(image_regions, total_mem_regions, start_points, instrs_backward, output_folder + file_substr);
+		 uint64_t farthest = get_farthest_mem_access_point(total_mem_regions);
+		 clustered_trees = cluster_trees(image_regions, total_mem_regions, start_points, instrs_backward, farthest, output_folder + file_substr);
 	 }
 
 

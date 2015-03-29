@@ -21,7 +21,7 @@ Comp_Abs_Node::Comp_Abs_Node(vector<Abs_Node *> abs_nodes){
 
 string Comp_Abs_Node::get_node_string()
 {
-	string ret = to_string(this->order_num) + "[label = \"";
+	string ret = "";
 
 	for (int i = 0; i < this->nodes.size(); i++){
 		Abs_Node * instance = dynamic_cast<Abs_Node*>(this->nodes[i]);
@@ -35,7 +35,7 @@ string Comp_Abs_Node::get_node_string()
 		}
 	}
 
-	return ret + "\"];";
+	return ret;
 }
 
 bool Comp_Abs_Node::are_nodes_similar(Node * node){

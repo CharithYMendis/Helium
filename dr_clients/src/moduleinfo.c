@@ -64,6 +64,7 @@ static bbinfo_t * add_bb_to_list (bbinfo_t * bb_list, unsigned int addr, bool ex
 		bb_list[bb_list[0].start_addr].called_to[0].bb_addr = 0;
 
 		bb_list[bb_list[0].start_addr].func = NULL;
+		bb_list[bb_list[0].start_addr].func_addr = 0;
 
 	}
 	 
@@ -363,6 +364,8 @@ void print_bb_info(bbinfo_t * bb, file_t file, bool extra_info){
 		else{
 			dr_fprintf(file, "0,");
 		}
+
+		//dr_fprintf(file,"%x,",bb->func_addr);
 		dr_fprintf(file, "%x,%u,%u,", bb->start_addr, bb->size, bb->freq);
 		dr_fprintf(file, "%u,%u,%u,", bb->is_call, bb->is_ret, bb->is_call_target);
 		dr_fprintf(file, "%u,", bb->from_bbs[0].start_addr);

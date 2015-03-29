@@ -235,7 +235,7 @@ bool Node::congregate_node(Node * head)
 			DEBUG_PRINT(("canc. opportunity \n"), 4);
 			Node * prev_node = this->prev[i];
 
-			uint32_t rem = prev_node->remove_forward_ref(this);
+			uint32_t rem = prev_node->remove_forward_ref_single(this);
 
 			if (rem){
 				for (int j = 0; j < this->srcs.size(); j++){

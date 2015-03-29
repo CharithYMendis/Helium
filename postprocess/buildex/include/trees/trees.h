@@ -27,7 +27,6 @@ void * empty_ret_mutator(void * value, vector<void *> values, void * ori_value);
 	 void collect_all_nodes(Node * node, std::vector<Node *> &nodes);
 	 static void copy_unrolled_tree_structure(Node * head,Node * from, Node * to, void * peripheral_data, node_to_node node_creation);
 	 static bool are_trees_similar(std::vector<Node *> node);
-
  protected:
 	 void * traverse_tree(Node * node, void * value, node_mutator mutator, return_mutator ret_mutator);
 	 void copy_exact_tree_structure(Tree * tree, void * peripheral_data, node_to_node node_creation);
@@ -73,7 +72,7 @@ void * empty_ret_mutator(void * value, vector<void *> values, void * ori_value);
 	 /* some tree transformations */
 	 void remove_assign_nodes();
 	 std::vector<mem_regions_t *> identify_intermediate_buffers(std::vector<mem_regions_t *> mem);
-
+	 void remove_multiplication();
  };
 
 
@@ -137,6 +136,8 @@ void * empty_ret_mutator(void * value, vector<void *> values, void * ori_value);
 	 bool update_depandancy_forward_with_src(rinstr_t * instr, uint32_t pc, std::string disasm, uint32_t line, bool * src_dep);
 
 	 void add_address_dependancy(Node * node, operand_t * opnds);
+	 void process_forward_destination(operand_t * opnd);
+	 void remove_dest_forward(operand_t * opnd);
 
 	 void number_parameters(std::vector<mem_regions_t *> regions);
 	 std::string serialize_tree();

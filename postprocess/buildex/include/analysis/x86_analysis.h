@@ -113,7 +113,7 @@ enum {
 
  /* debug routines */
  void print_cinstr(cinstr_t * instr);
- void print_rinstrs(rinstr_t * rinstr, int amount);
+ void print_rinstrs(std::ostream &file, rinstr_t * rinstr, int amount);
 
  
  #endif

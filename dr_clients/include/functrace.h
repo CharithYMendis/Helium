@@ -14,6 +14,7 @@ typedef struct _function_t {
 
 /* other public functions */
 function_t * get_current_function(void * drcontext);
+uint get_current_function_all(void * drcontext);
 
 /*instrumentation routines*/
 

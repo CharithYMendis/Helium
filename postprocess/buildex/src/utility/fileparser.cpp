@@ -170,6 +170,8 @@ bool compare_static_info(Static_Info * first, Static_Info * second){
 
 void parse_debug_disasm(vector<Static_Info *> &static_info, ifstream &file){
 
+	DEBUG_PRINT(("getting disassembly trace\n"), 2);
+
 	while (!file.eof()){
 
 		char string_ins[MAX_STRING_LENGTH];
@@ -236,13 +238,16 @@ vec_cinstr walk_file_and_get_instructions(ifstream &file, vector<Static_Info *> 
 	cinstr_t * instr;
 	Static_Info * info;
 	vec_cinstr instrs;
+	uint32_t count = 0;
+
+	DEBUG_PRINT(("getting dynamic instruction trace from file\n"), 2);
 
 	while (!file.eof()){
 		instr = get_next_from_ascii_file(file, version);
-		
+		count++;
 		if (instr != NULL){
 			info = get_static_info(static_info, instr->pc);
-			ASSERT_MSG((info != NULL), ("ERROR: static disassembly not found\n"));
+			ASSERT_MSG((info != NULL), ("ERROR: static disassembly not found %d, %d\n",instr->pc, count));
 			instrs.push_back(make_pair(instr, info));
 		}
 	}

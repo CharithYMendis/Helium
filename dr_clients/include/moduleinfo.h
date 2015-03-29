@@ -54,6 +54,8 @@ typedef struct _bbinfo_t {
 	call_target_info_t * called_to;
 	
 	function_t * func;
+
+	uint func_addr;
 	bool printable;
 
 } bbinfo_t;

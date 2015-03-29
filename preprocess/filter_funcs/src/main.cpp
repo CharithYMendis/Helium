@@ -353,9 +353,9 @@ int main(int argc, char **argv){
 			}
 		}
 		
-		populate_function_addr(module);
-		moduleinfo_t * func_module = move_to_function_composition(module);
-		print_moduleinfo(log_file, func_module);
+		//populate_function_addr(module);
+		//moduleinfo_t * func_module = move_to_function_composition(module);
+		//print_moduleinfo(log_file, func_module);
 
 		
 		

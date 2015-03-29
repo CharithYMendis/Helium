@@ -47,28 +47,31 @@ vector<mem_regions_t *> merge_instrace_and_dump_regions(vector<mem_regions_t *> 
 	/* mem regions are from dumps and check whether they overlap with instrace regions */
 	for (int i = 0; i < mem_regions.size(); i++){
 		for (int j = 0; j < mem_info.size(); j++){
-			if (is_overlapped(mem_regions[i]->start, mem_regions[i]->end, mem_info[j]->start, mem_info[j]->end)){
+			if (is_overlapped(mem_regions[i]->start, mem_regions[i]->end - 1, mem_info[j]->start, mem_info[j]->end - 1)){
 
 				merged_mem_info[j] = true;
 				mem_regions[i]->direction = mem_info[j]->direction;
 				
 				/* debug information about the merging */
 				if (debug && debug_level >= 2){
-					cout << "mem region:" << endl;
-					cout << "start : " << hex << mem_regions[i]->start << " end : " << mem_regions[i]->end << endl;
-					cout << dec << "strides : ";
-					for (int k = 0; k < mem_regions[i]->dimensions; k++) cout << mem_regions[i]->strides[k] << ",";
-					cout << endl;
-					cout << "mem instrace:" << endl;
-					cout << "start : " << hex << mem_info[j]->start << " end : " << mem_info[j]->end << endl;
+					LOG(log_file, "overlap for mem region" << endl);
+					LOG(log_file, "mem region:" << endl);
+					LOG(log_file, "start : " << hex << mem_regions[i]->start << " end : " << mem_regions[i]->end << endl);
+					LOG(log_file, dec << "strides : ");
+					for (int k = 0; k < mem_regions[i]->dimensions; k++) LOG(log_file, mem_regions[i]->strides[k] << ",");
+					LOG(log_file, dec << "extents : ");
+					for (int k = 0; k < mem_regions[i]->dimensions; k++) LOG(log_file, mem_regions[i]->extents[k] << ",");
+					LOG(log_file,endl);
+					LOG(log_file,"mem instrace:" << endl);
+					LOG(log_file,"start : " << hex << mem_info[j]->start << " end : " << mem_info[j]->end << endl);
 
 				}
 
 				mem_info_t * info = get_the_deepest_enclosing(mem_regions[i], mem_info[j]);
-
 				/* ok if the memory region is completely contained in the region constructed by meminfo */
 				if (info != NULL){
 					/* how much to the left of start is the meminfo spread? */
+					LOG(log_file, "found deepest enclosing: start " << info->start << " end " << info->end << endl);
 					uint64_t start = mem_regions[i]->start;
 					vector<uint32_t> left_spread;
 					for (int k = mem_regions[i]->dimensions - 1; k >= 0; k--){
@@ -78,11 +81,11 @@ vector<mem_regions_t *> merge_instrace_and_dump_regions(vector<mem_regions_t *> 
 					}
 
 					/* printing out the spreads */
-					cout << dec << "left spread: ";
+					LOG(log_file, dec << "left spread: ");
 					for (int k = 0; k < left_spread.size(); k++){
-						cout << left_spread[k] << ",";
+						LOG(log_file, left_spread[k] << ",");
 					}
-					cout << endl;
+					LOG(log_file, endl);
 
 					/* how much to the right of the end of the meminfo are we spread? */
 					uint64_t end = mem_regions[i]->end;
@@ -94,20 +97,20 @@ vector<mem_regions_t *> merge_instrace_and_dump_regions(vector<mem_regions_t *> 
 					}
 
 					/* printing out the spreads */
-					cout << "right spread: ";
+					LOG(log_file, "right spread: ");
 					for (int k = 0; k < right_spread.size(); k++){
-						cout << right_spread[k] << ",";
+						LOG(log_file, right_spread[k] << ",");
 					}
-					cout << endl;
+					LOG(log_file, endl);
 
-					cout << "--------------------------" << endl;
+					LOG(log_file, "--------------------------" << endl);
 
 					mem_regions[i]->start = info->start;
 					mem_regions[i]->end = info->end;
 
-					cout << "dims : " << get_number_dimensions(info) << endl;
-					cout << mem_info[j]->start << endl;
-					cout << mem_info[j]->end << endl;
+					LOG(log_file,"dims : " << get_number_dimensions(info) << endl);
+					LOG(log_file, "new start : " << mem_info[j]->start << endl);
+					LOG(log_file, "new end : " <<mem_info[j]->end << endl);
  
 
 					if (mem_regions[i]->dimensions == get_number_dimensions(info)){
@@ -119,12 +122,22 @@ vector<mem_regions_t *> merge_instrace_and_dump_regions(vector<mem_regions_t *> 
 							mem_regions[i]->extents[k] = get_extents(info, k + 1, get_number_dimensions(info));
 						}
 
+						LOG(log_file, "new extents recorded" << endl);
+						for (int k = 0; k < mem_regions[i]->dimensions; k++) LOG(log_file, mem_regions[i]->extents[k] << ",");
+
 					}
 
 					final_regions.push_back(mem_regions[i]);
 					total_regions.push_back(mem_regions[i]);
 					break;
 
+				}
+				else{ /* FIXME: */
+					DEBUG_PRINT(("WARNING: region is greater than what is accessed; may be not whole image accessed\n"), 2);
+					LOG(log_file,"WARNING: region is greater than what is accessed; may be not whole image accessed\n");
+					final_regions.push_back(mem_regions[i]);
+					total_regions.push_back(mem_regions[i]);
+					break;
 				}
 
 			}
@@ -279,9 +292,10 @@ void  mark_regions_type(vector<mem_regions_t *> regions, vector<mem_regions_t *>
 }
 
 
-vector<mem_regions_t *> get_input_output_regions(vector<mem_regions_t *> &image_regions, vector<mem_regions_t *> &total_regions, 
+vector<mem_regions_t *> get_input_output_regions(vector<mem_regions_t *> &image_regions, vector<mem_regions_t *> &total_regions,
 	vector<pc_mem_region_t* > &pc_mems, vector<uint32_t> app_pc, vec_cinstr &instrs, vector<uint32_t> start_points){
 
+	DEBUG_PRINT(("getting input output region for further analysis\n"), 2);
 
 	vector<mem_regions_t *> ret;
 	mem_regions_t * input_mem_region = NULL;
@@ -301,12 +315,17 @@ vector<mem_regions_t *> get_input_output_regions(vector<mem_regions_t *> &image_
 	}
 
 	if (input_mem_region != NULL && output_mem_region != NULL){
+		DEBUG_PRINT(("Both input and output regions are found from dump\n"), 2);
 		ret.push_back(input_mem_region);
 		ret.push_back(output_mem_region);
 		return ret;
 	}
 
-	/* mapping */
+
+	if (input_mem_region == NULL) DEBUG_PRINT(("input region missing\n"), 2);
+	if (output_mem_region == NULL) DEBUG_PRINT(("output region missing\n"), 2);
+
+	/* mapping - pc, regions */
 	map< uint32_t, vector<mem_regions_t *> > region_map;
 	for (int i = 0; i < pc_mems.size(); i++){
 		for (int k = 0; k < total_regions.size(); k++){
@@ -323,52 +342,59 @@ vector<mem_regions_t *> get_input_output_regions(vector<mem_regions_t *> &image_
 	vector<mem_regions_t *> input_regions;
 	if (input_mem_region != NULL){
 		input_regions.push_back(input_mem_region);
+
+		DEBUG_PRINT((" marking dependant regions using the input image\n"), 2);
+
+		uint32_t start = 0;
+		uint32_t end = 0;
+
+		for (int i = 0; i < start_points.size(); i++){
+			if (i != start_points.size() - 1) end = start_points[i + 1];
+			else end = instrs.size();
+			mark_regions_type(total_regions, input_regions, instrs, region_map, start, end);
+			start = end;
+		}
 	}
 
-	uint32_t start = 0;
-	uint32_t end = 0;
 
-	for (int i = 0; i < start_points.size(); i++){
-		if (i != start_points.size() - 1) end = start_points[i + 1];
-		else end = instrs.size();
-		cout << end << endl;
-		mark_regions_type(total_regions, input_regions, instrs, region_map, start, end);
-		start = end;
-	}
 
 
 	/*for (int i = 0; i < total_regions.size(); i++){
 		if ( (total_regions[i]->type & INPUT_BUFFER) == INPUT_BUFFER){
-			cout << "INPUT" << endl;
-			print_mem_regions(total_regions[i]);
+		cout << "INPUT" << endl;
+		print_mem_regions(total_regions[i]);
 		}
 		if ( (total_regions[i]->type & OUTPUT_BUFFER) == OUTPUT_BUFFER){
-			cout << "OUTPUT" << endl;
-			print_mem_regions(total_regions[i]);
+		cout << "OUTPUT" << endl;
+		print_mem_regions(total_regions[i]);
 		}
 		if ( (total_regions[i]->type & INTERMEDIATE_BUFFER) == INTERMEDIATE_BUFFER){
-			cout << "INTERMEDIATE " << endl;
-			print_mem_regions(total_regions[i]);
+		cout << "INTERMEDIATE " << endl;
+		print_mem_regions(total_regions[i]);
 		}
-	}*/
+		}*/
 
-	
+
 
 	if (output_mem_region == NULL && input_mem_region == NULL){
 
-		
+		ASSERT_MSG(false, ("ERROR: not yet implemented\n"));
 
 	}
 	else if (output_mem_region == NULL && input_mem_region != NULL){
 		for (int i = 0; i < total_regions.size(); i++){
-			if ( (total_regions[i]->type & OUTPUT_BUFFER) == OUTPUT_BUFFER){
+			if ((total_regions[i]->type & OUTPUT_BUFFER) == OUTPUT_BUFFER){
 				output_mem_region = total_regions[i];
 				break;
 			}
 		}
 
-	}	
+		DEBUG_PRINT(("new output region found\n"), 2);
+
+	}
 	else if (output_mem_region != NULL && input_mem_region == NULL){
+
+		ASSERT_MSG(false, ("ERROR: not yet implemented\n"));
 
 	}
 
@@ -379,3 +405,5 @@ vector<mem_regions_t *> get_input_output_regions(vector<mem_regions_t *> &image_
 
 
 }
+
+

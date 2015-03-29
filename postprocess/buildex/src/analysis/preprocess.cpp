@@ -8,6 +8,7 @@
 #include "analysis/staticinfo.h"
 
 #include "meminfo.h"
+#include "common_defines.h"
 
 
 using namespace std;
@@ -114,6 +115,8 @@ vec_cinstr filter_instr_trace(vector<uint32_t> start_pc, vector<uint32_t> end_pc
 	vec_cinstr instrs;
 	bool start = false;
 	int32_t index = -1;
+
+	DEBUG_PRINT(("filtering the instruction trace by start,end pcs\n"), 2);
 
 	for (int i = 0; i < unfiltered_instrs.size(); i++){
 

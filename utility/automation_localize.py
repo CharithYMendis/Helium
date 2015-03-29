@@ -93,10 +93,10 @@ if __name__ == '__main__':
                 elif opt == "-f":
                         filter = arg
         
-        #run_code_coverage(program)
-        #files = get_coverage_files(executable)
-        #run_code_diff(files, filter)
-        #run_profiling(program, executable)
+        run_code_coverage(program)
+        files = get_coverage_files(executable)
+        run_code_diff(files, filter)
+        run_profiling(program, executable)
         run_filter_funcs(executable)
         
     

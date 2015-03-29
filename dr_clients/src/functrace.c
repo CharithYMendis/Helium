@@ -47,6 +47,7 @@ static module_t * head;
 static function_t * functions;
 static int tls_index;
 static bool init = false;
+static int count = 0;
 
 static file_t logfile;
 static char ins_pass_name[MAX_STRING_LENGTH];
@@ -405,6 +406,54 @@ OUT void **user_data){
 
 }
 
+void at_call_all(app_pc instr_addr, app_pc target_addr){
+
+	module_data_t * module = dr_lookup_module(target_addr);
+	per_thread_t * data = drmgr_get_tls_field(dr_get_current_drcontext(), tls_index);
+	uint offset;
+	if (module != NULL){
+		offset = target_addr - module->start;
+		stack_push(data->stack, offset);
+	}
+	
+
+}
+
+void at_ret_all(app_pc instr_addr, app_pc target_addr){
+
+	module_data_t * module = dr_lookup_module(target_addr);
+	per_thread_t * data = drmgr_get_tls_field(dr_get_current_drcontext(), tls_index);
+	uint offset;
+	if (module != NULL){
+		offset = target_addr - module->start;
+		stack_pop(data->stack);
+	}
+	
+
+}
+
+uint get_current_function_all(void * drcontext){
+
+	per_thread_t * data = drmgr_get_tls_field(drcontext, tls_index);
+	void * value;
+	if (init){
+
+		value = stack_peek(data->stack);
+		if (value != NULL){
+			return (uint)value;
+		}
+		else{
+			return 0;
+		}
+	}
+	else{
+		return 0;
+	}
+
+}
+
+
+
 dr_emit_flags_t
 functrace_bb_instrumentation(void *drcontext, void *tag, instrlist_t *bb,
 instr_t *instr, bool for_trace, bool translating,
@@ -444,7 +493,6 @@ void *user_data)
 		else if (instr_is_far_cti(instr)){
 			dr_printf("WARNING : far cti detected\n");
 		}
-
 
 	}
 

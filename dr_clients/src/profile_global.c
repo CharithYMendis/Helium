@@ -69,6 +69,7 @@ typedef struct _per_thread_data_t {
 	int prev_bb_start_addr;
 	bool is_call_ins;
 	int call_ins_addr;
+	int last_call_addr;
 
 } per_thread_data_t;
 
@@ -84,9 +85,9 @@ typedef struct _client_arg_t {
 /***********************function prototypes**************************/
 
 /*analysis clean calls*/
-static void clean_call(void* bb,int offset,const char * module,uint is_call,uint call_addr);
+static void bbinfo_population(void* bb,int offset,const char * module,uint is_call,uint call_addr);
 static void register_bb(void * bbinfo);
-static void at_call(app_pc instr_addr, app_pc target_addr);
+static void called_to_population(app_pc instr_addr, app_pc target_addr);
 static void populate_call_target_information();
 
 /*debug and auxiliary prototypes*/
@@ -182,8 +183,6 @@ void bbinfo_init(client_id_t id, const char * name,
 	tls_index = drmgr_register_tls_field();
 
 }
-
-
 
 void bbinfo_exit_event(void){
 
@@ -314,7 +313,7 @@ static void print_readable_output(){
 still we have not implemented inter module calls/bb jumps; we only update bb information if it is 
 in the same module
 */
-static void clean_call(void* bb,int offset,const char * module,uint is_call, uint call_addr){
+static void bbinfo_population(void* bb,int offset,const char * module,uint is_call, uint call_addr){
 	
 	//get the drcontext
 	void * drcontext;
@@ -334,9 +333,10 @@ static void clean_call(void* bb,int offset,const char * module,uint is_call, uin
 	data = (per_thread_data_t *) drmgr_get_tls_field(drcontext,tls_index);
 
 	bbinfo = (bbinfo_t*) bb;
-	//data->bbinfo = bbinfo;
+	data->bbinfo = bbinfo;
 	bbinfo->freq++;
-	bbinfo->func = get_current_function(drcontext);
+	//bbinfo->func = get_current_function(drcontext);
+	bbinfo->func_addr = get_current_function_all(drcontext);
 
 	// we are sure that the bbs are from the filtered out modules
 	// updating from bbs
@@ -405,7 +405,7 @@ register_bb(void * bbinfo){
 }
 
 static void 
-at_call(app_pc instr_addr, app_pc target_addr){
+called_to_population(app_pc instr_addr, app_pc target_addr){
 
 	per_thread_data_t * data = drmgr_get_tls_field(dr_get_current_drcontext(), tls_index);
 	module_data_t * module = dr_lookup_module(instr_addr);
@@ -469,7 +469,7 @@ call_target_info(app_pc instr_addr, app_pc target_addr){
 		if (bb == NULL){
 			md_add_bb_to_module(call_target_head, module_data->full_path, offset, MAX_BBS_PER_MODULE, false);
 		}
-		at_call(instr_addr, target_addr);
+		called_to_population(instr_addr, target_addr);
 		dr_mutex_unlock(stats_mutex);
 	}
 
@@ -478,9 +478,10 @@ call_target_info(app_pc instr_addr, app_pc target_addr){
 
 }
 
-void add_to_module_list(app_pc instr_addr,app_pc target_addr){
+void call_target_info_wo_called_to(app_pc instr_addr,app_pc target_addr){
 
 	module_data_t * module_data = dr_lookup_module(target_addr);
+	per_thread_data_t * data = drmgr_get_tls_field(dr_get_current_drcontext(), tls_index);
 	uint offset;
 	bbinfo_t * bb;
 
@@ -492,6 +493,7 @@ void add_to_module_list(app_pc instr_addr,app_pc target_addr){
 			md_add_bb_to_module(call_target_head, module_data->full_path, offset, MAX_BBS_PER_MODULE, false);
 		}
 		dr_mutex_unlock(stats_mutex);
+		data->last_call_addr = offset;
 	}
 	dr_free_module_data(module_data);
 }
@@ -519,11 +521,12 @@ bbinfo_bb_instrumentation(void *drcontext, void *tag, instrlist_t *bb,
 
 		uint filtered = true;
 
-
 		uint srcs;
+		reg_id_t reg1 = DR_REG_XAX;
+		reg_id_t reg2 = DR_REG_XBX;
+		opnd_t opnd1;
+		opnd_t opnd2;
 
-
-		//DR_ASSERT(instr_ok_to_mangle(instr_current));
 
 		/* get the first non meta instruction */
 		for (instr = instrlist_first(bb); instr != NULL; instr = instr_get_next(instr)){
@@ -537,10 +540,6 @@ bbinfo_bb_instrumentation(void *drcontext, void *tag, instrlist_t *bb,
 		if(instr_current != first && instr_current != last)
 			return DR_EMIT_DEFAULT;
 
-		/*if (instr_current != first)
-			return DR_EMIT_DEFAULT;*/
-		
-		
 		//get the module data and if module + addr is present then add frequency counting
 		module_data = dr_lookup_module(instr_get_app_pc(first));
 
@@ -624,11 +623,52 @@ bbinfo_bb_instrumentation(void *drcontext, void *tag, instrlist_t *bb,
 			}
 		}
 
+		/* if the instr is filtered; only if instr == first; as this will be in the diff file */
+		if (filtered){
+
+			/* log the disassembly */
+			if (log_mode && (instr_current == first)){
+
+				dr_fprintf(logfile, "%s %d\n", module_name, offset);
+				instrlist_disassemble(drcontext, instr_get_app_pc(first), bb, logfile);
+			}
+
+			DR_ASSERT(bbinfo != NULL);
+
+			/* optimize this to only run if module is not found */
+			md_lookup_module(info_head, module_name)->start_addr = module_data->start;
+
+
+			//check whether this bb has a call at the end or a ret at the end
+			instr = instrlist_last(bb);
+			is_call = instr_is_call(instr);
+			if (is_call){
+				call_addr = (int)instr_get_app_pc(instr) - (int)module_data->start;
+			}
+			is_ret = instr_is_return(instr);
+
+
+			bbinfo->is_call = is_call;
+			bbinfo->is_ret = is_ret;
+			bbinfo->size = instr_get_app_pc(instrlist_last(bb)) - instr_get_app_pc(first) + instr_length(drcontext, instrlist_last(bb));
+
+			dr_mutex_lock(stats_mutex);
+			string_pointers[string_pointer_index++] = module_name;
+			dr_mutex_unlock(stats_mutex);
+
+			dr_insert_clean_call(drcontext, bb, first, (void *)bbinfo_population, false, 5,
+				OPND_CREATE_INTPTR(bbinfo),
+				OPND_CREATE_INT32(offset),
+				OPND_CREATE_INTPTR(module_name),
+				OPND_CREATE_INT32(is_call),
+				OPND_CREATE_INT32(call_addr));
+		}
+
+		dr_free_module_data(module_data);
+		dr_global_free(module_name, sizeof(char)*MAX_STRING_LENGTH);
 
 		if (!filtered){
 
-			/* we still need to handle calls */
-			
 			if (instr_is_call_direct(last)){
 
 				srcs = instr_num_srcs(last);
@@ -636,88 +676,28 @@ bbinfo_bb_instrumentation(void *drcontext, void *tag, instrlist_t *bb,
 					dr_printf("%d\n", srcs);
 				}
 				DR_ASSERT(instr_num_srcs(last) >= 1);
-				add_to_module_list(instr_get_app_pc(last), opnd_get_addr(instr_get_src(last, 0)));
+				call_target_info_wo_called_to(instr_get_app_pc(last), opnd_get_addr(instr_get_src(last, 0)));
 			}
 			else if (instr_is_call_indirect(last)){
-				dr_insert_mbr_instrumentation(drcontext, bb, last, (app_pc)add_to_module_list, SPILL_SLOT_1);
+				dr_insert_mbr_instrumentation(drcontext, bb, last, (app_pc)call_target_info_wo_called_to, SPILL_SLOT_1);
 			}
 
-
-			dr_free_module_data(module_data);
-			dr_global_free(module_name, sizeof(char)*MAX_STRING_LENGTH);
-			return DR_EMIT_DEFAULT;
 		}
-
-
-		if (log_mode && (instr_current == first) ){
-
-			dr_fprintf(logfile, "%s %d\n", module_name, offset);
-			instrlist_disassemble(drcontext, instr_get_app_pc(first), bb, logfile);
-		}
-
-		DR_ASSERT(bbinfo != NULL);
-
-		/* this is for called_to information */
-		/* if instr current is the last -  get the call targets */
-		/*if (instr_current == last){
-
-			dr_insert_clean_call(drcontext, bb, instr_current, (void *)register_bb, false, 1, OPND_CREATE_INTPTR(bbinfo));
-			if (instr_is_call_direct(last)){
-				dr_insert_call_instrumentation(drcontext, bb, instr_current, (app_pc)at_call);
-			}
-			else if (instr_is_call_indirect(last)){
-				dr_insert_mbr_instrumentation(drcontext, bb, instr_current, (app_pc)at_call, SPILL_SLOT_1);
-			}
-
-			if (instr_current != first){
-				return DR_EMIT_DEFAULT;
-			}
-
-		}*/
-
-		/* this is to get the call target information */
-		if (instr_current == last){
-			dr_insert_clean_call(drcontext, bb, instr_current, (void *)register_bb, false, 1, OPND_CREATE_INTPTR(bbinfo));
-			if (instr_is_call_direct(last)){
-				dr_insert_call_instrumentation(drcontext, bb, instr_current, (app_pc)call_target_info);
-			}
-			else if (instr_is_call_indirect(last)){
-				dr_insert_mbr_instrumentation(drcontext, bb, instr_current, (app_pc)call_target_info, SPILL_SLOT_1);
-			}
-			if (instr_current != first){
-				return DR_EMIT_DEFAULT;
+		else{
+			if (instr_current == last){
+				//dr_insert_clean_call(drcontext, bb, instr_current, (void *)register_bb, false, 1, OPND_CREATE_INTPTR(bbinfo));
+				if (instr_is_call_direct(last)){
+					dr_insert_call_instrumentation(drcontext, bb, instr_current, (app_pc)call_target_info);
+				}
+				else if (instr_is_call_indirect(last)){
+					dr_insert_mbr_instrumentation(drcontext, bb, instr_current, (app_pc)call_target_info, SPILL_SLOT_1);
+				}
+				if (instr_current != first){
+					return DR_EMIT_DEFAULT;
+				}
 			}
 		}
-
-		/* optimize this to only run if module is not found */
-		md_lookup_module(info_head, module_name)->start_addr = module_data->start;
-
-
-		//check whether this bb has a call at the end or a ret at the end
-		instr = instrlist_last(bb);
-		is_call = instr_is_call(instr);
-		if(is_call){
-			call_addr = (int)instr_get_app_pc(instr) - (int)module_data->start;
-		}
-		is_ret = instr_is_return(instr);
-
-
-		bbinfo->is_call = is_call;
-		bbinfo->is_ret = is_ret;
-		bbinfo->size = instr_get_app_pc(instrlist_last(bb)) - instr_get_app_pc(first) + instr_length(drcontext,instrlist_last(bb));
-
-		dr_mutex_lock(stats_mutex);
-		string_pointers[string_pointer_index++] = module_name;
-		dr_mutex_unlock(stats_mutex);
-
-		dr_insert_clean_call(drcontext,bb,first,(void *)clean_call,false,5,
-			OPND_CREATE_INTPTR(bbinfo),
-			OPND_CREATE_INT32(offset),
-			OPND_CREATE_INTPTR(module_name),
-			OPND_CREATE_INT32(is_call),
-			OPND_CREATE_INT32(call_addr));
-
-		dr_free_module_data(module_data);
+		
 
 
 		return DR_EMIT_DEFAULT;

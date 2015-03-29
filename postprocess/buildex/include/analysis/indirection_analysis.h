@@ -9,7 +9,7 @@
 #include "analysis/x86_analysis.h"
 
 std::vector< std::vector<uint32_t> > find_dependant_statements_with_indirection
-					(vec_cinstr &instrs, mem_regions_t * mem, std::vector<Static_Info *> static_info);
+					(vec_cinstr &instrs, std::vector<mem_regions_t *> mem, std::vector<Static_Info *> static_info, std::vector<uint32_t> start_points);
 void populate_dependant_indireciton(std::vector<Static_Info *> &static_info, std::vector<uint32_t> dep);
 
 
