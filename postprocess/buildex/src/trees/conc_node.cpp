@@ -103,7 +103,8 @@ bool Conc_Node::are_nodes_similar(Node * node){
 	else{
 		if (symbol->type == node->symbol->type){
 			if (symbol->type == IMM_INT_TYPE){
-				return symbol->value == node->symbol->value;
+				return true;
+				//return symbol->value == node->symbol->value;
 			}
 			else if (symbol->type == IMM_FLOAT_TYPE){
 				return abs(symbol->float_value - node->symbol->float_value) < 1e-6;

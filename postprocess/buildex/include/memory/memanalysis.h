@@ -18,6 +18,7 @@ std::vector<mem_regions_t *> get_image_regions_from_instrace(std::vector<mem_inf
 std::vector<mem_regions_t *> get_input_output_regions(std::vector<mem_regions_t *> &image_regions, std::vector<mem_regions_t *> &total_regions,
 	std::vector<pc_mem_region_t* > &pc_mems, std::vector<uint32_t> app_pc, vec_cinstr &instrs, std::vector<uint32_t> start_points);
 
-
+std::vector<mem_regions_t *> get_input_regions(std::vector<mem_regions_t *> total_regions, std::vector<pc_mem_region_t *> &pc_mems,
+	std::vector<uint32_t> start_points, vec_cinstr &instrs);
 
 #endif

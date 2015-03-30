@@ -905,6 +905,14 @@ bool link_mem_regions_greedy_dim(vector<mem_info_t *> &mem, uint32_t app_pc){
 				}
 
 				mem.insert(mem.begin() + i, new_mem_info);
+
+
+				new_mem_info->order = INT_MAX;
+				for (int j = 0; j < new_mem_info->mem_infos.size(); j++){
+					if (new_mem_info->order > new_mem_info->mem_infos[j]->order){
+						new_mem_info->order = new_mem_info->mem_infos[j]->order;
+					}
+				}
 				
 				LOG(log_file, "linked infos" << endl);
 				LOG(log_file, new_mem_info->start << "  " << new_mem_info->end << endl);

@@ -458,12 +458,64 @@ bool Tree::is_recursive(Node * node, vector<mem_regions_t *> &regions){
 }
 
 
+bool remove_multiplication_internal(Node * dst){
+
+	if (dst->visited) return false;
+	else{
+
+		bool mul = false;
+		dst->visited = true;
+
+		if (dst->operation == op_mul){
+
+			int index = -1;
+			int imm_value = 0;
+
+			for (int i = 0; i < dst->srcs.size(); i++){
+				if (dst->srcs[i]->symbol->type == IMM_INT_TYPE){
+					imm_value = dst->srcs[i]->symbol->value; index = i;
+					break;
+				}
+			}
+
+			if (index != -1 && imm_value < 10 && imm_value >= 0){
+				mul = true;
+				for (int i = 0; i < dst->prev.size(); i++){
+					for (int j = 0; j < dst->srcs.size(); j++){
+						if (index != j){
+							for (int k = 0; k < imm_value; k++){
+								dst->prev[i]->add_forward_ref(dst->srcs[j]);
+							}
+						}
+					}
+					dst->prev[i]->remove_forward_ref_single(dst);
+				}
+
+				for (int i = 0; i < dst->srcs.size(); i++){
+					dst->remove_forward_ref(dst->srcs[i]);
+				}
+			}
+		}
+
+		for (int i = 0; i < dst->srcs.size(); i++){
+			if (remove_multiplication_internal(dst->srcs[i])) i--;
+		}
+
+
+		return mul;
+
+	}
+	
+
+
+}
+
 
 void Tree::remove_multiplication(){
 
 	cleanup_visit();
 
-	traverse_tree(head, head, [](Node * dst, void * value)->void*{
+	/*traverse_tree(head, head, [](Node * dst, void * value)->void*{
 
 		if (!dst->visited){
 
@@ -501,9 +553,44 @@ void Tree::remove_multiplication(){
 		}
 		return NULL;
 
-	}, empty_ret_mutator);
+	}, empty_ret_mutator);*/
+
+	remove_multiplication_internal(head);
 
 	cleanup_visit();
+
+}
+
+/* make sure all nodes are canonicalized before calling this routine */
+void Tree::simplify_immediates(){
+
+	traverse_tree(head, head, [](Node * node, void * value)->void *{
+
+		if (node->operation == op_mul || node->operation == op_add){
+
+			vector<uint32_t> indexes;
+			int32_t value = 0 ;
+
+			for (int i = 0; i < node->srcs.size(); i++){
+				if (node->srcs[i]->symbol->type == IMM_INT_TYPE){
+					value += node->srcs[i]->symbol->value;
+					indexes.push_back(i);
+				}
+			}
+
+			if (indexes.size() > 0){
+				
+				ASSERT_MSG(indexes[0] == 0, ("ERROR: canonicalized tree has immediates to the left\n"));
+				node->srcs[0]->symbol->value = value;
+				for (int i = 1; i < indexes.size(); i++){
+					node->remove_forward_ref_single(node->srcs[indexes[i] - (i - 1)]);
+				}
+			}
+		}
+
+
+		return NULL;
+	}, empty_ret_mutator);
 
 }
 

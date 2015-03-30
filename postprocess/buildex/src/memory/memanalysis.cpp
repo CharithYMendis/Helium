@@ -1,5 +1,6 @@
 #include <iostream>
 #include <map>
+#include <algorithm>
 
 #include "utility/defines.h"
 #include "common_defines.h"
@@ -129,6 +130,7 @@ vector<mem_regions_t *> merge_instrace_and_dump_regions(vector<mem_regions_t *> 
 
 					final_regions.push_back(mem_regions[i]);
 					total_regions.push_back(mem_regions[i]);
+					mem_regions[i]->order = info->order;
 					break;
 
 				}
@@ -137,8 +139,13 @@ vector<mem_regions_t *> merge_instrace_and_dump_regions(vector<mem_regions_t *> 
 					LOG(log_file,"WARNING: region is greater than what is accessed; may be not whole image accessed\n");
 					final_regions.push_back(mem_regions[i]);
 					total_regions.push_back(mem_regions[i]);
+					mem_regions[i]->order = mem_info[j]->order;
 					break;
 				}
+
+				
+
+
 
 			}
 		}
@@ -271,6 +278,7 @@ void  mark_regions_type(vector<mem_regions_t *> regions, vector<mem_regions_t *>
 								memory_map[instr->srcs[k].value] |= READ;
 								if ( (regions[m]->type & OUTPUT_BUFFER) == OUTPUT_BUFFER ) regions[m]->type |= INTERMEDIATE_BUFFER;
 								else regions[m]->type |= INPUT_BUFFER;
+								regions[m]->dependant = true;
 							}
 						}
 					}
@@ -281,6 +289,7 @@ void  mark_regions_type(vector<mem_regions_t *> regions, vector<mem_regions_t *>
 						if (is_overlapped(regions[m]->start, regions[m]->end, rinstr->dst.value, rinstr->dst.value)){ 
 							memory_map[rinstr->dst.value] |= WRITTEN;
 							regions[m]->type |= OUTPUT_BUFFER;
+							regions[m]->dependant = true;
 						}
 					}
 				}
@@ -402,6 +411,61 @@ vector<mem_regions_t *> get_input_output_regions(vector<mem_regions_t *> &image_
 	ret.push_back(output_mem_region);
 
 	return ret;
+
+
+}
+
+
+bool compare_mem_region(mem_regions_t * first, mem_regions_t * second){
+	return first->order < second->order;
+}
+
+vector<mem_regions_t *> get_input_regions(vector<mem_regions_t *> total_regions, vector<pc_mem_region_t *> &pc_mems,
+	vector<uint32_t> start_points, vec_cinstr &instrs){
+
+	sort(total_regions.begin(), total_regions.end(), compare_mem_region);
+
+	vector<mem_regions_t *> inputs;
+
+	/* mapping - pc, regions */
+	map< uint32_t, vector<mem_regions_t *> > region_map;
+	for (int i = 0; i < pc_mems.size(); i++){
+		for (int k = 0; k < total_regions.size(); k++){
+			for (int j = 0; j < pc_mems[i]->regions.size(); j++){
+				if (is_overlapped(pc_mems[i]->regions[j]->start, pc_mems[i]->regions[j]->end, total_regions[k]->start, total_regions[k]->end)){
+					region_map[pc_mems[i]->pc].push_back(total_regions[k]);
+					break;
+				}
+			}
+		}
+	}
+
+	for (int i = 0; i < total_regions.size(); i++){
+
+		if ((!total_regions[i]->dependant) && ( (total_regions[i]->direction & MEM_INPUT) == MEM_INPUT) ){
+
+			inputs.push_back(total_regions[i]);
+
+			uint32_t start = 0;
+			uint32_t end = 0;
+
+			vector<mem_regions_t *> current;
+			current.push_back(total_regions[i]);
+
+			for (int i = 0; i < start_points.size(); i++){
+				if (i != start_points.size() - 1) end = start_points[i + 1];
+				else end = instrs.size();
+				mark_regions_type(total_regions,current, instrs, region_map, start, end);
+				start = end;
+			}
+
+
+		}
+
+
+	}
+
+	return inputs;
 
 
 }

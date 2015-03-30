@@ -354,8 +354,9 @@ Conc_Tree * build_conc_tree(uint64_t destination,
 	tree->remove_assign_nodes();
 	tree->remove_multiplication();
 	tree->canonicalize_tree();
+	tree->simplify_immediates();
 
-#define DEBUG_TREE_PRINT
+//#define DEBUG_TREE_PRINT
 
 #ifdef DEBUG_TREE_PRINT
 
@@ -916,7 +917,7 @@ std::vector< std::vector <Conc_Tree *> > cluster_trees
 		Conc_Tree * tree = new Conc_Tree();
 		tree->tree_num = i - mem->start;
 		Conc_Tree * initial_tree = build_conc_tree(i, mem->bytes_per_pixel, start_points, FILE_BEGINNING, FILE_ENDING, tree, instrs, farthest, total_regions);
-		//build_conc_trees_for_conditionals(start_points, tree, instrs, total_regions);
+		build_conc_trees_for_conditionals(start_points, tree, instrs, farthest, total_regions);
 		trees.push_back(tree);
 		if (initial_tree != NULL){
 			build_conc_trees_for_conditionals(start_points, initial_tree, instrs, farthest, total_regions);
@@ -1011,7 +1012,6 @@ Abs_Tree* abstract_the_trees(vector<Conc_Tree *> cluster, uint32_t no_trees, uin
 			ofstream file(get_standard_folder("output") + "\\abs_tree_not_sim" + to_string(i) + ".dot");
 			trees[i]->number_tree_nodes();
 			trees[i]->print_dot(file, "abs", i);
-
 		}
 
 
@@ -1113,7 +1113,6 @@ vector<Abs_Tree_Charac *> build_abs_trees(
 		/* check if the trees are recursive*/
 		if (abs_tree->recursive){  /* if yes, then try to get the reduction domain */
 
-
 			Abs_Tree_Charac * charac = new Abs_Tree_Charac();
 			/* ok now determine whether this is indirect */
 
@@ -1130,7 +1129,7 @@ vector<Abs_Tree_Charac *> build_abs_trees(
 				charac->red_node = abs_node;
 			}
 			else{
-				//ASSERT_MSG(false, ("build_abs_tree: not yet implemented\n"));
+				ASSERT_MSG(false, ("build_abs_tree: not yet implemented\n"));
 			}
 
 			cout << "red func built" << endl;

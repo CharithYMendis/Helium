@@ -32,7 +32,7 @@ struct mem_regions_t {
 	uint32_t dump_type;
 
 	/* indirect or not */
-	bool indirect;
+	bool dependant;
 
 
 	uint32_t dimensions;
@@ -55,11 +55,13 @@ struct mem_regions_t {
 	/* pcs which reference this region */
 	std::vector<uint32_t > pcs;
 
+	uint32_t order;
+
 	mem_regions_t(){
 		type = 0;
 		direction = 0;
 		dump_type = 0;
-		indirect = false;
+		dependant = false;
 	}
 
 };

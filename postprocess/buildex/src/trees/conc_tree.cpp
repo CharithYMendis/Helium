@@ -296,7 +296,7 @@ void add_dependancy(Node * dst, Node * src, uint operation){
 void Conc_Tree::add_address_dependancy(Node * node, operand_t * opnds){
 
 	/* four operands here for [base + index * scale + disp] */
-	
+
 	/* make sure that this is a base-disp address */
 	if (opnds[0].value == 0 && opnds[1].value == 0){
 		return;
@@ -306,57 +306,72 @@ void Conc_Tree::add_address_dependancy(Node * node, operand_t * opnds){
 	uint32_t reg1 = mem_range_to_reg(&opnds[0]);
 	uint32_t reg2 = mem_range_to_reg(&opnds[1]);
 
-	if ((reg1 == DR_REG_RSP || reg1 == DR_REG_RBP || reg1 == 0) &&
-		(reg2 == DR_REG_RSP || reg2 == DR_REG_RBP || reg2 == 0)){
+	/* absolute addr and rsp, rbp combination filtering */
+	if ((reg1 == DR_REG_RSP || reg1 == DR_REG_RBP || opnds[0].value == 0) &&
+		(reg2 == DR_REG_RSP || reg2 == DR_REG_RBP || opnds[1].value == 0)){
 		return;
 	}
 
-
 	Conc_Node * current_node;
+
 	Conc_Node * indirect_node = new Conc_Node(REG_TYPE, 0, 0, 0.0); //reg_type is used here; it doesn't really matter as this is an operation only node
 	indirect_node->operation = op_indirect;
-
-	node->srcs.push_back(indirect_node);
-	indirect_node->prev.push_back(node);
-	indirect_node->pos.push_back(node->srcs.size() - 1);
+	node->add_forward_ref(indirect_node);
 	current_node = indirect_node;
 
-	//if (opnds[0].value != 0 && opnds[1].value != 0){
+	/*ok now with cases*/
+	bool reg1_rsp = (reg1 == DR_REG_RSP || reg1 == DR_REG_RBP );
+	bool reg2_rsp = (reg2 == DR_REG_RSP || reg2 == DR_REG_RBP );
+
+	/* ok if one of the regs is a RSP or a RBP then, omit the displacement */
+	if (reg1_rsp && !reg2_rsp){
+		Node * addr_node = search_node(&opnds[1]);
+		if (addr_node == NULL){
+			addr_node = new Conc_Node(&opnds[1]);
+			add_to_frontier(generate_hash(&opnds[1]), addr_node);
+		}
+		current_node->add_forward_ref(addr_node);
+	}
+	else if (!reg1_rsp && reg2_rsp){
+		Node * addr_node = search_node(&opnds[0]);
+		if (addr_node == NULL){
+			addr_node = new Conc_Node(&opnds[0]);
+			add_to_frontier(generate_hash(&opnds[0]), addr_node);
+		}
+		current_node->add_forward_ref(addr_node);
+	}
+	/* [edx + 2] like addresses */
+	else if(!reg1_rsp && !reg2_rsp){
+		Node * addr_node;
+		if (opnds[0].value == 0){
+			addr_node = search_node(&opnds[1]);
+			if (addr_node == NULL){
+				addr_node = new Conc_Node(&opnds[1]);
+				add_to_frontier(generate_hash(&opnds[1]), addr_node);
+			}
+		}
+		else if(opnds[1].value == 0){
+			addr_node = search_node(&opnds[0]);
+			if (addr_node == NULL){
+				addr_node = new Conc_Node(&opnds[0]);
+				add_to_frontier(generate_hash(&opnds[0]), addr_node);
+			}
+		}
+		else{
+			ASSERT_MSG(false, ("ERROR: not handled\n"));
+		}
+
 		Conc_Node * add_node = new Conc_Node(REG_TYPE, 0, 0, 0.0); //reg_type is used here; it doesn't really matter as this is an operation only node
 		add_node->operation = op_add;
 
-		indirect_node->srcs.push_back(add_node);
-		add_node->prev.push_back(indirect_node);
-		add_node->pos.push_back(indirect_node->srcs.size() - 1);
-		current_node = add_node;
-	//}
-	
-	/* some special cases to be worried about 
-	1. we don't consider the scale or displacement here; it may be just the access width + constant offset for an addr calc
-	*/
-
-
-	for (int i = 0; i < 2; i++){
-
-		if (opnds[i].value == 0) continue;
-		
-		Node * addr_node = search_node(&opnds[i]);
-		if (addr_node == NULL){
-			addr_node = new Conc_Node(&opnds[i]);
-			add_to_frontier(generate_hash(&opnds[i]), addr_node);
-		}
-
-		current_node->srcs.push_back(addr_node);
-		addr_node->prev.push_back(current_node);
-		addr_node->pos.push_back(current_node->srcs.size() - 1);
-
+		current_node->add_forward_ref(add_node);
+		add_node->add_forward_ref(addr_node);
+		Conc_Node * imm = new Conc_Node(&opnds[3]);
+		add_node->add_forward_ref(imm);
 	}
-
-	/* remove !!!!!! */
-	Conc_Node * imm = new Conc_Node(IMM_INT_TYPE, opnds[3].value, opnds[3].width, 0.0);
-	current_node->srcs.push_back(imm);
-	imm->prev.push_back(current_node);
-	imm->pos.push_back(current_node->srcs.size() - 1);
+	else{
+		ASSERT_MSG(false, ("ERROR: should not reach here\n"));
+	}
 
 }
 
@@ -854,14 +869,14 @@ void Conc_Tree::number_parameters(Node * node, vector<mem_regions_t *> mem_regio
 	if (node->srcs.size() == 1){
 		if (conc_node->symbol->type == REG_TYPE){
 			if (conc_node->para_num == -1){
-				conc_node->para_num == Conc_Tree::num_paras++;
+				conc_node->para_num = Conc_Tree::num_paras++;
 				conc_node->is_para = true;
 			}
 		}
 		else if (conc_node->symbol->type == MEM_HEAP_TYPE || conc_node->symbol->type == MEM_STACK_TYPE){
 			if (get_mem_region(conc_node->symbol->type, mem_regions) == NULL){
 				if (conc_node->para_num == -1){
-					conc_node->para_num == Conc_Tree::num_paras++;
+					conc_node->para_num = Conc_Tree::num_paras++;
 					conc_node->is_para = true;
 				}
 			}

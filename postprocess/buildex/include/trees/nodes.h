@@ -67,14 +67,12 @@
 		virtual bool are_nodes_similar(Node * node) = 0;
 		static bool are_nodes_similar(std::vector<Node *> nodes);
 		int32_t is_node_indirect();
-
-   private:
-		bool remove_forward_ref_single(Node * ref);
-		bool remove_backward_ref_single(Node *ref);
+	
 
 		/* node canonicalizing routines */
 	public:
-		
+		bool remove_backward_ref_single(Node *ref);
+		bool remove_forward_ref_single(Node * ref);
 		bool congregate_node(Node * head); /* congregate nodes with associative operations */
 		void order_node();  /* order the srcs of the node */
 		
@@ -164,6 +162,7 @@
 	struct {
 		mem_regions_t * associated_mem;
 		uint32_t dimensions;
+		uint32_t head_dimensions;
 		int ** indexes; /* 2-dimensional array */
 		int * pos;
 	} mem_info;
@@ -186,7 +185,7 @@
  private:
 	 std::string get_mem_string(std::vector<std::string> vars);
 	 std::string get_mem_string();
-
+	 std::string get_immediate_string(std::vector<std::string> vars);
  };
 
  

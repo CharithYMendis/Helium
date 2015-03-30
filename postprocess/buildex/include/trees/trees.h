@@ -73,6 +73,7 @@ void * empty_ret_mutator(void * value, vector<void *> values, void * ori_value);
 	 void remove_assign_nodes();
 	 std::vector<mem_regions_t *> identify_intermediate_buffers(std::vector<mem_regions_t *> mem);
 	 void remove_multiplication();
+	 void simplify_immediates();
  };
 
 

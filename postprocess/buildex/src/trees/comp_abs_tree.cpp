@@ -230,6 +230,40 @@ void abstract_buffer_indexes_traversal(Comp_Abs_Node * head, Comp_Abs_Node * nod
 		}
 
 	}
+	else if (first->type == Abs_Node::IMMEDIATE_INT){
+
+		vector<vector<double> > A;
+		//for (int i = 0; i < head->nodes.size(); i++){
+		for (int i = 0; i < node->nodes.size(); i++){
+			vector<double> coeff;
+			for (int j = 0; j < head->nodes[i]->mem_info.dimensions; j++){
+				coeff.push_back((double)head->nodes[i]->mem_info.pos[j]);
+			}
+			coeff.push_back(1.0);
+			A.push_back(coeff);
+		}
+
+		cout << "A" << endl;
+		printout_matrices(A);
+
+		vector<double> b;
+
+		first->mem_info.indexes = new int * [1];
+		first->mem_info.indexes[0] = new int[head->nodes[0]->mem_info.dimensions + 1];
+		first->mem_info.dimensions = 1;
+		first->mem_info.head_dimensions = head->nodes[0]->mem_info.dimensions;
+
+		for (int i = 0; i < node->nodes.size(); i++){
+			b.push_back((double)node->nodes[i]->symbol->value);
+		}
+
+		vector<double> results = solve_linear_eq(A, b);
+
+		for (int i = 0; i < results.size(); i++){
+			first->mem_info.indexes[0][i] = double_to_int(results[i]);
+		}
+
+	}
 	else if ((first->type == Abs_Node::SUBTREE_BOUNDARY)){
 		return;
 	}

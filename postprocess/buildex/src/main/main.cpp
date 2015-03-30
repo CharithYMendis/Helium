@@ -85,8 +85,6 @@
 #define HALIDE_OUTPUT_STAGE		5
 
 
- /* some debug defines */
-#define INPUT_ANALYSIS_SKIP
 
  int main(int argc, char ** argv){
 
@@ -353,8 +351,12 @@
 
 	 create_mem_layout(instrace_file, mem_info, version);
 	 create_mem_layout(instrace_file, pc_mem_info, version);
-	 sort_mem_info(mem_info);
 
+	 for (int i = 0; i < mem_info.size(); i++){
+		 mem_info[i]->order = i;
+	 }
+
+	 sort_mem_info(mem_info);
 	 link_mem_regions_greedy_dim(mem_info, 0);
 	 
 	 LOG(log_file, "*********** pc_mem_info *************" << endl);
@@ -437,6 +439,13 @@
 	 
 	 vector<mem_regions_t*> regions = get_input_output_regions(image_regions, total_mem_regions, pc_mem_info, candidate_ins, instrs_forward, start_points_mem);
 	 
+	 for (int i = 0; i < total_mem_regions.size(); i++){
+		 total_mem_regions[i]->dependant = false;
+	 }
+
+	 vector<mem_regions_t *> input_regions = get_input_regions(total_mem_regions, pc_mem_info, start_points_mem, instrs_forward);
+	 print_mem_regions(log_file, input_regions);
+
 	 input_mem_region = regions[0];
 	 output_mem_region = regions[1];
 
@@ -482,9 +491,11 @@
 	}*/
 
 	//app_pc = find_dependant_statements(instrs_forward, input_mem_region, static_info);
+/* some debug defines */
+//#define INPUT_ANALYSIS_SKIP
 
 #ifndef INPUT_ANALYSIS_SKIP
-	app_pc_vec = find_dependant_statements_with_indirection(instrs_forward, inputs, static_info, start_points_mem);
+	app_pc_vec = find_dependant_statements_with_indirection(instrs_forward, input_regions, static_info, start_points_mem);
 #else
 	app_pc_vec.push_back(app_pc);
 	app_pc_vec.push_back(app_pc);

@@ -26,7 +26,7 @@ string Comp_Abs_Node::get_node_string()
 	for (int i = 0; i < this->nodes.size(); i++){
 		Abs_Node * instance = dynamic_cast<Abs_Node*>(this->nodes[i]);
 
-		if (instance->type == Abs_Node::INPUT_NODE || instance->type == Abs_Node::OUTPUT_NODE || instance->type == Abs_Node::INTERMEDIATE_NODE){
+		if (instance->type == Abs_Node::INPUT_NODE || instance->type == Abs_Node::OUTPUT_NODE || instance->type == Abs_Node::INTERMEDIATE_NODE || instance->type == Abs_Node::IMMEDIATE_INT){
 			ret += instance->get_node_string() + "\\n";
 		}
 		else{

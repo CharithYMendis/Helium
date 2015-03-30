@@ -181,11 +181,30 @@ string Abs_Node::get_node_string()
 	return "";
 }
 
+string Abs_Node::get_immediate_string(vector<string> vars){
+
+	string ret = "";
+	for (int i = 0; i < mem_info.head_dimensions + 1; i++){
+		if (i == mem_info.head_dimensions){
+			ret += to_string(mem_info.indexes[0][i]);
+		}
+		else if(mem_info.indexes[0][i] != 0){
+			ret += to_string(mem_info.indexes[0][i]) + " * " + vars[i] + " + ";
+		}
+	}
+
+	return ret;
+
+}
+
 string Abs_Node::get_symbolic_string(vector<string> vars){
 
 
 	if ((type == INPUT_NODE) || (type == OUTPUT_NODE) || (type == INTERMEDIATE_NODE)){
 		return get_mem_string(vars);
+	}
+	else if (type == IMMEDIATE_INT){
+		return get_immediate_string(vars);
 	}
 	else{
 		return get_node_string();
@@ -204,12 +223,14 @@ bool Abs_Node::are_nodes_similar(Node * node){
 		}
 		else{
 			if (type == IMMEDIATE_INT){
-				return symbol->value == abs_node->symbol->value;
+				return true;
+				//return symbol->value == abs_node->symbol->value;
 			}
 			else if (type == IMMEDIATE_FLOAT){
 				return abs(symbol->float_value - abs_node->symbol->float_value) < 1e-6;
 			}
 			else if (type == INPUT_NODE || type == OUTPUT_NODE || type == INTERMEDIATE_NODE){
+				if (node->srcs.size() > 0 && node->srcs[0]->operation == op_indirect) return true;
 				return mem_info.associated_mem == abs_node->mem_info.associated_mem;
 			}
 			else{

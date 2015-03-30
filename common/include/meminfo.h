@@ -44,6 +44,7 @@ struct mem_info_t {
 
 	std::vector < mem_info_t * > mem_infos; // if merged this would be filled
 	bool padding_merge; /* heuristic merging of padded regions with non-rectangular windows */
+	int order;
 
 };
 
