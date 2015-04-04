@@ -4,11 +4,20 @@
 #include <stdint.h>
 #include <vector>
 #include <ostream>
+#include <map>
 
 #include "halide/halide.h"
 #include "trees/trees.h"
 #include "memory/memregions.h"
 
+
+struct mem_dump_regions_t{
+
+	string name;
+	char * values;
+	uint32_t size;
+
+};
 
 /* main halide program for generation Halide code - we also need a helper halide module to setup buffer_t for patching */
 class Halide_Program {
@@ -61,6 +70,8 @@ public:
 	
 	std::vector<Abs_Node *> inputs;
 	std::vector<Abs_Node *> params;
+	std::map<uint32_t, uint32_t> param_match;
+
 	std::vector<std::string> vars;
 	std::vector<std::string> rvars;
 
@@ -121,7 +132,7 @@ private:
 
 	/* very crude change*/
 	std::string get_indirect_string(Abs_Node * node, Abs_Node * head, std::vector<std::string> vars);
-
+	std::vector<mem_dump_regions_t *> get_memory_regions(std::vector<std::string> memdump_files);
 
 
 };

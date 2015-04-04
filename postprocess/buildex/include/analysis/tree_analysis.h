@@ -74,6 +74,7 @@ struct Abs_Tree_Charac{
 	Abs_Tree * tree;
 	bool is_recursive;
 	std::vector< std::pair< int32_t, int32_t > > extents;
+	bool gaps_in_rdom;
 	Abs_Node * red_node;
 
 

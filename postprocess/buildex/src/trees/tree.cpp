@@ -247,9 +247,9 @@ void * empty_ret_mutator(void * value, vector<void *> values, void * ori_value){
 
 void Tree::number_tree_nodes()
 {
-	DEBUG_PRINT(("numbering tree\n"), 2);
+	DEBUG_PRINT(("numbering tree\n"), 3);
 	traverse_tree(head, &num_nodes, node_numbering, empty_ret_mutator);
-	DEBUG_PRINT(("number of nodes %d\n", num_nodes), 2);
+	DEBUG_PRINT(("number of nodes %d\n", num_nodes), 3);
 }
 
 void Tree::cleanup_visit()
@@ -594,6 +594,161 @@ void Tree::simplify_immediates(){
 
 }
 
+bool remove_redundant_internal(Node * node){
+
+	bool changed = false;
+	if (node->operation == op_add){
+		if (node->srcs.size() == 1){
+			for (int i = 0; i < node->prev.size(); i++){
+				node->change_ref(node->prev[i], node->srcs[0]);
+				changed = true;
+			}
+		}
+	}
+
+	else if (node->operation == op_full_overlap){
+		for (int i = 0; i < node->srcs.size(); i++){
+			if (node->srcs[i]->symbol->type == IMM_INT_TYPE){
+				for (int j = 0; j < node->prev.size(); j++){
+					node->change_ref(node->prev[j], node->srcs[i]);
+					changed = true;
+				}
+			}
+		}
+	}
+
+	else if (node->symbol->type == IMM_INT_TYPE && node->symbol->value == 0){
+		int count = 0;
+		for (int i = 0; i < node->prev.size(); i++){
+			if (node->prev[i]->operation == op_add){
+				node->prev[i]->remove_forward_ref_single(node);
+				changed = true;
+				count++;
+			}
+		}
+	}
+
+	for (int i = 0; i < node->srcs.size(); i++){
+		if (remove_redundant_internal(node->srcs[i])) i = (i - 1 >= 0) ? i-1 : 0;
+	}
+
+	return changed;
+
+}
+
+void Tree::remove_redundant_nodes(){
+
+	remove_redundant_internal(head);
+
+}
+
+bool convert_node_sub_internal(Node * node, Node * head){
+
+	bool changed = false;
+	if (node->operation == op_sub){
+
+		for (int i = 0; i < node->prev.size(); i++){
+			if (node->prev[i]->operation == op_add){
+				ASSERT_MSG(node->srcs.size() == 2, ("ERROR: sub\n"));
+				
+				node->prev[i]->add_forward_ref(node->srcs[0]);
+				node->srcs[1]->minus = true;
+				node->prev[i]->add_forward_ref(node->srcs[1]);
+				changed = true;
+
+				node->remove_forward_ref_single(node->srcs[0]);
+				node->remove_forward_ref_single(node->srcs[0]);
+				node->prev[i]->remove_forward_ref_single(node);
+			}
+			
+			
+		}
+	}
+
+	for (int i = 0; i < node->srcs.size(); i++){
+		if (convert_node_sub_internal(node->srcs[i], head)) i--;
+	}
+	return changed;
+
+}
+
+void internal_propogate_minus(Node * node){
+
+	if (node->minus && node->operation == op_add){
+		for (int i = 0; i < node->srcs.size(); i++){
+			node->srcs[i]->minus = !node->srcs[i]->minus;
+		}
+	}
+
+	for (int i = 0; i < node->srcs.size(); i++){
+		internal_propogate_minus(node->srcs[i]);
+	}
+
+
+
+}
+
+void Tree::verify_minus(){
+
+	traverse_tree(head, head, [](Node * node, void * value)->void *{
+
+		if (node->operation == op_sub){
+			ASSERT_MSG(node->srcs.size() == 2, ("ERROR: minus with <2 nodes\n"));
+		}
+		return NULL;
+	}, empty_ret_mutator);
+
+	DEBUG_PRINT(("sub verified\n"), 2);
+
+}
+
+void Tree::simplify_minus(){
+
+	traverse_tree(head, head, [](Node * node, void * value)->void *{
+
+		if (node->operation == op_add){
+			vector<Node *> positive;
+			vector<Node *> negative;
+
+			for (int i = 0; i < node->srcs.size(); i++){
+				if (node->srcs[i]->minus) negative.push_back(node->srcs[i]);
+				else positive.push_back(node->srcs[i]);
+			}
+
+			//cout << "minus " << positive.size() << " " << negative.size() << endl;
+
+			for (int i = 0; i < positive.size(); i++){
+				for (int j = 0; j < negative.size(); j++){
+					if (positive[i]->symbol->type == negative[j]->symbol->type &&
+						positive[i]->symbol->width == negative[j]->symbol->width &&
+						positive[i]->symbol->value == negative[j]->symbol->value){
+						node->remove_forward_ref_single(positive[i]);
+						node->remove_forward_ref_single(negative[j]);
+						negative.erase(negative.begin() + j);
+						break;
+					}
+				}
+			}
+		}
+
+
+		return NULL;
+		
+
+
+
+	}, empty_ret_mutator);
+
+
+}
+
+void Tree::convert_sub_nodes(){
+
+	convert_node_sub_internal(head, head);
+	
+	internal_propogate_minus(head);
+
+}
 
 
 

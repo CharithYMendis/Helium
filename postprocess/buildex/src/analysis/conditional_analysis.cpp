@@ -62,13 +62,30 @@ void update_merge_points(vec_cinstr &instrs, vector<Jump_Info *> &jumps){
 	for (int i = 0; i < jumps.size(); i++){
 
 
-		ASSERT_MSG((jumps[i]->target_pc >= jumps[i]->fall_pc), ("ERROR: we only consider forward branches for now\n"));
+		if (jumps[i]->target_pc != 0 && jumps[i]->fall_pc != 0){
+
+			if (jumps[i]->target_pc < jumps[i]->fall_pc){
+
+				LOG(log_file, "jump ");
+				LOG(log_file, jumps[i]->jump_pc << " " << endl);
+				LOG(log_file, "cond_pc ");
+				LOG(log_file, jumps[i]->cond_pc << " " << endl);
+				LOG(log_file, "target_pc ");
+				LOG(log_file, jumps[i]->target_pc << endl);
+				LOG(log_file, "fall_pc ");
+				LOG(log_file, jumps[i]->fall_pc << endl);
+
+			}
+
+			ASSERT_MSG((jumps[i]->target_pc >= jumps[i]->fall_pc), ("ERROR: we only consider forward branches for now\n"));
+		}
 
 		uint32_t true_line = jumps[i]->taken + 1;
 		uint32_t false_line = jumps[i]->not_taken + 1;
 
 		if (true_line == 1 || false_line == 1){
 			DEBUG_PRINT(("WARNING: either taken or not taken information is missing for this trace for jump %d\n", jumps[i]->jump_pc), 2);
+			ASSERT_MSG(false, ("ERROR: missing a certain direction of the branch; please use another representative input\n"));
 			continue;
 		}
 

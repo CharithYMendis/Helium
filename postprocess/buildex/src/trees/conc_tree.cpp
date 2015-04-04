@@ -21,6 +21,7 @@ using namespace std;
 Conc_Tree::Conc_Tree() : Tree()
 {
 
+	dummy_tree = false;
 	frontier = new frontier_t[MAX_FRONTIERS];
 
 	for (int i = 0; i < MAX_FRONTIERS; i++){
@@ -361,7 +362,7 @@ void Conc_Tree::add_address_dependancy(Node * node, operand_t * opnds){
 			ASSERT_MSG(false, ("ERROR: not handled\n"));
 		}
 
-		Conc_Node * add_node = new Conc_Node(REG_TYPE, 0, 0, 0.0); //reg_type is used here; it doesn't really matter as this is an operation only node
+		Conc_Node * add_node = new Conc_Node(REG_TYPE, 0, 4, 0.0); //reg_type is used here; it doesn't really matter as this is an operation only node
 		add_node->operation = op_add;
 
 		current_node->add_forward_ref(add_node);
@@ -863,10 +864,10 @@ void Conc_Tree::print_conditionals(){
 
 void Conc_Tree::number_parameters(Node * node, vector<mem_regions_t *> mem_regions){
 
-	if (node->operation == op_indirect) return;
+	//if (node->operation == op_indirect) return;
 
 	Conc_Node * conc_node = (Conc_Node *)node;
-	if (node->srcs.size() == 1){
+	if (node->srcs.size() == 0){
 		if (conc_node->symbol->type == REG_TYPE){
 			if (conc_node->para_num == -1){
 				conc_node->para_num = Conc_Tree::num_paras++;
@@ -874,7 +875,7 @@ void Conc_Tree::number_parameters(Node * node, vector<mem_regions_t *> mem_regio
 			}
 		}
 		else if (conc_node->symbol->type == MEM_HEAP_TYPE || conc_node->symbol->type == MEM_STACK_TYPE){
-			if (get_mem_region(conc_node->symbol->type, mem_regions) == NULL){
+			if (get_mem_region(conc_node->symbol->value, mem_regions) == NULL){
 				if (conc_node->para_num == -1){
 					conc_node->para_num = Conc_Tree::num_paras++;
 					conc_node->is_para = true;

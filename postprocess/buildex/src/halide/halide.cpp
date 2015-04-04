@@ -1,4 +1,4 @@
-
+#include <sys\stat.h>
 #include <string>
 #include <stack>
 #include <algorithm>
@@ -7,6 +7,8 @@
 #include "halide/halide.h"
 #include "trees/nodes.h"
 #include "common_defines.h"
+
+#include "utilities.h"
 
 
 
@@ -80,7 +82,7 @@ string print_Halide_parameter_declaration(Abs_Node * node){
 	}
 	else{
 		if (!node->sign) ret += "u";
-		ret += "int" + to_string(node->symbol->width) + "_t";
+		ret += "int" + to_string(node->symbol->width * 8) + "_t";
 	}
 	ret += "> ";
 
@@ -142,7 +144,7 @@ Halide_Program::Func * Halide_Program::check_function(mem_regions_t * mem){
 }
 
 bool compare_tree(Abs_Tree * first, Abs_Tree * second){
-	return first->conditional_trees.size() < second->conditional_trees.size();
+	return first->conditional_trees.size() > second->conditional_trees.size();
 }
 
 void Halide_Program::sort_functions(){
@@ -270,6 +272,15 @@ void Halide_Program::populate_paras_input_paras(bool para)
 		}
 	}
 
+
+	/*get the conditional trees as well*/
+	int sz = trees.size();
+	for (int i = 0; i < sz; i++){
+		for (int j = 0; j < trees[i]->conditional_trees.size(); j++){
+			trees.push_back(trees[i]->conditional_trees[j].first);
+		}
+	}
+
 	vector<Abs_Node *> total;
 
 	for (int i = 0; i < trees.size(); i++){
@@ -283,14 +294,20 @@ void Halide_Program::populate_paras_input_paras(bool para)
 
 		/* paras we can have duplicates */
 		for (int i = 0; i < total.size(); i++){
-			for (int j = 0; j < total.size(); j++){
-				if (i == j) continue;
+			bool found = false;
+
+			for (int j = 0; j < i; j++){
 				if ((total[i]->symbol->type == total[j]->symbol->type) &&
 					(total[i]->symbol->value == total[j]->symbol->value) &&
 					(total[i]->symbol->width == total[j]->symbol->width)){
+					param_match[total[i]->para_num] = total[j]->para_num;
 					total.erase(total.begin() + i--);
+					found = true;
 					break;
 				}
+			}
+			if (!found){
+				param_match[total[i]->para_num] = total[i]->para_num;
 			}
 		}
 
@@ -350,6 +367,8 @@ void Halide_Program::populate_halide_program(){
 
 }
 
+
+
 /************************************************************************/
 /* casting and overlap node printing								    */
 /************************************************************************/
@@ -384,6 +403,11 @@ string Halide_Program::print_full_overlap_node(Abs_Node * node, Node * head, vec
 
 	
 	string ret = "";
+
+	if (node->symbol->width == overlap->symbol->width){ /* where the nodes are of reg and memory etc.*/
+		ret += print_abs_tree(overlap, head, vars);
+		return ret;
+	}
 
 	if (overlap_end == node_end){
 		ret += " ( ";
@@ -433,6 +457,12 @@ void Halide_Program::print_halide_program(std::ostream &out, vector<string> red_
 
 	DEBUG_PRINT(("printing halide....\n"), 1);
 
+	map<uint32_t, uint32_t>::iterator it;
+
+	for (it = param_match.begin(); it != param_match.end(); it++){
+		cout << it->first << " " << it->second << endl;
+	}
+
 	/*print the Halide header*/
 	out << print_Halide_header() << endl;
 
@@ -452,6 +482,8 @@ void Halide_Program::print_halide_program(std::ostream &out, vector<string> red_
 		out << print_Halide_parameter_declaration(params[i]) << endl;
 	}
 
+
+	sort_functions();
 	/* print Funcs */
 	for (int i = 0; i < funcs.size(); i++){
 		out << print_Halide_function_declaration(
@@ -594,7 +626,13 @@ string Halide_Program::print_predicated_tree(vector<Abs_Tree *> trees, string ex
 		static_cast<Abs_Node *>(trees[0]->get_head()),
 		vars);
 
-	output += " = " + exprs[exprs.size() - 1]->name + ";\n";
+	Abs_Node * head_node = static_cast<Abs_Node *>(trees[0]->get_head());
+
+	uint32_t clamp_max = (uint32_t(~0)) >> (32 - head_node->symbol->width * 8);
+	uint32_t clamp_min = 0;
+
+	/* BUG - what to do with the sign?? */
+	output += " = " + get_cast_string(head_node,false) + "( clamp(" + exprs[exprs.size() - 1]->name + "," + to_string(clamp_min) + "," + to_string(clamp_max) + ") );\n";
 
 	return output;
 
@@ -675,7 +713,11 @@ std::string Halide_Program::print_function(Func * func, vector<string> red_varia
 /* very crude printing */
 std::string Halide_Program::get_indirect_string(Abs_Node * node, Abs_Node * head, vector<string> vars){
 
-	if (node->srcs[0]->operation == op_add){
+
+	return print_abs_tree(node->srcs[0], head, vars);
+
+
+	/*if (node->srcs[0]->operation == op_add){
 		Abs_Node * base = (Abs_Node *)node->srcs[0]->srcs[0]; 
 		Abs_Node * index = (Abs_Node *)node->srcs[0]->srcs[1];
 
@@ -687,7 +729,7 @@ std::string Halide_Program::get_indirect_string(Abs_Node * node, Abs_Node * head
 		}
 	}
 
-	return "";
+	return ""; */
 
 }
 
@@ -761,7 +803,13 @@ std::string Halide_Program::print_abs_tree(Node * nnode, Node * head ,vector<str
 				ret += print_abs_tree(node->srcs[pos], head, vars); /* assumes that these nodes are at the leaves */
 			}
 			else{
-				ret += node->get_symbolic_string(vars) + " ";
+
+				if (node->type == Abs_Node::PARAMETER){
+					ret += "p_" + to_string(param_match[node->para_num]) + " ";
+				}
+				else{
+					ret += node->get_symbolic_string(vars) + " ";
+				}
 			}
 		}
 		else{
@@ -828,7 +876,88 @@ std::string Halide_Program::print_conditional_trees(std::vector< std::pair<Abs_T
 /*     Reduction domain abstraction                                     */
 /************************************************************************/
 
+/* vector<mem_dump_regions_t *> Halide_Program::get_memory_regions(vector<string> memdump_files){
 
+	struct mem_dump_t{
+		char * buffer;
+		uint32_t start;
+		uint32_t end;
+		bool write;
+	};
+
+	vector<mem_dump_t *> dump;
+
+	for (int i = 0; i < memdump_files.size(); i++){
+
+		ifstream file(memdump_files[i], ios::in | ios::binary);
+
+		vector<string> parts = split(memdump_files[i], '_');
+		uint32_t index = parts.size() - 2;
+		bool write = parts[index][0] - '0';
+		uint32_t size = strtoull(parts[index - 1].c_str(), NULL, 10);
+		uint64_t base_pc = strtoull(parts[index - 2].c_str(), NULL, 16);
+
+		uint64_t start = base_pc;
+		uint64_t end = base_pc + size;
+
+		struct stat results;
+		char *  file_values;
+
+		ASSERT_MSG(stat(memdump_files[i].c_str(), &results) == 0, ("file stat collection unsuccessful\n"));
+		
+		file_values = new char[results.st_size];
+		file.read(file_values, results.st_size);
+
+		dump.push_back(new mem_dump_t());
+		dump[i]->start = start;
+		dump[i]->end = end;
+		dump[i]->buffer = file_values;
+		dump[i]->write = write;
+
+	}
+
+	vector<mem_dump_regions_t *> dumps;
+
+	// for the funcs get the values 
+	for (int i = 0; i < funcs.size(); i++){
+		Abs_Node * head = (Abs_Node *)funcs[i]->pure_trees[0]->get_head();
+		uint64_t start = head->mem_info.associated_mem->start;
+		uint64_t end = head->mem_info.associated_mem->end;
+
+		for (int j = 0; j < dump.size(); j++){
+			if (dump[i]->write){
+				if (start >= dump[i]->start && end <= dump[i]->end){
+					mem_dump_regions_t * dump_region = new mem_dump_regions_t;
+					dump_region->name = head->mem_info.associated_mem->name;
+					dump_region->values = &dump[i]->buffer[start - dump[i]->start];
+					dump_region->size = get_actual_size(head->mem_info.associated_mem);
+				}
+			}
+		}
+	}
+
+	// for all inputs
+	for (int i = 0; i < inputs.size(); i++){
+
+		uint64_t start = inputs[i]->mem_info.associated_mem->start;
+		uint64_t end = inputs[i]->mem_info.associated_mem->end;
+
+		for (int j = 0; j < dump.size(); j++){
+			if (!dump[i]->write){
+				if (start >= dump[i]->start && end <= dump[i]->end){
+					mem_dump_regions_t * dump_region = new mem_dump_regions_t;
+					dump_region->name = inputs[i]->mem_info.associated_mem->name;
+					dump_region->values = &dump[i]->buffer[start - dump[i]->start];
+					dump_region->size = get_actual_size(head->mem_info.associated_mem);
+				}
+			}
+		}
+
+
+	}
+
+
+} */
 
 
 

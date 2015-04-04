@@ -131,10 +131,7 @@ mem_regions_t * locate_image_CN2(char * values, uint32_t size, uint64_t * start_
 
 }
 
-mem_regions_t * locate_image_CN2_backward_write(char * values, uint32_t size, uint64_t * start, uint64_t * end, image_t * image){
-
-
-	cout << "came to function write" << endl;
+mem_regions_t * locate_image_CN2_backward_write(char * values, uint32_t size, uint64_t * start, uint64_t * end, image_t * image, uint32_t bound){
 
 	bool image_found = false;
 	int i;
@@ -142,59 +139,53 @@ mem_regions_t * locate_image_CN2_backward_write(char * values, uint32_t size, ui
 	uint32_t image_size = image->width * image->height;
 
 
-	for (i = size - 1; i >= 3 * image_size; i--){
+	for (i = *start; i >= 3 * image_size; i--){
 
 		print_progress(&count, 100000);
 
 
 		bool success = true;
-		for (int j = 2 * image->width - 1; j >= image->width; j--){
-			int val = 3 * (image->width - 1 - j);
-			if ((values[i - val] & 0xff) != image->image_array[j]){
+		for (int j = image->width - 1 - bound; j >= bound; j--){
+			int val = 3 * (image->width - 1 - bound - j);
+			if ((values[i - val] & 0xff) != image->image_array[(0 * image->width * image->height) + j + bound * image->width]){
 				success = false;
 				break;
 			}
-			if ((values[i - (val + 1)] & 0xff) != image->image_array[j + image_size]){ /* this may need to be changed */
+			if ((values[i - (val + 1)] & 0xff) != image->image_array[ (1 * image->width * image->height) + j + bound * image->width]){ /* this may need to be changed */
 				success = false;
 				break;
 			}
-			if ((values[i - (val + 2)] & 0xff) != image->image_array[j + 2 * image_size]){ /* this may need to be changed */
+			if ((values[i - (val + 2)] & 0xff) != image->image_array[ (2 * image->width * image->height) + j + bound * image->width]){ /* this may need to be changed */
 				success = false;
 				break;
 			}
 
 		}
-
-
 
 		if (success){
 			cout << "got it" << endl;
-			cout << endl;
 		}
-
 
 
 		if (success){ /* verify the region actually has the image */
 			vector<uint32_t> start_points;
-			int start = 0;
+			int start_local = 0;
 			int last = 0;
 			/* get the starting points of each image line */
 			for (int j = i; j >= image_size; j--){
 
 				bool found = true;
-				for (int k = image->width - 1; k >= 0; k--){
-					int val = 3 * (image->width - 1 - k);
-
-
-					if ((values[j - (val)] & 0xff) != (uint8_t)(image->image_array[last + k])){
+				for (int k = image->width - 1 - bound; k >= bound; k--){
+					int val = 3 * (image->width - 1 - bound - k);
+					if ((values[j - (val)] & 0xff) != (uint8_t)(image->image_array[(0 * image->width * image->height) + last + k + bound * image->width])){
 						found = false;
 						break;
 					}
-					if ((values[j - (val + 1)] & 0xff) != (uint8_t)image->image_array[last + k]){
+					if ((values[j - (val + 1)] & 0xff) != (uint8_t)image->image_array[(1 * image->width * image->height) + last + k + bound * image->width]){
 						found = false;
 						break;
 					}
-					if ((values[j - (val + 2)] & 0xff) != (uint8_t)image->image_array[last + k]){
+					if ((values[j - (val + 2)] & 0xff) != (uint8_t)image->image_array[(2 * image->width * image->height) + last + k + bound * image->width]){
 						found = false;
 						break;
 					}
@@ -203,92 +194,67 @@ mem_regions_t * locate_image_CN2_backward_write(char * values, uint32_t size, ui
 
 
 				if (found){
-					start = j;
+					start_local = j;
 					last += image->width;
-					j -= 3 * (image->width) - 1;
-					//cout << hex << "new j " <<  j << dec << endl;
-					start_points.push_back(start);
-					if (last == image->width * image->height) { break; }
+					j -= 3 * (image->width - 2 * bound) - 1; /* because of j--*/
+					start_points.push_back(start_local);
+					if (last == image->width * (image->height - 2 * bound) ) { break; }
 				}
 
 			}
 			/* if we covered the entire image */
-			if (last == image->width * image->height){
+			if (last == image->width * (image->height - 2 * bound) ){
 
+				cout << "here" << endl;
 				/* check whether the gaps are uniform */
 				vector<uint32_t> gaps;
-				for (int j = 1; j < start_points.size(); j++){
-					gaps.push_back(start_points[j - 1] - start_points[j]);
+				for (int j = 0; j < start_points.size() - 1; j++){
+					gaps.push_back(start_points[j] - start_points[j + 1]);
 				}
 
-				if (gaps.size() == 0){
+				uint32_t found = true;
+				uint32_t comp_val = gaps[0];
+				for (int j = 1; j < gaps.size(); j++){
+					if (comp_val != gaps[j]){
+						found = false; break;
+					}
+				}
+				if (found){
 					mem_regions_t * region = new mem_regions_t();
 
 					region->bytes_per_pixel = 1;
-					region->dimensions = 2;
+					region->dimensions = 3;
 
 					region->strides[0] = 1;
-					region->strides[1] = image->width;
+					region->strides[1] = 3;
+					region->strides[2] = gaps[0];
 
 					region->padding_filled = 1;
-					region->padding[0] = 0;
+					if (gaps[0] != (image->width - 2 * bound) * 3){
+						region->padding[0] = gaps[0] - (image->width - 2 * bound) * 3;
+					}
+					else region->padding[0] = 0;
 
-					region->extents[0] = image->width;
-					region->extents[1] = image->height;
+					region->extents[0] = 3;
+					region->extents[1] = image->width - 2 * bound;
+					region->extents[2] = image->height - 2 * bound;
 
-					/*region start and the end */
+					/* region start and the end */
 					region->start = start_points[0];
-					region->end = start_points[start_points.size() - 1] + region->strides[1];
-
+					region->end = start_points[start_points.size() - 1] - region->strides[2];
+					*end = region->end;
 					return region;
 				}
-				else{
 
-					uint32_t found = true;
-					uint32_t comp_val = gaps[0];
-					for (int j = 1; j < gaps.size(); j++){
-						if (comp_val != gaps[j]){
-							found = false; break;
-						}
-					}
-					if (found){
-						mem_regions_t * region = new mem_regions_t();
 
-						region->bytes_per_pixel = 1;
-						region->dimensions = 2;
-
-						region->strides[0] = 1;
-						region->strides[1] = gaps[0];
-
-						region->padding_filled = 1;
-						region->padding[0] = gaps[0] / 3 - image->width;
-
-						region->extents[0] = image->width;
-						region->extents[1] = image->height;
-
-						/* region start and the end */
-						region->start = start_points[0];
-						region->end = start_points[start_points.size() - 1] + region->strides[1];
-
-						return region;
-					}
-				}
 			}
 		}
 	}
 
 	return NULL;
-
-
-
-
-
 }
 
 mem_regions_t * locate_image_CN2_backward(char * values, uint32_t size, uint64_t * start, uint64_t * end, image_t * image){
-
-
-	cout << "came to function" << endl;
 
 	bool image_found = false;
 	int i;
@@ -296,7 +262,7 @@ mem_regions_t * locate_image_CN2_backward(char * values, uint32_t size, uint64_t
 	uint32_t image_size = image->width * image->height;
 
 
-	for (i = size - 1; i >= 3 * image_size; i--){
+	for (i = *start; i >= 3 * image_size; i--){
 
 		print_progress(&count, 100000);
 
@@ -304,33 +270,26 @@ mem_regions_t * locate_image_CN2_backward(char * values, uint32_t size, uint64_t
 		bool success = true;
 		for (int j = image->width - 1; j >= 0; j--){
 			int val = 3 * (image->width - 1 - j);
-			if ((values[i - val] & 0xff) != image->image_array[j]){
+			if ((values[i - val] & 0xff) != image->image_array[(0 * image->width * image->height) + j]){
 				success = false;
 				break;
 			}
-			if ((values[i - (val + 1)] & 0xff) != image->image_array[j]){ /* this may need to be changed */
+			if ((values[i - (val + 1)] & 0xff) != image->image_array[(1 * image->width * image->height) + j]){ /* this may need to be changed */
 				success = false;
 				break;
 			}
-			if ((values[i - (val + 2)] & 0xff) != image->image_array[j]){ /* this may need to be changed */
+			if ((values[i - (val + 2)] & 0xff) != image->image_array[(2 * image->width * image->height) + j]){ /* this may need to be changed */
 				success = false;
 				break;
 			}
 
-		}
-
-
-
-		if (success){
-			cout << "got it" << endl;
-			cout << endl;
 		}
 
 
 
 		if (success){ /* verify the region actually has the image */
 			vector<uint32_t> start_points;
-			int start = 0;
+			int start_local = 0;
 			int last = 0;
 			/* get the starting points of each image line */
 			for (int j = i; j >= image_size; j--){
@@ -338,17 +297,15 @@ mem_regions_t * locate_image_CN2_backward(char * values, uint32_t size, uint64_t
 				bool found = true;
 				for (int k = image->width - 1; k >= 0; k--){
 					int val = 3 * (image->width - 1 - k);
-
-
-					if ((values[j - (val)] & 0xff) != (uint8_t)(image->image_array[last + k])){
+					if ((values[j - (val)] & 0xff) != (uint8_t)(image->image_array[(0 * image->width * image->height) + last + k])){
 						found = false;
 						break;
 					}
-					if ((values[j - (val + 1)] & 0xff) != (uint8_t)image->image_array[last + k]){
+					if ((values[j - (val + 1)] & 0xff) != (uint8_t)image->image_array[(1 * image->width * image->height) + last + k]){
 						found = false;
 						break;
 					}
-					if ((values[j - (val + 2)] & 0xff) != (uint8_t)image->image_array[last + k]){
+					if ((values[j - (val + 2)] & 0xff) != (uint8_t)image->image_array[(2 * image->width * image->height) + last + k]){
 						found = false;
 						break;
 					}
@@ -357,11 +314,10 @@ mem_regions_t * locate_image_CN2_backward(char * values, uint32_t size, uint64_t
 
 
 				if (found){
-					start = j;
+					start_local = j;
 					last += image->width;
-					j -= 3 * (image->width) - 1;
-					//cout << hex << "new j " <<  j << dec << endl;
-					start_points.push_back(start);
+					j -= 3 * (image->width) - 1; /* because of j--*/
+					start_points.push_back(start_local);
 					if (last == image->width * image->height) { break; }
 				}
 
@@ -369,64 +325,48 @@ mem_regions_t * locate_image_CN2_backward(char * values, uint32_t size, uint64_t
 			/* if we covered the entire image */
 			if (last == image->width * image->height){
 
+
 				/* check whether the gaps are uniform */
 				vector<uint32_t> gaps;
-				for (int j = 1; j < start_points.size(); j++){
-					gaps.push_back(start_points[j - 1] - start_points[j]);
+				for (int j = 0; j < start_points.size() - 1; j++){
+					gaps.push_back(start_points[j] - start_points[j + 1]);
 				}
 
-				if (gaps.size() == 0){
+				uint32_t found = true;
+				uint32_t comp_val = gaps[0];
+				for (int j = 1; j < gaps.size(); j++){
+					if (comp_val != gaps[j]){
+						found = false; break;
+					}
+				}
+				if (found){
 					mem_regions_t * region = new mem_regions_t();
 
 					region->bytes_per_pixel = 1;
-					region->dimensions = 2;
+					region->dimensions = 3;
 
 					region->strides[0] = 1;
-					region->strides[1] = image->width;
+					region->strides[1] = 3;
+					region->strides[2] = gaps[0];
 
 					region->padding_filled = 1;
-					region->padding[0] = 0;
+					if (gaps[0] != image->width * 3){
+						region->padding[0] = gaps[0] - image->width * 3;
+					}
+					else region->padding[0] = 0;
+					
+					region->extents[0] = 3;
+					region->extents[1] = image->width;
+					region->extents[2] = image->height;
 
-					region->extents[0] = image->width;
-					region->extents[1] = image->height;
-
-					/*region start and the end */
+					/* region start and the end */
 					region->start = start_points[0];
-					region->end = start_points[start_points.size() - 1] + region->strides[1];
-
+					region->end = start_points[start_points.size() - 1] - region->strides[2];
+					*end = region->end;
 					return region;
 				}
-				else{
-
-					uint32_t found = true;
-					uint32_t comp_val = gaps[0];
-					for (int j = 1; j < gaps.size(); j++){
-						if (comp_val != gaps[j]){
-							found = false; break;
-						}
-					}
-					if (found){
-						mem_regions_t * region = new mem_regions_t();
-
-						region->bytes_per_pixel = 1;
-						region->dimensions = 2;
-
-						region->strides[0] = 1;
-						region->strides[1] = gaps[0];
-
-						region->padding_filled = 1;
-						region->padding[0] = gaps[0] / 3 - image->width;
-
-						region->extents[0] = image->width;
-						region->extents[1] = image->height;
-
-						/* region start and the end */
-						region->start = start_points[0];
-						region->end = start_points[start_points.size() - 1] + region->strides[1];
-
-						return region;
-					}
-				}
+					
+				
 			}
 		}
 	}
@@ -472,6 +412,8 @@ vector<mem_regions_t *> get_image_regions_from_dump(vector<string> filenames, st
 
 		uint64_t start = 0;
 		uint64_t end = 0;
+		uint64_t start_back;
+		uint64_t end_back = 0;
 
 		mem_regions_t * mem = NULL;
 
@@ -484,6 +426,8 @@ vector<mem_regions_t *> get_image_regions_from_dump(vector<string> filenames, st
 		file_values = new char[results.st_size];
 		file.read(file_values, results.st_size);
 
+		start_back = results.st_size - 1;
+
 		bool found_region = true;
 
 		while (found_region){
@@ -491,16 +435,15 @@ vector<mem_regions_t *> get_image_regions_from_dump(vector<string> filenames, st
 			/* locate the image */
 			if (write){
 				mem = locate_image_CN2(file_values, results.st_size, &start, &end, out_image);
-				//mem = locate_image_CN2_backward_write(file_values, results.st_size, &start, &end, out_image);
+				if(mem == NULL) mem = locate_image_CN2_backward_write(file_values, results.st_size, &start_back, &end_back, out_image, 1);
 			}
 			else{
 				mem = locate_image_CN2(file_values, results.st_size, &start, &end, in_image);
-				//mem = locate_image_CN2_backward(file_values, results.st_size, &start, &end, in_image);
-
-
+				if(mem == NULL) mem = locate_image_CN2_backward(file_values, results.st_size, &start_back, &end_back, in_image);
 			}
 
 			start = end;
+			start_back = end_back;
 
 			if (mem != NULL){
 				mem->dump_type = write ? OUTPUT_BUFFER : INPUT_BUFFER;

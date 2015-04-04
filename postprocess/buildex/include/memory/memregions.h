@@ -76,6 +76,8 @@ std::vector<uint64_t> get_nbd_of_random_points(std::vector<mem_regions_t *> imag
 std::vector<uint64_t> get_nbd_of_random_points_2(std::vector<mem_regions_t *> image_regions, uint32_t seed, uint32_t * stride);
 mem_regions_t* get_random_output_region(std::vector<mem_regions_t *> regions);
 uint64_t get_random_mem_location(mem_regions_t * region, uint32_t seed);
+uint32_t get_region_size(mem_regions_t * region);
+uint32_t get_actual_size(mem_regions_t * region);
 
 /* extracting exact locations, memregions */
 mem_regions_t * get_mem_region(uint64_t value, std::vector<mem_regions_t *> &mem_regions); /* extracting mem regions */

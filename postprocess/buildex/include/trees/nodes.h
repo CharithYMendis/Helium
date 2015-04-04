@@ -21,6 +21,9 @@
 		
 		int operation;   /* the operation of this node */
 		bool sign; /* indicates whether the operation is signed */
+
+		bool minus;
+
 		operand_t * symbol;  /* operand information for this node - this is concrete */
 
 		std::vector<Node *> srcs;  /* forward references also srcs of the destination */
@@ -158,7 +161,7 @@
 
 	 /* some type information about the node - what type of node is this */
 	 uint type;
-	 
+
 	struct {
 		mem_regions_t * associated_mem;
 		uint32_t dimensions;

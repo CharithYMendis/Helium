@@ -39,6 +39,7 @@ void * empty_ret_mutator(void * value, vector<void *> values, void * ori_value);
 	 int32_t tree_num; /* this is for numbering the tree (most porabably based on output location - used in tree clustering) */
 	 static uint32_t num_paras;
 	 bool recursive;
+	 bool dummy_tree;
 
 
 	 Tree();
@@ -74,6 +75,11 @@ void * empty_ret_mutator(void * value, vector<void *> values, void * ori_value);
 	 std::vector<mem_regions_t *> identify_intermediate_buffers(std::vector<mem_regions_t *> mem);
 	 void remove_multiplication();
 	 void simplify_immediates();
+	 void remove_minus_nodes();
+	 void remove_redundant_nodes();
+	 void convert_sub_nodes();
+	 void simplify_minus();
+	 void verify_minus();
  };
 
 

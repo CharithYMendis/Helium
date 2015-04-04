@@ -24,12 +24,24 @@ Abs_Node::Abs_Node(Conc_Node * head, Conc_Node * conc_node, vector<mem_regions_t
 		mem = get_mem_region(conc_node->symbol->value, mem_regions);
 	}
 
+	this->minus = false;
+	this->operation = conc_node->operation;
 	this->para_num = conc_node->para_num;
+	this->symbol = conc_node->symbol;
+
+	bool filter = false;
+	if (conc_node == head) filter = true;
+	else if (conc_node->srcs.size() == 0) filter = true;
+	else{
+		for (int i = 0; i < conc_node->srcs.size(); i++){
+			if (conc_node->srcs[i]->operation == op_indirect) filter = true;
+		}
+	}
 
 	/* mem buffers in the head or in the leaves with at most an indirection */
-	if (mem != NULL){ 
+	if (mem != NULL && filter){
 
-		ASSERT_MSG((conc_node == head || conc_node->srcs.size() <= 1), ("ERROR: mem buffers in the head or in the leaves with at most an indirection\n"));
+		//ASSERT_MSG((conc_node == head || conc_node->srcs.size() <= 1), ("ERROR: mem buffers in the head or in the leaves with at most an indirection\n"));
 
 		mem_regions_t * mem = get_mem_region(conc_node->symbol->value, mem_regions);
 		this->operation = conc_node->operation;
@@ -47,16 +59,21 @@ Abs_Node::Abs_Node(Conc_Node * head, Conc_Node * conc_node, vector<mem_regions_t
 		this->mem_info.indexes = new int *[mem->dimensions];
 		this->mem_info.pos = new int[mem->dimensions];
 
+		mem_regions_t * head_region = get_mem_region(head->symbol->value, mem_regions);
+		ASSERT_MSG(head_region != NULL, ("ERROR: the head region cannot be NULL"));
+
+		this->mem_info.head_dimensions = head_region->dimensions;
+
 		vector<int> pos = get_mem_position(mem, conc_node->symbol->value);
 		for (int i = 0; i < mem->dimensions; i++){
-			this->mem_info.indexes[i] = new int[mem->dimensions + 1];
+			this->mem_info.indexes[i] = new int[head_region->dimensions + 1];
 			this->mem_info.pos[i] = pos[i];
 		}
 
 	}
-	else if ((conc_node->symbol->type == MEM_STACK_TYPE) || (conc_node->symbol->type == REG_TYPE)){ /*parameters can be here*/
+	else if ((conc_node->symbol->type == MEM_HEAP_TYPE) || (conc_node->symbol->type == MEM_STACK_TYPE) || (conc_node->symbol->type == REG_TYPE)){ /*parameters can be here*/
 		this->symbol = conc_node->symbol;
-		ASSERT_MSG((mem == NULL), ("ERROR: we cannot have a buffer here\n"));
+		//ASSERT_MSG((mem == NULL), ("ERROR: we cannot have a buffer here\n"));
 		this->operation = conc_node->operation;
 		if (conc_node->is_para){
 			this->type = PARAMETER;
@@ -117,7 +134,7 @@ string Abs_Node::get_mem_string(vector<string> vars){
 	for (int i = 0; i < this->mem_info.dimensions; i++){
 
 		bool first = true;
-		for (int j = 0; j < this->mem_info.dimensions; j++){
+		for (int j = 0; j < this->mem_info.head_dimensions; j++){
 
 
 			if (this->mem_info.indexes[i][j] == 1){
@@ -139,11 +156,11 @@ string Abs_Node::get_mem_string(vector<string> vars){
 
 		}
 
-		if (this->mem_info.indexes[i][this->mem_info.dimensions] != 0){
+		if (this->mem_info.indexes[i][this->mem_info.head_dimensions] != 0){
 			if (!first){
 				ret += "+";
 			}
-			ret += to_string(this->mem_info.indexes[i][this->mem_info.dimensions]);
+			ret += to_string(this->mem_info.indexes[i][this->mem_info.head_dimensions]);
 		}
 
 		if (i != this->mem_info.dimensions - 1){
@@ -166,7 +183,7 @@ string Abs_Node::get_node_string()
 		return get_mem_string();
 	}
 	else if (this->type == IMMEDIATE_INT){
-		return to_string(symbol->value);
+		return to_string((int32_t)symbol->value);
 	}
 	else if (this->type == IMMEDIATE_FLOAT){
 		return to_string(symbol->float_value);
@@ -199,16 +216,19 @@ string Abs_Node::get_immediate_string(vector<string> vars){
 
 string Abs_Node::get_symbolic_string(vector<string> vars){
 
-
+	string ret = "";
 	if ((type == INPUT_NODE) || (type == OUTPUT_NODE) || (type == INTERMEDIATE_NODE)){
-		return get_mem_string(vars);
+		ret = get_mem_string(vars);
 	}
 	else if (type == IMMEDIATE_INT){
-		return get_immediate_string(vars);
+		ret = get_immediate_string(vars);
 	}
 	else{
-		return get_node_string();
+		ret = get_node_string();
 	}
+
+	//ret += " " + to_string(this->minus);
+	return ret;
 
 }
 

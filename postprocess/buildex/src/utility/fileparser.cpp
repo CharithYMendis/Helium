@@ -36,7 +36,8 @@ uint32_t fill_operand(operand_t * operand, vector<string> &tokens, uint32_t star
 	}
 	else{
 #ifndef __GNUG__
-		operand->value = stoull(tokens[i++].c_str());
+		//operand->value = stoull(tokens[i++].c_str());
+		operand->value = stoll(tokens[i++]);
 #else
 		operand->value = strtoull(tokens[i++].c_str(), NULL, 10);
 #endif

@@ -170,7 +170,7 @@ vector<mem_regions_t *> merge_instrace_and_dump_regions(vector<mem_regions_t *> 
 				mem->padding_filled = 0;
 
 				mem->direction = mem_info[i]->direction;
-
+				mem->order = mem_info[i]->order;
 				total_regions.push_back(mem);
 
 			}
@@ -424,6 +424,10 @@ vector<mem_regions_t *> get_input_regions(vector<mem_regions_t *> total_regions,
 	vector<uint32_t> start_points, vec_cinstr &instrs){
 
 	sort(total_regions.begin(), total_regions.end(), compare_mem_region);
+
+	/*log_file << "***************sorted**************" << endl;
+	print_mem_regions(log_file, total_regions);
+	log_file << "****end*****" << endl;*/
 
 	vector<mem_regions_t *> inputs;
 

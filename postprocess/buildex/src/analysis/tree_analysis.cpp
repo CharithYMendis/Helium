@@ -340,6 +340,7 @@ Conc_Tree * build_conc_tree(uint64_t destination,
 
 			/* dummy tree */
 			build_dummy_initial_tree(initial_tree, tree, region);
+			initial_tree->dummy_tree = true;
 		}
 
 		initial_tree->number_parameters(regions);
@@ -348,13 +349,13 @@ Conc_Tree * build_conc_tree(uint64_t destination,
 
 	}
 	
-	
-	
-	tree->number_parameters(regions);
 	tree->remove_assign_nodes();
 	tree->remove_multiplication();
 	tree->canonicalize_tree();
 	tree->simplify_immediates();
+	tree->number_parameters(regions);
+
+
 
 //#define DEBUG_TREE_PRINT
 
@@ -370,6 +371,11 @@ Conc_Tree * build_conc_tree(uint64_t destination,
 
 	Abs_Tree * abs_tree = new Abs_Tree();
 	abs_tree->build_abs_tree_unrolled(tree, regions);
+	abs_tree->verify_minus();
+	abs_tree->convert_sub_nodes();
+	abs_tree->canonicalize_tree();
+	abs_tree->simplify_minus();
+
 	ofstream abs_file(get_standard_folder("output") + "\\abs_tree_" + to_string(destination) + ".dot");
 	abs_tree->number_tree_nodes();
 	abs_tree->print_dot(abs_file, "abs_tree", 0);
@@ -895,6 +901,41 @@ std::vector<Conc_Tree *> get_similar_trees(
 }
 
 
+vector< vector<int32_t> > get_index_list(mem_regions_t * mem){
+
+	bool finished = false;
+
+	vector< vector<int32_t> > ret;
+
+	vector<int32_t> current_index;
+
+	for (int i = 0; i < mem->dimensions; i++){
+		current_index.push_back(0);
+	}
+
+	while (!finished){
+		/* do stuff */
+		ret.push_back(current_index);
+
+		finished = true;
+		for (int i = 0; i < mem->dimensions; i++){
+			if (current_index[i] < mem->extents[i] - 1){
+				current_index[i]++;
+				for (int j = 0; j < i; j++){
+					current_index[j] = 0;
+				}
+				finished = false;
+				break;
+			}
+		}
+
+	}
+
+	return ret;
+
+
+}
+
 std::vector< std::vector <Conc_Tree *> > cluster_trees
 		(std::vector<mem_regions_t *> mem_regions,
 		std::vector<mem_regions_t *> &total_regions,
@@ -910,9 +951,35 @@ std::vector< std::vector <Conc_Tree *> > cluster_trees
 	mem_regions_t * mem = get_random_output_region(mem_regions);
 
 	vector<Conc_Tree *> trees;
+	vector< vector<int32_t> > indexes = get_index_list(mem);
+	vector<int32_t> offset = indexes[0];
+	bool success = true;
+
+	//for (int i = indexes.size() - 1; i >= 0; i--){
+	for (int i = 0; i < indexes.size()/8; i++){
+
+		uint64_t location = get_mem_location(indexes[i], offset, mem, &success);
+		ASSERT_MSG(success, ("ERROR: getting mem location error\n"));
+
+		DEBUG_PRINT(("building tree for location %llx\n", location, i), 2);
+		for (int j = 0; j < mem->dimensions; j++){
+			DEBUG_PRINT(("%d,", indexes[i][j]), 2);
+		}
+		DEBUG_PRINT(("\n"),2);
+
+		Conc_Tree * tree = new Conc_Tree();
+		tree->tree_num = i;
+		Conc_Tree * initial_tree = build_conc_tree(location, mem->bytes_per_pixel, start_points, FILE_BEGINNING, FILE_ENDING, tree, instrs, farthest, total_regions);
+		build_conc_trees_for_conditionals(start_points, tree, instrs, farthest, total_regions);
+		trees.push_back(tree);
+		if (initial_tree != NULL){
+			build_conc_trees_for_conditionals(start_points, initial_tree, instrs, farthest, total_regions);
+			trees.push_back(initial_tree);
+		}
+	}
 
 	/*BUG - incrementing by +1 is not general; should increment by the stride */
-	for (uint64 i = mem->start; i < mem->end; i+= mem->bytes_per_pixel){
+	/*for (uint64 i = mem->start; i < mem->end; i+= mem->bytes_per_pixel){
 		DEBUG_PRINT(("building tree for location %llx - %u\n", i, i - mem->start), 2);
 		Conc_Tree * tree = new Conc_Tree();
 		tree->tree_num = i - mem->start;
@@ -923,13 +990,20 @@ std::vector< std::vector <Conc_Tree *> > cluster_trees
 			build_conc_trees_for_conditionals(start_points, initial_tree, instrs, farthest, total_regions);
 			trees.push_back(initial_tree);
 		}
-		//if (i == mem->start + mem->bytes_per_pixel * 100) exit(0); /* FIXME */
-	}
+		//if (i == mem->start + mem->bytes_per_pixel * 100) exit(0); 
+	}*/
+
+	
 
 	DEBUG_PRINT(("clustering trees\n"), 2);
 	
 	/* cluster based on the similarity */
 	vector< vector<Conc_Tree *> > clustered_trees = categorize_trees(trees);
+
+	if (clustered_trees.size() == trees.size()){ /* so each tree is a seperate cluster; assume that all the trees are in a single cluster and this would fail is similarity checking in abstrees */
+		clustered_trees.clear();
+		clustered_trees.push_back(trees);
+	}
 	
 	/* cluster results */
 	cout << "number of tree clusters : " << clustered_trees.size() << endl;
@@ -986,6 +1060,14 @@ Abs_Tree* abstract_the_trees(vector<Conc_Tree *> cluster, uint32_t no_trees, uin
 		/* parameter identification here -> please check */
 		//identify_parameters(cluster[j]->head, pc_mem);
 		abs_tree->build_abs_tree_unrolled(cluster[j], total_regions);
+
+		abs_tree->verify_minus();
+		abs_tree->convert_sub_nodes();
+		abs_tree->canonicalize_tree();
+		abs_tree->simplify_minus();
+		abs_tree->remove_redundant_nodes();
+		abs_tree->canonicalize_tree();
+
 		abs_trees.push_back(abs_tree);
 		trees.push_back(abs_tree);
 	}
@@ -1067,13 +1149,13 @@ vector<Abs_Tree_Charac *> build_abs_trees(
 	for (int i = 0; i < clusters.size(); i++){
 
 		Conc_Tree * tree = clusters[i][0];
-		ofstream conc_file(folder + "_conc_comp_" + to_string(i) + ".dot", ofstream::out);
+		ofstream conc_file(folder + "\\conc_comp_" + to_string(i) + ".dot", ofstream::out);
 		tree->print_dot(conc_file,"cluster_conc",i);
 		
 		for (int j = 0; j < tree->conditionals.size(); j++){
 
 			Conc_Tree * cond_tree = tree->conditionals[j]->tree;
-			ofstream conc_file(folder + "_conc_cond_" + to_string(i) + "_" + to_string(j) + ".dot", ofstream::out);
+			ofstream conc_file(folder + "\\conc_cond_" + to_string(i) + "_" + to_string(j) + ".dot", ofstream::out);
 			cond_tree->print_dot(conc_file,"cluster_conc_cond",j);
 			
 		}
@@ -1127,9 +1209,43 @@ vector<Abs_Tree_Charac *> build_abs_trees(
 			if (indirect_node != NULL){
 				Abs_Node * abs_node = abs_tree->find_indirect_node((Abs_Node *)indirect_node);
 				charac->red_node = abs_node;
+				charac->gaps_in_rdom = false;
 			}
 			else{
-				ASSERT_MSG(false, ("build_abs_tree: not yet implemented\n"));
+				
+				Abs_Tree * first_tree = new Abs_Tree();
+				first_tree->build_abs_tree_unrolled(clusters[i][0], total_regions);
+				Abs_Tree * last_tree = new Abs_Tree();
+				last_tree->build_abs_tree_unrolled(clusters[i][clusters[i].size() - 1], total_regions);
+
+				Abs_Node * first_head = (Abs_Node *)first_tree->get_head();
+				Abs_Node * last_head = (Abs_Node *)last_tree->get_head();
+
+				for (int j = 0; j < first_head->mem_info.dimensions ; j++){
+					cout << first_head->mem_info.pos[j] << " " << last_head->mem_info.pos[j] << endl;
+				}
+
+				bool gap = false;
+				for (int j = 0; j < clusters[i].size() - 1; j++){
+					if (clusters[i][j + 1]->tree_num - clusters[i][j]->tree_num != 1){
+						gap = true; break;
+					}
+				}
+
+				if (!gap){ /* get the abs pos of the first and last trees */
+					DEBUG_PRINT(("no gaps\n"), 2);
+					for (int j = 0; j < first_head->mem_info.dimensions; j++){
+						charac->extents.push_back(make_pair(first_head->mem_info.pos[j], last_head->mem_info.pos[j]));
+					}
+					charac->gaps_in_rdom = false;
+				}
+				else{
+					charac->gaps_in_rdom = true;
+					ASSERT_MSG(false, ("build_abs_tree: not yet implemented\n"));
+				}
+
+
+				
 			}
 
 			cout << "red func built" << endl;
@@ -1149,10 +1265,41 @@ vector<Abs_Tree_Charac *> build_abs_trees(
 			tree_characs.push_back(charac);
 
 		}
-
-		
-	
 	}
+
+
+
+	/* now let's check for recursive trees whether there are opportunities with dummy trees - this is to avoid multi-image solving; in reality this part can be removed */
+	for (int i = 0; i < tree_characs.size(); i++){
+
+		Abs_Tree_Charac * charac = tree_characs[i];
+		if (charac->is_recursive && charac->red_node == NULL){
+
+			Abs_Node * node = (Abs_Node *)charac->tree->get_head();
+			uint32_t size = get_region_size(node->mem_info.associated_mem);
+
+			uint32_t rdom_size = 1;
+			for (int j = 0; j < charac->extents.size(); j++){
+				rdom_size *= charac->extents[j].second - charac->extents[j].first + 1;
+			}
+
+			if (size == rdom_size){
+
+				for (int j = 0; j < tree_characs.size(); j++){
+					Abs_Tree_Charac * now_charac = tree_characs[j];
+					Abs_Node * now_node = (Abs_Node *)now_charac->tree->get_head();
+					if (!now_charac->is_recursive && (now_node->mem_info.associated_mem == node->mem_info.associated_mem) && now_charac->tree->dummy_tree){
+						DEBUG_PRINT(("dummy tree red charac found\n"), 2);
+						charac->red_node = (Abs_Node *)now_node->srcs[0];
+						break;
+					}
+				}
+			}
+		}
+
+	}
+
+
 
 
 	return tree_characs;

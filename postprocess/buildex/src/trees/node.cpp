@@ -256,6 +256,7 @@ void Node::order_node()
 {
 	vector<pair<Node *, uint32_t> > other;
 	vector<pair<Node *, uint32_t> > heap;
+	vector<pair<Node *, uint32_t> > imm;
 
 	if (this->operation != op_mul && this->operation != op_add) return;
 
@@ -263,6 +264,9 @@ void Node::order_node()
 
 		if (this->srcs[i]->symbol->type == MEM_HEAP_TYPE){
 			heap.push_back(make_pair(this->srcs[i], i));
+		}
+		else if (this->srcs[i]->symbol->type == IMM_INT_TYPE){
+			imm.push_back(make_pair(this->srcs[i], i));
 		}
 		else{
 			other.push_back(make_pair(this->srcs[i], i));
@@ -272,18 +276,29 @@ void Node::order_node()
 
 	sort(heap.begin(), heap.end(), sort_function);
 
-	/*first rearrange the other elements*/
+	/* first imm */
+	for (int i = 0; i < imm.size(); i++){
+		this->srcs[i] = imm[i].first;
+		for (int j = 0; j < imm[i].first->prev.size(); j++){
+			if (imm[i].first->prev[j] == this && imm[i].first->pos[j] == imm[i].second){
+				imm[i].first->pos[j] = i;
+			}
+		}
+	}
+
+	/*next rearrange the other elements*/
+	uint32_t beg = imm.size();
 	for (int i = 0; i < other.size(); i++){
-		this->srcs[i] = other[i].first;
+		this->srcs[beg + i] = other[i].first;
 		for (int j = 0; j < other[i].first->prev.size(); j++){
 			if (other[i].first->prev[j] == this && other[i].first->pos[j] == other[i].second){
-				other[i].first->pos[j] = i;
+				other[i].first->pos[j] = beg + i;
 			}
 		}
 	}
 
 	/* now for the heap */
-	uint32_t beg = other.size();
+	beg = other.size() + imm.size();
 	for (int i = 0; i < heap.size(); i++){
 		this->srcs[beg + i] = heap[i].first;
 		for (int j = 0; j < heap[i].first->prev.size(); j++){

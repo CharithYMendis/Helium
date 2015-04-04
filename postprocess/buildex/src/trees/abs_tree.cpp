@@ -29,12 +29,14 @@ Node * abs_node_from_conc_node(void * head, void * node, void * peripheral_data)
 void Abs_Tree::build_abs_tree_unrolled(Conc_Tree * tree, std::vector<mem_regions_t *> &mem_regions)
 {
 	this->recursive = tree->recursive;
+	this->dummy_tree = tree->dummy_tree;
 	copy_unrolled_tree_structure(tree, &mem_regions, abs_node_from_conc_node);
 }
 
 void Abs_Tree::build_abs_tree_exact(Conc_Tree * tree, std::vector<mem_regions_t *> &mem_regions){
 
 	this->recursive = tree->recursive;
+	this->dummy_tree = tree->dummy_tree;
 	copy_exact_tree_structure(tree, &mem_regions, abs_node_from_conc_node);
 
 }

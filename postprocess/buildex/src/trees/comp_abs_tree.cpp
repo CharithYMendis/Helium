@@ -254,10 +254,14 @@ void abstract_buffer_indexes_traversal(Comp_Abs_Node * head, Comp_Abs_Node * nod
 		first->mem_info.head_dimensions = head->nodes[0]->mem_info.dimensions;
 
 		for (int i = 0; i < node->nodes.size(); i++){
-			b.push_back((double)node->nodes[i]->symbol->value);
+			b.push_back((long long)node->nodes[i]->symbol->value);
 		}
 
 		vector<double> results = solve_linear_eq(A, b);
+
+		cout << "imm results" << endl;
+		printout_vector(results);
+
 
 		for (int i = 0; i < results.size(); i++){
 			first->mem_info.indexes[0][i] = double_to_int(results[i]);

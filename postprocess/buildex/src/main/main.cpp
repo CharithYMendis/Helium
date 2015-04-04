@@ -352,6 +352,7 @@
 	 create_mem_layout(instrace_file, mem_info, version);
 	 create_mem_layout(instrace_file, pc_mem_info, version);
 
+
 	 for (int i = 0; i < mem_info.size(); i++){
 		 mem_info[i]->order = i;
 	 }
@@ -367,6 +368,9 @@
 	 
 	 vector<vector<mem_info_t *> > mergable = get_merge_opportunities(mem_info, pc_mem_info);
 	 merge_mem_regions_pc(mergable, mem_info);
+
+
+	 
 
 	 DEBUG_PRINT(("*******************end of mem info stage*********************\n"), 2);
 
@@ -443,8 +447,9 @@
 		 total_mem_regions[i]->dependant = false;
 	 }
 
-	 vector<mem_regions_t *> input_regions = get_input_regions(total_mem_regions, pc_mem_info, start_points_mem, instrs_forward);
-	 print_mem_regions(log_file, input_regions);
+	 vector<mem_regions_t *> input_regions;
+	 //input_regions = get_input_regions(total_mem_regions, pc_mem_info, start_points_mem, instrs_forward);
+	 //print_mem_regions(log_file, input_regions);
 
 	 input_mem_region = regions[0];
 	 output_mem_region = regions[1];
@@ -492,7 +497,7 @@
 
 	//app_pc = find_dependant_statements(instrs_forward, input_mem_region, static_info);
 /* some debug defines */
-//#define INPUT_ANALYSIS_SKIP
+#define INPUT_ANALYSIS_SKIP
 
 #ifndef INPUT_ANALYSIS_SKIP
 	app_pc_vec = find_dependant_statements_with_indirection(instrs_forward, input_regions, static_info, start_points_mem);
@@ -718,7 +723,7 @@
 
 
 	 if (clustered_trees.size() > 0){
-		 abs_trees = build_abs_trees(clustered_trees, output_folder, 4, total_mem_regions, 30, pc_mem_info);
+		 abs_trees = build_abs_trees(clustered_trees, output_folder, 5, total_mem_regions, 39, pc_mem_info);
 		 cout << "building abstract trees done" << endl;
 
 	 }

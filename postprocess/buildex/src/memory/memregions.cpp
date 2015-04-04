@@ -143,6 +143,17 @@ vector<uint64_t> get_nbd_of_random_points_2(vector<mem_regions_t *> image_region
 
 }
 
+
+uint32_t get_region_size(mem_regions_t * region){
+
+	uint32_t size = 1;
+	for (int i = 0; i < region->dimensions; i++){
+		size *= region->extents[i];
+	}
+	return size;
+
+}
+
 uint64_t get_random_mem_location(mem_regions_t *  region, uint32_t seed){
 
 	DEBUG_PRINT(("selecting a random output location now.....\n"), 2);
@@ -221,6 +232,7 @@ uint64_t get_mem_location(vector<int> base, vector<int> offset, mem_regions_t * 
 	}
 
 	*success = true;
+
 
 	uint64_t ret_addr = mem_region->start;
 	//uint64_t ret_addr = mem_region->end;
@@ -488,6 +500,14 @@ uint64_t get_farthest_mem_access_point(vector<mem_regions_t *> &regions){
 	}
 
 	return max_addr + 16;
+
+}
+
+
+uint32_t get_actual_size(mem_regions_t * region){
+
+	uint32_t dims = region->dimensions;
+	return region->extents[dims - 1] * region->strides[dims - 1];
 
 }
 

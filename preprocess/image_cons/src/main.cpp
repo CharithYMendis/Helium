@@ -80,7 +80,7 @@ int main(int argc, char **argv){
 
 	create_column_image(width, height, (image_folder + "\\column.png").c_str());
 	create_row_image(width, height, (image_folder + "\\row.png").c_str());
-	create_arith_image(width, height, (image_folder + "\\arith.png").c_str());
+	create_arith_image(width, height, (image_folder + "\\arith_" + to_string(width) + "_" + to_string(height) + ".png").c_str());
 	create_alternating_image(width, height, (image_folder + "\\alter.png").c_str());
 
 
