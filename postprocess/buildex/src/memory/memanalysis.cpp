@@ -16,9 +16,12 @@ using namespace std;
 
 mem_info_t * get_the_deepest_enclosing(mem_regions_t * region, mem_info_t * info){
 
+	uint64_t region_start = region->start > region->end ? region->end : region->start; 
+	uint64_t region_end = region->start > region->end ? region->start : region->end;
+	
 
 	mem_info_t * mem = NULL;
-	if (info->start <= region->start && info->end >= region->end){
+	if (info->start <= region_start && info->end >= region_end){
 		mem = info;
 	}
 
@@ -47,8 +50,24 @@ vector<mem_regions_t *> merge_instrace_and_dump_regions(vector<mem_regions_t *> 
 
 	/* mem regions are from dumps and check whether they overlap with instrace regions */
 	for (int i = 0; i < mem_regions.size(); i++){
+
+		uint64_t region_start = 0;
+		uint64_t region_end = 0;
+		if (mem_regions[i]->start > mem_regions[i]->end){
+			region_start = mem_regions[i]->end;
+			region_end = mem_regions[i]->start;
+			DEBUG_PRINT(("region start is greater than end\n"), 2);
+		}
+		else{
+			region_start = mem_regions[i]->start;
+			region_end = mem_regions[i]->end;
+			DEBUG_PRINT(("region start is lesser than end\n"), 2);
+		}
+
 		for (int j = 0; j < mem_info.size(); j++){
-			if (is_overlapped(mem_regions[i]->start, mem_regions[i]->end - 1, mem_info[j]->start, mem_info[j]->end - 1)){
+
+
+			if (is_overlapped(region_start, region_end - 1, mem_info[j]->start, mem_info[j]->end - 1)){
 
 				merged_mem_info[j] = true;
 				mem_regions[i]->direction = mem_info[j]->direction;
@@ -73,41 +92,50 @@ vector<mem_regions_t *> merge_instrace_and_dump_regions(vector<mem_regions_t *> 
 				if (info != NULL){
 					/* how much to the left of start is the meminfo spread? */
 					LOG(log_file, "found deepest enclosing: start " << info->start << " end " << info->end << endl);
-					uint64_t start = mem_regions[i]->start;
-					vector<uint32_t> left_spread;
-					for (int k = mem_regions[i]->dimensions - 1; k >= 0; k--){
-						uint32_t spread = (start - info->start) / mem_regions[i]->strides[k];
-						start = mem_regions[i]->start - spread * mem_regions[i]->strides[k];
-						left_spread.push_back(spread);
+					
+					if (mem_regions[i]->start < mem_regions[i]->end){
+						uint64_t start = mem_regions[i]->start;
+						vector<uint32_t> left_spread;
+						for (int k = mem_regions[i]->dimensions - 1; k >= 0; k--){
+							uint32_t spread = (start - info->start) / mem_regions[i]->strides[k];
+							start = mem_regions[i]->start - spread * mem_regions[i]->strides[k];
+							left_spread.push_back(spread);
+						}
+
+						/* printing out the spreads */
+						LOG(log_file, dec << "left spread: ");
+						for (int k = 0; k < left_spread.size(); k++){
+							LOG(log_file, left_spread[k] << ",");
+						}
+						LOG(log_file, endl);
+
+						/* how much to the right of the end of the meminfo are we spread? */
+						uint64_t end = mem_regions[i]->end;
+						vector<uint32_t> right_spread;
+						for (int k = mem_regions[i]->dimensions - 1; k >= 0; k--){
+							uint32_t spread = (info->end - end) / mem_regions[i]->strides[k];
+							end = mem_regions[i]->end + spread * mem_regions[i]->strides[k];
+							right_spread.push_back(spread);
+						}
+
+						/* printing out the spreads */
+						LOG(log_file, "right spread: ");
+						for (int k = 0; k < right_spread.size(); k++){
+							LOG(log_file, right_spread[k] << ",");
+						}
+						LOG(log_file, endl);
+
+						LOG(log_file, "--------------------------" << endl);
 					}
 
-					/* printing out the spreads */
-					LOG(log_file, dec << "left spread: ");
-					for (int k = 0; k < left_spread.size(); k++){
-						LOG(log_file, left_spread[k] << ",");
+					if (mem_regions[i]->start < mem_regions[i]->end){
+						mem_regions[i]->start = info->start;
+						mem_regions[i]->end = info->end;
 					}
-					LOG(log_file, endl);
-
-					/* how much to the right of the end of the meminfo are we spread? */
-					uint64_t end = mem_regions[i]->end;
-					vector<uint32_t> right_spread;
-					for (int k = mem_regions[i]->dimensions - 1; k >= 0; k--){
-						uint32_t spread = (info->end - end) / mem_regions[i]->strides[k];
-						end = mem_regions[i]->end + spread * mem_regions[i]->strides[k];
-						right_spread.push_back(spread);
+					else{
+						mem_regions[i]->start = info->end;
+						mem_regions[i]->end = info->start;
 					}
-
-					/* printing out the spreads */
-					LOG(log_file, "right spread: ");
-					for (int k = 0; k < right_spread.size(); k++){
-						LOG(log_file, right_spread[k] << ",");
-					}
-					LOG(log_file, endl);
-
-					LOG(log_file, "--------------------------" << endl);
-
-					mem_regions[i]->start = info->start;
-					mem_regions[i]->end = info->end;
 
 					LOG(log_file,"dims : " << get_number_dimensions(info) << endl);
 					LOG(log_file, "new start : " << mem_info[j]->start << endl);
@@ -142,10 +170,6 @@ vector<mem_regions_t *> merge_instrace_and_dump_regions(vector<mem_regions_t *> 
 					mem_regions[i]->order = mem_info[j]->order;
 					break;
 				}
-
-				
-
-
 
 			}
 		}

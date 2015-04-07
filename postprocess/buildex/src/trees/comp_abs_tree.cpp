@@ -242,7 +242,7 @@ void abstract_buffer_indexes_traversal(Comp_Abs_Node * head, Comp_Abs_Node * nod
 			coeff.push_back(1.0);
 			A.push_back(coeff);
 		}
-
+		cout << "imm" << endl;
 		cout << "A" << endl;
 		printout_matrices(A);
 
@@ -256,10 +256,14 @@ void abstract_buffer_indexes_traversal(Comp_Abs_Node * head, Comp_Abs_Node * nod
 		for (int i = 0; i < node->nodes.size(); i++){
 			b.push_back((long long)node->nodes[i]->symbol->value);
 		}
+		cout << "b" << endl;
+		printout_vector(b);
 
 		vector<double> results = solve_linear_eq(A, b);
 
+		
 		cout << "imm results" << endl;
+
 		printout_vector(results);
 
 

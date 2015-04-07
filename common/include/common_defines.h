@@ -10,6 +10,11 @@ extern bool debug;
 extern uint32_t debug_level;
 extern std::ofstream log_file;
 
+extern bool conctree_opt;
+extern bool abstree_opt;
+extern uint32_t fraction;
+extern bool debug_tree;
+
 #define ASSERT_MSG(x,s)	      \
 	if(!(x)){				  \
 		printf s;			  \

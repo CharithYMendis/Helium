@@ -751,6 +751,34 @@ void Tree::convert_sub_nodes(){
 }
 
 
+/* unsound transformations */
+void Tree::remove_po_nodes(){
+
+
+	traverse_tree(head, head, [](Node * node, void * value)-> void *{
+
+		if (node->operation == op_partial_overlap){
+			for (int i = 0; i < node->prev.size(); i++){
+				if (node->prev[i]->symbol->width == node->symbol->width){
+					for (int j = 0; j < node->srcs.size(); j++){
+						node->change_ref(node->prev[i],node->srcs[j]);
+					}
+				}
+			}
+		}
+
+		return NULL;
+		
+
+
+	}, empty_ret_mutator);
+
+
+
+
+
+}
+
 
 
 

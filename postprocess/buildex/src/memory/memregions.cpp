@@ -234,13 +234,18 @@ uint64_t get_mem_location(vector<int> base, vector<int> offset, mem_regions_t * 
 	*success = true;
 
 
-	uint64_t ret_addr = mem_region->start;
-	//uint64_t ret_addr = mem_region->end;
-	
-
-	for (int i = 0; i < base.size(); i++){
-		ret_addr += mem_region->strides[i] * base[i];
-		//ret_addr -= mem_region->strides[i] * base[i];
+	uint64_t ret_addr;
+	if (mem_region->start < mem_region->end){
+		ret_addr = mem_region->start;
+		for (int i = 0; i < base.size(); i++){
+			ret_addr += mem_region->strides[i] * base[i];
+		}
+	}
+	else{
+		ret_addr = mem_region->start;
+		for (int i = 0; i < base.size(); i++){
+			ret_addr -= mem_region->strides[i] * base[i];
+		}
 	}
 
 	return ret_addr;
@@ -256,7 +261,15 @@ vector<int> get_mem_position(mem_regions_t * mem_region, uint64_t mem_value){
 	/* dimensions would always be width dir(x), height dir(y) */
 
 	/*get the row */
-	uint64_t offset = mem_value - mem_region->start;
+
+	uint64_t offset;
+
+	if (mem_region->start < mem_region->end){
+		offset = mem_value - mem_region->start;
+	}
+	else{
+		offset = mem_region->start - mem_value;
+	}
 	//uint64_t offset = mem_region->end - mem_value;
 
 	//cout << "mem position: " << dec << offset << " start " << mem_region->start << " end " << mem_region->end << " value " << mem_value << endl;
@@ -279,8 +292,15 @@ vector<int> get_mem_position(mem_regions_t * mem_region, uint64_t mem_value){
 mem_regions_t * get_mem_region(uint64_t value, vector<mem_regions_t *> &mem_regions){
 
 	for (int i = 0; i < mem_regions.size(); i++){
-		if ((mem_regions[i]->start <= value) && (mem_regions[i]->end >= value)){
-			return mem_regions[i];
+		if (mem_regions[i]->start < mem_regions[i]->end){
+			if ((mem_regions[i]->start <= value) && (mem_regions[i]->end >= value)){
+				return mem_regions[i];
+			}
+		}
+		else{
+			if ((mem_regions[i]->start >= value) && (mem_regions[i]->end <= value)){
+				return mem_regions[i];
+			}
 		}
 	}
 
@@ -290,8 +310,12 @@ mem_regions_t * get_mem_region(uint64_t value, vector<mem_regions_t *> &mem_regi
 
 bool is_within_mem_region(mem_regions_t* mem, uint64_t value){
 
-	return (value >= mem->start) && (value <= mem->end);
-
+	if (mem->start < mem->end){
+		return (value >= mem->start) && (value <= mem->end);
+	}
+	else{
+		return (value >= mem->end) && (value <= mem->start);
+	}
 }
 
 /* printing functions - debug */
@@ -494,8 +518,11 @@ uint64_t get_farthest_mem_access_point(vector<mem_regions_t *> &regions){
 	uint64_t max_addr = 0;
 
 	for (int i = 0; i < regions.size(); i++){
-		if (max_addr < regions[i]->end){
+		if (regions[i]->start < regions[i]->end && max_addr < regions[i]->end){
 			max_addr = regions[i]->end;
+		}
+		else if (regions[i]->start > regions[i]->end && max_addr < regions[i]->start){
+			max_addr = regions[i]->start;
 		}
 	}
 

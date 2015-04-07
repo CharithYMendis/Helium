@@ -80,6 +80,7 @@ void * empty_ret_mutator(void * value, vector<void *> values, void * ori_value);
 	 void convert_sub_nodes();
 	 void simplify_minus();
 	 void verify_minus();
+	 void remove_po_nodes();
  };
 
 

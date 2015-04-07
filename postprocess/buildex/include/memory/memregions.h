@@ -56,13 +56,15 @@ struct mem_regions_t {
 	std::vector<uint32_t > pcs;
 
 	uint32_t order;
-
+	
 	mem_regions_t(){
 		type = 0;
 		direction = 0;
 		dump_type = 0;
 		dependant = false;
 	}
+
+
 
 };
 

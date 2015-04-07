@@ -43,6 +43,14 @@
  ofstream log_file;
 
  uint32_t Tree::num_paras = 0;
+
+
+ bool conctree_opt = true;
+ bool abstree_opt = false;
+ bool debug_tree = false;
+ uint32_t fraction = 1;
+
+
  
  void print_usage(){
 	 printf("usage - format -<name> <value>\n");
@@ -68,6 +76,18 @@
 	 printf("\t dump - whether the application memory dump should be used\n");
 	 printf("\t start_pcs - a comma separated list of start of captured functions\n");
 	 printf("\t end_pcs - a comma separated list of end of captured functions\n");
+
+	 /*auxiliary variables*/
+	 printf("\t version - version of the instrace - with and without addr calc information\n");
+	 printf("\t skip - take the nth tree for abstraction\n");
+	 printf("\t no_trees - number of trees to be included in the abstraction process\n");
+
+	 printf("\t anaopt - analysis options\n");
+	 printf("\t fraction - fraction of the trees to be built\n");
+	 printf("\t abstree_opt - turn on abstract tree optimizations\n");
+	 printf("\t conctree_opt - turn on conc tree optimizations\n");
+	 printf("\t debug_tree - whether printing all the trees are enabled\n");
+
  }
 
  /* tree build modes */
@@ -83,6 +103,12 @@
 #define TREE_BUILD_STAGE		3
 #define ABSTRACTION_STAGE		4
 #define HALIDE_OUTPUT_STAGE		5
+
+ /* analysis switch on off */
+#define DEPENDANT_ANALYSIS		(1<<1)
+#define CONDITIONAL_ANALYSIS	(1<<2)
+#define	INPUT_REGION_SELECTION	(1<<3)
+#define ALL_ANALYSIS			(0xFF)
 
 
 
@@ -115,6 +141,11 @@
 
 	 vector<uint32_t> start_pcs;
 	 vector<uint32_t> end_pcs;
+
+	 uint32_t skip = 4;
+	 uint32_t no_trees = 30;
+
+	 uint32_t anaopt = ALL_ANALYSIS;
 
 
 	 /***************************** command line args processing ************************/
@@ -187,6 +218,29 @@
 		 else if (args[i]->name.compare("-version") == 0){
 			 version = atoi(args[i]->value.c_str());
 		 }
+		 else if (args[i]->name.compare("-anaopt") == 0){
+			 anaopt = atoi(args[i]->value.c_str());
+		 }
+		 else if (args[i]->name.compare("-skip") == 0){
+			 skip = atoi(args[i]->value.c_str());
+		 }
+		 else if (args[i]->name.compare("-no_trees") == 0){
+			 no_trees = atoi(args[i]->value.c_str());
+		 }
+
+		 else if (args[i]->name.compare("-abstree_opt") == 0){
+			 abstree_opt = atoi(args[i]->value.c_str());
+		 }
+		 else if (args[i]->name.compare("-conctree_opt") == 0){
+			 conctree_opt = atoi(args[i]->value.c_str());
+		 }
+		 else if (args[i]->name.compare("-fraction") == 0){
+			 fraction = atoi(args[i]->value.c_str());
+		 }
+		 else if (args[i]->name.compare("-debug_tree") == 0){
+			 debug_tree = atoi(args[i]->value.c_str());
+		 }
+		 
 		 else{
 			 ASSERT_MSG(false, ("ERROR: unknown option\n"));
 		 }
@@ -447,13 +501,18 @@
 		 total_mem_regions[i]->dependant = false;
 	 }
 
-	 vector<mem_regions_t *> input_regions;
-	 //input_regions = get_input_regions(total_mem_regions, pc_mem_info, start_points_mem, instrs_forward);
-	 //print_mem_regions(log_file, input_regions);
-
 	 input_mem_region = regions[0];
 	 output_mem_region = regions[1];
 
+	 vector<mem_regions_t *> input_regions;
+	 if ( (anaopt & INPUT_REGION_SELECTION) == INPUT_REGION_SELECTION){
+		 input_regions = get_input_regions(total_mem_regions, pc_mem_info, start_points_mem, instrs_forward);
+		 print_mem_regions(log_file, input_regions);
+	 }
+	 else{
+		 input_regions.push_back(input_mem_region);
+	 }
+	 
 	 image_regions.clear();
 	 image_regions.push_back(output_mem_region); /* we do not need to check whether this region is there; can be a duplicate, this is for random tree building */
 
@@ -482,29 +541,22 @@
 	filter_disasm_vector(instrs_forward, static_info);
 	DEBUG_PRINT(("after filter static ins : %d\n", static_info.size()), 2);
 
-	vector<mem_regions_t *> inputs;
+	/*vector<mem_regions_t *> inputs;
 	for (int i = 0; i < total_mem_regions.size(); i++){
 		if ((total_mem_regions[i]->direction & MEM_INPUT) == MEM_INPUT){
 			inputs.push_back(total_mem_regions[i]);
 		}
 	}
-	/*inputs.push_back(input_mem_region);
-	for (int i = 0; i < total_mem_regions.size(); i++){
-		if (total_mem_regions[i]->start == 144560352){
-			inputs.push_back(total_mem_regions[i]);
-		}
-	}*/
-
-	//app_pc = find_dependant_statements(instrs_forward, input_mem_region, static_info);
-/* some debug defines */
-#define INPUT_ANALYSIS_SKIP
-
-#ifndef INPUT_ANALYSIS_SKIP
-	app_pc_vec = find_dependant_statements_with_indirection(instrs_forward, input_regions, static_info, start_points_mem);
-#else
-	app_pc_vec.push_back(app_pc);
-	app_pc_vec.push_back(app_pc);
-#endif
+	app_pc = find_dependant_statements(instrs_forward, input_mem_region, static_info);
+	*/
+	
+	if ((anaopt & DEPENDANT_ANALYSIS) == DEPENDANT_ANALYSIS){
+		app_pc_vec = find_dependant_statements_with_indirection(instrs_forward, input_regions, static_info, start_points_mem);
+	}
+	else{
+		app_pc_vec.push_back(app_pc);
+		app_pc_vec.push_back(app_pc);
+	}
 
 	app_pc = app_pc_vec[0];
 	app_pc_total = app_pc_vec[1];
@@ -534,8 +586,9 @@
 
 
 	
-
-	cond_app_pc = find_dependant_conditionals(app_pc_total, instrs_forward, static_info);
+	if ((anaopt & CONDITIONAL_ANALYSIS) == CONDITIONAL_ANALYSIS){
+		cond_app_pc = find_dependant_conditionals(app_pc_total, instrs_forward, static_info);
+	}
 
 	LOG(log_file, "dependant conditionals" << endl);
 	for (int i = 0; i < cond_app_pc.size(); i++){
@@ -602,7 +655,6 @@
 		 if (start_trace == FILE_BEGINNING){
 			 mem_regions_t * random_mem_region = get_random_output_region(image_regions);
 			 uint64 mem_location = get_random_mem_location(random_mem_region, seed);
-			 //mem_location = 234813344;
 			 DEBUG_PRINT(("random mem location we got - %llx\n", mem_location), 1);
 			 dest = mem_location;
 			 stride = random_mem_region->bytes_per_pixel;
@@ -634,7 +686,6 @@
 		 uint64_t farthest = get_farthest_mem_access_point(total_mem_regions);
 		 /*ok we need find a set of random locations */
 		 vector<uint64_t> nbd_locations = get_nbd_of_random_points(image_regions, seed, &stride);
-		 //exit(0);
 
 		 /* ok now build trees for the set of locations */
 		 for (int i = 0; i < nbd_locations.size(); i++){
@@ -643,8 +694,6 @@
 			 Conc_Tree * initial = build_conc_tree(nbd_locations[i], stride, start_points, FILE_BEGINNING, end_trace, tree, instrs_backward, farthest, total_mem_regions);
 			 build_conc_trees_for_conditionals(start_points, tree, instrs_backward,farthest, total_mem_regions);
 
-			 //identify_parameters(tree->get_head(), pc_mem_info);
-			 //exit(0);
 			 conc_trees.push_back(tree);
 			 if (initial != NULL){
 				 build_conc_trees_for_conditionals(start_points, initial, instrs_backward, farthest, total_mem_regions);
@@ -723,9 +772,8 @@
 
 
 	 if (clustered_trees.size() > 0){
-		 abs_trees = build_abs_trees(clustered_trees, output_folder, 5, total_mem_regions, 39, pc_mem_info);
+		 abs_trees = build_abs_trees(clustered_trees, output_folder, 4, total_mem_regions, 30, pc_mem_info);
 		 cout << "building abstract trees done" << endl;
-
 	 }
 
 
@@ -790,6 +838,7 @@
 
 	 vector<string> red_variables;
 	 halide->print_halide_program(halide_file, red_variables);
+	 halide->get_memory_regions(memdump_files);
 
 	 shutdown_image_subsystem(token);
 	 return 0;

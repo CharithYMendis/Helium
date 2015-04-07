@@ -409,16 +409,19 @@ string Halide_Program::print_full_overlap_node(Abs_Node * node, Node * head, vec
 		return ret;
 	}
 
-	if (overlap_end == node_end){
-		ret += " ( ";
-		ret += print_abs_tree(overlap, head, vars);
-		ret += " ) & " + to_string(node->symbol->width * 8);
-	}
-	else{
+	uint32_t mask = uint32_t(~0) >> (32 - node->symbol->width * 8);
+
+	
+	if(node->symbol->type == REG_TYPE && overlap->symbol->type == REG_TYPE && overlap_end != node_end){
 		ret += " ( ( ";
 		ret += print_abs_tree(overlap,head, vars);
 		ret += " >> " + to_string((overlap_end - node_end) * 8) + " ) ";
-		ret += " ) & " + to_string((node->symbol->width * 8));
+		ret += " ) & " + to_string(mask);
+	}
+	else{
+		ret += " ( ";
+		ret += print_abs_tree(overlap, head, vars);
+		ret += " ) & " + to_string(mask);
 	}
 
 	return ret;
@@ -429,7 +432,7 @@ string Halide_Program::print_partial_overlap_node(Abs_Node * node, Node * head, 
 
 	string ret = "";
 
-	for (int i = 0; i < node->srcs.size(); i++)
+	/*for (int i = 0; i < node->srcs.size(); i++)
 	{
 		Abs_Node * overlap = static_cast<Abs_Node *>(node->srcs[i]);
 
@@ -445,7 +448,7 @@ string Halide_Program::print_partial_overlap_node(Abs_Node * node, Node * head, 
 		if (i != node->srcs.size() - 1){
 			ret+= " | ";
 		}
-	}
+	}*/
 	return ret;
 }
 
@@ -548,14 +551,17 @@ string print_select_statement(Halide_Program::Select_Expr * current_expr,Halide_
 }
 
 Abs_Node * get_indirect_node(Abs_Node * node){
-	Abs_Node * base = (Abs_Node *)node->srcs[0]->srcs[0];
+	
+	return (Abs_Node *)node->srcs[0];
+	
+	/*Abs_Node * base = (Abs_Node *)node->srcs[0]->srcs[0];
 	Abs_Node * index = (Abs_Node *)node->srcs[0]->srcs[1];
 	if (base->type == Abs_Node::OPERATION_ONLY){
 		return index;
 	}
 	else{
 		return base;
-	}
+	}*/
 
 }
 
@@ -628,7 +634,7 @@ string Halide_Program::print_predicated_tree(vector<Abs_Tree *> trees, string ex
 
 	Abs_Node * head_node = static_cast<Abs_Node *>(trees[0]->get_head());
 
-	uint32_t clamp_max = (uint32_t(~0)) >> (32 - head_node->symbol->width * 8);
+	uint32_t clamp_max = min((uint32_t(~0)) >> (32 - head_node->symbol->width * 8),(uint32_t)65535);
 	uint32_t clamp_min = 0;
 
 	/* BUG - what to do with the sign?? */
@@ -876,7 +882,27 @@ std::string Halide_Program::print_conditional_trees(std::vector< std::pair<Abs_T
 /*     Reduction domain abstraction                                     */
 /************************************************************************/
 
-/* vector<mem_dump_regions_t *> Halide_Program::get_memory_regions(vector<string> memdump_files){
+
+void print_dump_to_file(ofstream &file, mem_dump_regions_t * region){
+
+	file << "uint8_t " << region->name << "[] = {";
+
+	for (int i = 0; i < region->size; i++){
+
+		file << to_string((uint8_t)region->values[i]);
+
+		if (i != region->size - 1){
+			file << ",";
+		}
+
+
+	}
+
+	file << "};" << endl;
+
+}
+
+vector<mem_dump_regions_t *> Halide_Program::get_memory_regions(vector<string> memdump_files){
 
 	struct mem_dump_t{
 		char * buffer;
@@ -924,13 +950,15 @@ std::string Halide_Program::print_conditional_trees(std::vector< std::pair<Abs_T
 		uint64_t start = head->mem_info.associated_mem->start;
 		uint64_t end = head->mem_info.associated_mem->end;
 
-		for (int j = 0; j < dump.size(); j++){
-			if (dump[i]->write){
-				if (start >= dump[i]->start && end <= dump[i]->end){
+		for(int j=0; j< dump.size(); j++){
+			if (dump[j]->write){
+				if (start >= dump[j]->start && end <= dump[j]->end){
 					mem_dump_regions_t * dump_region = new mem_dump_regions_t;
 					dump_region->name = head->mem_info.associated_mem->name;
-					dump_region->values = &dump[i]->buffer[start - dump[i]->start];
+					dump_region->values = &dump[j]->buffer[start - dump[j]->start];
 					dump_region->size = get_actual_size(head->mem_info.associated_mem);
+					dumps.push_back(dump_region);
+					break;
 				}
 			}
 		}
@@ -942,22 +970,61 @@ std::string Halide_Program::print_conditional_trees(std::vector< std::pair<Abs_T
 		uint64_t start = inputs[i]->mem_info.associated_mem->start;
 		uint64_t end = inputs[i]->mem_info.associated_mem->end;
 
-		for (int j = 0; j < dump.size(); j++){
-			if (!dump[i]->write){
-				if (start >= dump[i]->start && end <= dump[i]->end){
+		for(int j=0; j< dump.size(); j++){
+			if (!dump[j]->write){
+				if (start >= dump[j]->start && end <= dump[j]->end){
 					mem_dump_regions_t * dump_region = new mem_dump_regions_t;
 					dump_region->name = inputs[i]->mem_info.associated_mem->name;
-					dump_region->values = &dump[i]->buffer[start - dump[i]->start];
-					dump_region->size = get_actual_size(head->mem_info.associated_mem);
+					dump_region->values = &dump[j]->buffer[start - dump[j]->start];
+					dump_region->size = get_actual_size(inputs[i]->mem_info.associated_mem);
+					dumps.push_back(dump_region);
+					break;
 				}
 			}
 		}
-
-
 	}
 
 
-} */
+	//for all dummy inputs
+	for (int i = 0; i < funcs.size(); i++){
+		if (funcs[i]->reduction_trees.size() > 0){
+
+			for (int j = 0; j < funcs[i]->pure_trees.size(); j++){
+				if (funcs[i]->pure_trees[j]->dummy_tree){
+
+					Abs_Node * head = (Abs_Node *)funcs[i]->pure_trees[j]->get_head();
+					uint64_t start = head->mem_info.associated_mem->start;
+					uint64_t end = head->mem_info.associated_mem->end;
+
+					for (int k = 0; k < dump.size(); k++){
+						if (!dump[k]->write){
+							if (start >= dump[k]->start && end <= dump[k]->end){
+								mem_dump_regions_t * dump_region = new mem_dump_regions_t;
+								dump_region->name = head->mem_info.associated_mem->name + "_in";
+								dump_region->values = &dump[k]->buffer[start - dump[k]->start];
+								dump_region->size = get_actual_size(head->mem_info.associated_mem);
+								dumps.push_back(dump_region);
+								break;
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	ofstream file(get_standard_folder("output") + "\\dump.h");
+	for (int i = 0; i < dumps.size(); i++){
+		print_dump_to_file(file, dumps[i]); 
+	}
+
+	return dumps;
+
+}
+
+
+
+
 
 
 

@@ -382,7 +382,7 @@ bool Conc_Tree::update_depandancy_backward(rinstr_t * instr, cinstr_t * cinstr, 
 
 //#define INTERMEDIATE_BUFFER_ANALYSIS
 #define INDIRECTION
-#define ASSIGN_OPT
+//#define ASSIGN_OPT
 //#define SIMPLIFICATIONS
 
 

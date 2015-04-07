@@ -38,6 +38,11 @@ Abs_Node::Abs_Node(Conc_Node * head, Conc_Node * conc_node, vector<mem_regions_t
 		}
 	}
 
+	int32_t pos = head->is_node_indirect();
+	if (pos != -1){
+		head = (Conc_Node *)head->srcs[pos]->srcs[0];
+	}
+
 	/* mem buffers in the head or in the leaves with at most an indirection */
 	if (mem != NULL && filter){
 

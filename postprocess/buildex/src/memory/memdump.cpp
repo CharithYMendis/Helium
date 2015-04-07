@@ -162,10 +162,6 @@ mem_regions_t * locate_image_CN2_backward_write(char * values, uint32_t size, ui
 
 		}
 
-		if (success){
-			cout << "got it" << endl;
-		}
-
 
 		if (success){ /* verify the region actually has the image */
 			vector<uint32_t> start_points;
@@ -205,7 +201,6 @@ mem_regions_t * locate_image_CN2_backward_write(char * values, uint32_t size, ui
 			/* if we covered the entire image */
 			if (last == image->width * (image->height - 2 * bound) ){
 
-				cout << "here" << endl;
 				/* check whether the gaps are uniform */
 				vector<uint32_t> gaps;
 				for (int j = 0; j < start_points.size() - 1; j++){

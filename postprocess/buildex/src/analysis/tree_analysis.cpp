@@ -343,53 +343,62 @@ Conc_Tree * build_conc_tree(uint64_t destination,
 			initial_tree->dummy_tree = true;
 		}
 
-		initial_tree->number_parameters(regions);
-		initial_tree->remove_assign_nodes();
-		initial_tree->canonicalize_tree();
-
+		if (conctree_opt){
+			initial_tree->remove_assign_nodes();
+			initial_tree->remove_multiplication();
+			initial_tree->remove_po_nodes();
+			initial_tree->canonicalize_tree();
+			initial_tree->simplify_immediates();
+			initial_tree->number_parameters(regions);
+		}
 	}
 	
-	tree->remove_assign_nodes();
-	tree->remove_multiplication();
-	tree->canonicalize_tree();
-	tree->simplify_immediates();
-	tree->number_parameters(regions);
-
-
-
-//#define DEBUG_TREE_PRINT
-
-#ifdef DEBUG_TREE_PRINT
-
-	DEBUG_PRINT(("--------debug tree printing-----------\n"), 2);
-
-	ofstream file(get_standard_folder("output") + "\\tree_" + to_string(destination) + ".dot");
-	tree->number_tree_nodes();
-	tree->print_dot(file, "tree", 0);
-	tree->num_nodes = 0;
-	DEBUG_PRINT(("number of conditionals : %d\n", tree->conditionals.size()), 2);
-
-	Abs_Tree * abs_tree = new Abs_Tree();
-	abs_tree->build_abs_tree_unrolled(tree, regions);
-	abs_tree->verify_minus();
-	abs_tree->convert_sub_nodes();
-	abs_tree->canonicalize_tree();
-	abs_tree->simplify_minus();
-
-	ofstream abs_file(get_standard_folder("output") + "\\abs_tree_" + to_string(destination) + ".dot");
-	abs_tree->number_tree_nodes();
-	abs_tree->print_dot(abs_file, "abs_tree", 0);
-	abs_tree->num_nodes = 0;
-
-	if (initial_tree != NULL){
-		DEBUG_PRINT(("initial_tree built\n"), 2);
-		ofstream initial_file(get_standard_folder("output") + "\\tree_" + to_string(destination) + "_initial.dot");
-		initial_tree->number_tree_nodes();
-		initial_tree->print_dot(initial_file, "initial_tree", 0);
-		DEBUG_PRINT(("number of conditionals : %d\n", initial_tree->conditionals.size()), 2);
+	if (conctree_opt){
+		tree->remove_assign_nodes();
+		tree->remove_multiplication();
+		tree->remove_po_nodes();
+		tree->canonicalize_tree();
+		tree->simplify_immediates();
+		tree->number_parameters(regions);
 	}
-	
-#endif
+
+
+	if (debug_tree){
+
+		DEBUG_PRINT(("--------debug tree printing-----------\n"), 2);
+
+		ofstream file(get_standard_folder("output") + "\\tree_" + to_string(destination) + ".dot");
+		tree->number_tree_nodes();
+		tree->print_dot(file, "tree", 0);
+		tree->num_nodes = 0;
+		DEBUG_PRINT(("number of conditionals : %d\n", tree->conditionals.size()), 2);
+
+		Abs_Tree * abs_tree = new Abs_Tree();
+		abs_tree->build_abs_tree_unrolled(tree, regions);
+
+		if (abstree_opt){
+			abs_tree->verify_minus();
+			abs_tree->convert_sub_nodes();
+			abs_tree->canonicalize_tree();
+			abs_tree->simplify_minus();
+			abs_tree->remove_redundant_nodes();
+			abs_tree->canonicalize_tree();
+		}
+
+		ofstream abs_file(get_standard_folder("output") + "\\abs_tree_" + to_string(destination) + ".dot");
+		abs_tree->number_tree_nodes();
+		abs_tree->print_dot(abs_file, "abs_tree", 0);
+		abs_tree->num_nodes = 0;
+
+		if (initial_tree != NULL){
+			DEBUG_PRINT(("initial_tree built\n"), 2);
+			ofstream initial_file(get_standard_folder("output") + "\\tree_" + to_string(destination) + "_initial.dot");
+			initial_tree->number_tree_nodes();
+			initial_tree->print_dot(initial_file, "initial_tree", 0);
+			DEBUG_PRINT(("number of conditionals : %d\n", initial_tree->conditionals.size()), 2);
+		}
+
+	}
 
 	DEBUG_PRINT(("build_tree_multi_func(concrete) - done\n"), 2);
 
@@ -956,7 +965,19 @@ std::vector< std::vector <Conc_Tree *> > cluster_trees
 	bool success = true;
 
 	//for (int i = indexes.size() - 1; i >= 0; i--){
-	for (int i = 0; i < indexes.size()/8; i++){
+	//for (int i = 0; i < indexes.size()/8; i++){
+
+	int i;
+	if (mem->start > mem->end){
+		i = indexes.size() - 1;
+	}
+	else{
+		i = 0;
+	}
+	bool done = false;
+	uint32_t count = 0;
+
+	while (!done){
 
 		uint64_t location = get_mem_location(indexes[i], offset, mem, &success);
 		ASSERT_MSG(success, ("ERROR: getting mem location error\n"));
@@ -976,6 +997,16 @@ std::vector< std::vector <Conc_Tree *> > cluster_trees
 			build_conc_trees_for_conditionals(start_points, initial_tree, instrs, farthest, total_regions);
 			trees.push_back(initial_tree);
 		}
+
+		count++;
+		if (mem->start > mem->end){
+			i--;
+		}
+		else{
+			i++;
+		}
+
+		if (count == indexes.size()/fraction) done = true;
 	}
 
 	/*BUG - incrementing by +1 is not general; should increment by the stride */
@@ -1048,6 +1079,66 @@ vector< vector<Conc_Tree *> >  categorize_trees(vector<Conc_Tree * > trees){
 /*  Building Abs_Trees                                                  */
 /************************************************************************/
 
+
+vector<Tree *> get_linearly_independant_trees(vector<Conc_Tree *> cluster, vector<mem_regions_t *> regions){
+
+	vector<Tree *> ret;
+	mem_regions_t * region = get_mem_region(cluster[0]->get_head()->symbol->value, regions);
+	vector<int32_t> pos;
+
+	for (int i = 0; i < cluster.size(); i++){
+		pos = get_mem_position(get_mem_region(cluster[i]->get_head()->symbol->value, regions), cluster[i]->get_head()->symbol->value);
+		if (pos[0] != 0 && pos[0] != -1){
+			ret.push_back(cluster[i]); break;
+		}
+		
+	}
+	
+
+	vector<vector<int32_t> > all_pos;
+	all_pos.push_back(pos);
+	//pos[0] = 0;
+
+	vector<int32_t> next = pos;
+
+	for (int i = 0; i < pos.size(); i++){
+
+		uint32_t extents = region->extents[i];
+		vector<int32_t> now_regions = next;
+
+		for (int j = now_regions[i] + 1; j < extents; j++){
+
+			bool done = false;
+			now_regions[i]++;
+			for (int k = 0; k < cluster.size(); k++){
+				vector<int32_t> now = get_mem_position(region, cluster[k]->get_head()->symbol->value);
+				if (now_regions == now){
+					ret.push_back(cluster[k]); done = true;
+					all_pos.push_back(now_regions);
+					if (ret.size() % 2 == 0) next = now_regions;
+					break;
+				}
+			}
+			if (done) break;
+		}
+
+		if (ret.size() % 2 == 0) i--;
+
+	}
+	ASSERT_MSG(ret.size() > region->dimensions, ("ERROR: not enought equations\n"));
+
+	DEBUG_PRINT((" positions of abs trees in equations \n"), 2);
+	for (int i = 0; i < all_pos.size(); i++){
+		vector<int32_t> temp = all_pos[i];
+		for (int j = 0; j < temp.size(); j++){
+			DEBUG_PRINT(("%d,", temp[j]), 2);
+		}
+		DEBUG_PRINT(("\n"), 2);
+	}
+
+	return ret;
+}
+
 Abs_Tree* abstract_the_trees(vector<Conc_Tree *> cluster, uint32_t no_trees, uint32_t skip,
 	vector<mem_regions_t *> &total_regions, vector<pc_mem_region_t *> &pc_mem){
 
@@ -1055,22 +1146,47 @@ Abs_Tree* abstract_the_trees(vector<Conc_Tree *> cluster, uint32_t no_trees, uin
 	vector<Abs_Tree *> abs_trees;
 	vector<Tree *> trees;
 
-	for (int j = 0; j < skip * no_trees; j+= skip){
+
+	vector<Tree *> ind_trees = get_linearly_independant_trees(cluster, total_regions);
+
+	/* for (int j = 0; j < skip * no_trees; j+= skip){
 		Abs_Tree  * abs_tree = new Abs_Tree();
-		/* parameter identification here -> please check */
 		//identify_parameters(cluster[j]->head, pc_mem);
 		abs_tree->build_abs_tree_unrolled(cluster[j], total_regions);
 
-		abs_tree->verify_minus();
-		abs_tree->convert_sub_nodes();
-		abs_tree->canonicalize_tree();
-		abs_tree->simplify_minus();
-		abs_tree->remove_redundant_nodes();
-		abs_tree->canonicalize_tree();
+		if (abstree_opt){
+			abs_tree->verify_minus();
+			abs_tree->convert_sub_nodes();
+			abs_tree->canonicalize_tree();
+			abs_tree->simplify_minus();
+			abs_tree->remove_redundant_nodes();
+			abs_tree->canonicalize_tree(); 
+		}
+
+		abs_trees.push_back(abs_tree);
+		trees.push_back(abs_tree);
+	} */
+
+	
+	for (int j = 0; j < ind_trees.size(); j++){
+		Abs_Tree  * abs_tree = new Abs_Tree();
+		//identify_parameters(cluster[j]->head, pc_mem);
+		abs_tree->build_abs_tree_unrolled((Conc_Tree *)ind_trees[j], total_regions);
+
+		if (abstree_opt){
+			abs_tree->verify_minus();
+			abs_tree->convert_sub_nodes();
+			abs_tree->canonicalize_tree();
+			abs_tree->simplify_minus();
+			abs_tree->remove_redundant_nodes();
+			abs_tree->canonicalize_tree();
+		}
 
 		abs_trees.push_back(abs_tree);
 		trees.push_back(abs_tree);
 	}
+
+	
 
 	bool similar = Tree::are_trees_similar(trees);
 	if (similar){

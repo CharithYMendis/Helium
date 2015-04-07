@@ -102,6 +102,7 @@ public:
 	/* Main halide program printing function */
 	void print_halide_program(std::ostream &file, std::vector<std::string> red_variables);
 
+	std::vector<mem_dump_regions_t *> get_memory_regions(std::vector<std::string> memdump_files);
 
 private:
 
@@ -132,7 +133,6 @@ private:
 
 	/* very crude change*/
 	std::string get_indirect_string(Abs_Node * node, Abs_Node * head, std::vector<std::string> vars);
-	std::vector<mem_dump_regions_t *> get_memory_regions(std::vector<std::string> memdump_files);
 
 
 };
