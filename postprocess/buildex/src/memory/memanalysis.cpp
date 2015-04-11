@@ -83,7 +83,7 @@ vector<mem_regions_t *> merge_instrace_and_dump_regions(vector<mem_regions_t *> 
 					for (int k = 0; k < mem_regions[i]->dimensions; k++) LOG(log_file, mem_regions[i]->extents[k] << ",");
 					LOG(log_file,endl);
 					LOG(log_file,"mem instrace:" << endl);
-					LOG(log_file,"start : " << hex << mem_info[j]->start << " end : " << mem_info[j]->end << endl);
+					LOG(log_file,"start : " << hex << mem_info[j]->start << " end : " << mem_info[j]->end << dec << endl);
 
 				}
 

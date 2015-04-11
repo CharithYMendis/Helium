@@ -35,10 +35,28 @@ vector< vector<uint32_t> > find_dependant_statements_with_indirection(vec_cinstr
 		DEBUG_PRINT(("start - %d  end - %d\n", start, end), 2);
 
 		for (int j = 0; j < mem.size(); j++){
-			for (uint64_t i = mem[j]->start; i < mem[j]->end; i += mem[j]->bytes_per_pixel){
-				operand_t opnd = { MEM_HEAP_TYPE, mem[j]->bytes_per_pixel, i };
-				direct_tree->add_to_frontier(direct_tree->generate_hash(&opnd), new Conc_Node(&opnd));
-				indirect_tree->add_to_frontier(indirect_tree->generate_hash(&opnd), new Conc_Node(&opnd));
+
+			if (mem[j]->start < mem[j]->end){
+				for (uint64_t i = mem[j]->start; i < mem[j]->end; i += mem[j]->bytes_per_pixel){
+					operand_t opnd = { MEM_HEAP_TYPE, mem[j]->bytes_per_pixel, i };
+					if (direct_tree->search_node(&opnd) == NULL){
+						direct_tree->add_to_frontier(direct_tree->generate_hash(&opnd), new Conc_Node(&opnd));
+					}
+					if (indirect_tree->search_node(&opnd) == NULL){
+						indirect_tree->add_to_frontier(indirect_tree->generate_hash(&opnd), new Conc_Node(&opnd));
+					}
+				}
+			}
+			else{
+				for (uint64_t i = mem[j]->start; i >= mem[j]->end; i -= mem[j]->bytes_per_pixel){
+					operand_t opnd = { MEM_HEAP_TYPE, mem[j]->bytes_per_pixel, i };
+					//if (direct_tree->search_node(&opnd) == NULL){
+						direct_tree->add_to_frontier(direct_tree->generate_hash(&opnd), new Conc_Node(&opnd));
+					//}
+					//if (indirect_tree->search_node(&opnd) == NULL){
+						indirect_tree->add_to_frontier(indirect_tree->generate_hash(&opnd), new Conc_Node(&opnd));
+					//}
+				}
 			}
 		}
 
@@ -89,6 +107,7 @@ vector< vector<uint32_t> > find_dependant_statements_with_indirection(vec_cinstr
 		}
 
 		start = end;
+		break;
 
 	}
 

@@ -113,7 +113,8 @@ void build_conc_tree_helper(
 
 void build_tree_intial_update(uint64_t destination, 
 					   uint32_t stride, 
-					   std::vector<uint32_t> start_points, 
+					   uint32_t start,
+					   uint32_t end, 
 					   Conc_Tree * tree, 
 					   vec_cinstr &instrs, 
 					   uint32_t original_start,
@@ -128,7 +129,7 @@ void build_tree_intial_update(uint64_t destination,
 	int curpos = -1;
 
 	/* get the first assignment to the destination */
-	for (int i = instrs.size() - 1; i >= 0; i--){
+	for (int i = end; i >= start; i--){
 		instr = instrs[i].first;
 		bool found = false;
 		for (int j = 0; j < instr->num_dsts; j++){
@@ -152,6 +153,8 @@ void build_tree_intial_update(uint64_t destination,
 
 	}
 
+	cout << start << " " << end << " " << curpos << endl;
+
 	if (curpos == original_start){
 		return;
 	}
@@ -166,34 +169,16 @@ void build_tree_intial_update(uint64_t destination,
 
 
 	uint32_t start_trace = curpos + 1;
-	uint32_t end_trace = 0;
-	index = -1;
-	/* find the end_trace location in the start points */
-	for (int i = 0; i < start_points.size(); i++){
-		if (start_points[i] > start_trace){
-			end_trace = start_points[i];
-			index = i;
-			break;
-		}
-	}
-
+	uint32_t end_trace = end;
 	
 	ASSERT_MSG((index != -1), ("ERROR: should find end trace in start points\n"));
 
 
 	/* ok now build the tree */
-	while (start_trace != instrs.size()){
-
-		cout << start_trace << " - " << end_trace << endl;
-
-		build_conc_tree_helper(start_trace, end_trace, tree, instrs, regions);
-		remove_reg_leaves(tree);
-
-		start_trace = end_trace;
-		if (index + 1 < start_points.size()) end_trace = start_points[++index];
-		break;
-
-	}
+	
+	build_conc_tree_helper(start_trace, end_trace, tree, instrs, regions);
+	remove_reg_leaves(tree);
+	
 
 	/*ofstream conc_file(get_standard_folder("output") + "\\initial.dot");
 	tree->number_tree_nodes();
@@ -294,11 +279,18 @@ Conc_Tree * build_conc_tree(uint64_t destination,
 	delete[] rinstr;
 
 	start_trace++;
+	uint32_t start_to_initial = start_trace;
 	index = -1;
 	/* find the end_trace location in the start points */
 	for (int i = 0; i < start_points.size(); i++){
 		if (start_points[i] == end_trace) index = i;
 	}
+
+	for (int i = start_points.size() - 1; i >=0 ; i--){
+		if (start_points[i] < start_to_initial){ start_to_initial = start_points[i]; break; }
+	}
+
+	if (index == -1) end_trace = instrs.size();
 
 	ASSERT_MSG((index != -1), ("ERROR: should find end trace in start points\n"));
 
@@ -311,18 +303,18 @@ Conc_Tree * build_conc_tree(uint64_t destination,
 			build_conc_tree_helper(start_trace, end_trace, tree, instrs, regions);
 			remove_reg_leaves(tree);
 
-			start_trace = end_trace;
-			if (index + 1 < start_points.size()) end_trace = start_points[++index];
+			//start_trace = end_trace;
+			//if (index + 1 < start_points.size()) end_trace = start_points[++index];
 			break;
 
 	}
 
 	Conc_Tree * initial_tree = NULL;
-
 	if (tree->recursive){
 		initial_tree = new Conc_Tree();
 		/* ok we need to build a tree for the initial update definition */
-		build_tree_intial_update(destination, stride, start_points, initial_tree, instrs, initial_start, regions);
+
+		build_tree_intial_update(destination, stride, start_to_initial, end_trace, initial_tree, instrs, initial_start, regions);
 
 		if (initial_tree->get_head() == NULL){
 			/* ok, there is no initial first create a new region if the dummy region is not built */
@@ -1100,32 +1092,45 @@ vector<Tree *> get_linearly_independant_trees(vector<Conc_Tree *> cluster, vecto
 	//pos[0] = 0;
 
 	vector<int32_t> next = pos;
+	bool backwards = region->start > region->end;
 
 	for (int i = 0; i < pos.size(); i++){
 
 		uint32_t extents = region->extents[i];
 		vector<int32_t> now_regions = next;
 
-		for (int j = now_regions[i] + 1; j < extents; j++){
+		bool found = false;
+		now_regions[i] = backwards ? region->extents[i]: -1;
+		int j = backwards ? now_regions[i] - 1: now_regions[i] + 1;
 
-			bool done = false;
-			now_regions[i]++;
-			for (int k = 0; k < cluster.size(); k++){
-				vector<int32_t> now = get_mem_position(region, cluster[k]->get_head()->symbol->value);
-				if (now_regions == now){
-					ret.push_back(cluster[k]); done = true;
-					all_pos.push_back(now_regions);
-					if (ret.size() % 2 == 0) next = now_regions;
-					break;
+		while (!found && j >= 0 && j < region->extents[i]){
+				bool done = false;
+				now_regions[i] = backwards ? now_regions[i] - 1 : now_regions[i] + 1;
+				if (now_regions[i] == next[i]) continue;
+
+				cout << "regions " << now_regions[i] << endl;
+				for (int k = 0; k < cluster.size(); k++){
+					vector<int32_t> now = get_mem_position(region, cluster[k]->get_head()->symbol->value);
+					if (now_regions == now){
+						ret.push_back(cluster[k]); done = true; found = true;
+						all_pos.push_back(now_regions);
+						if (ret.size() % 2 == 0) next = now_regions;
+						break;
+					}
 				}
-			}
-			if (done) break;
+				if (done) break;
+			
+				if (backwards){
+					j--; if (j == 0) found = true;
+				}
+				else{
+					j++; if (j == region->extents[i]) found = true;
+				}
 		}
 
 		if (ret.size() % 2 == 0) i--;
 
 	}
-	ASSERT_MSG(ret.size() > region->dimensions, ("ERROR: not enought equations\n"));
 
 	DEBUG_PRINT((" positions of abs trees in equations \n"), 2);
 	for (int i = 0; i < all_pos.size(); i++){
@@ -1135,6 +1140,10 @@ vector<Tree *> get_linearly_independant_trees(vector<Conc_Tree *> cluster, vecto
 		}
 		DEBUG_PRINT(("\n"), 2);
 	}
+
+	ASSERT_MSG(ret.size() > region->dimensions, ("ERROR: not enought equations\n"));
+
+	
 
 	return ret;
 }
@@ -1263,6 +1272,18 @@ vector<Abs_Tree_Charac *> build_abs_trees(
 
 	/* sanity print */
 	for (int i = 0; i < clusters.size(); i++){
+		log_file << "cluster " << i << endl;
+		mem_regions_t * cluster_region = get_mem_region(clusters[i][0]->get_head()->symbol->value, total_regions);
+		for (int j = 0; j < clusters[i].size(); j++){
+
+			vector<int32_t> pos = get_mem_position(cluster_region, clusters[i][j]->get_head()->symbol->value);
+			for (int k = 0; k < pos.size(); k++){
+				log_file << pos[k] << ",";
+			}
+			log_file << endl;
+
+		}
+
 
 		Conc_Tree * tree = clusters[i][0];
 		ofstream conc_file(folder + "\\conc_comp_" + to_string(i) + ".dot", ofstream::out);
@@ -1271,6 +1292,7 @@ vector<Abs_Tree_Charac *> build_abs_trees(
 		for (int j = 0; j < tree->conditionals.size(); j++){
 
 			Conc_Tree * cond_tree = tree->conditionals[j]->tree;
+			cond_tree->number_tree_nodes();
 			ofstream conc_file(folder + "\\conc_cond_" + to_string(i) + "_" + to_string(j) + ".dot", ofstream::out);
 			cond_tree->print_dot(conc_file,"cluster_conc_cond",j);
 			
@@ -1284,6 +1306,8 @@ vector<Abs_Tree_Charac *> build_abs_trees(
 	for (int i = 0; i < clusters.size(); i++){
 
 		cout << "cluster " << i << endl;
+
+		
 
 		/* get the abstract tree for the computational path */
 		uint32_t skip_trees = skip;

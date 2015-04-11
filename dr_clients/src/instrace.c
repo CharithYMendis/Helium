@@ -186,6 +186,7 @@ void instrace_init(client_id_t id, const char * name, const char * arguments)
 
 	if(client_arg->filter_mode != FILTER_NONE){
 		in_file = dr_open_file(client_arg->filter_filename,DR_FILE_READ);
+		dr_printf("%s\n", client_arg->filter_filename);
 		DR_ASSERT(in_file != INVALID_FILE);
 		md_read_from_file(head,in_file,false);
 		dr_close_file(in_file);
@@ -786,10 +787,10 @@ static void operand_trace(instr_t * instr, void * drcontext){
 			if (md_get_module_position(instrace_head, module_data->full_path) == -1){
 				md_add_module(instrace_head, module_data->full_path, MAX_BBS_PER_MODULE);
 			}
-			dr_fprintf(data->outfile, "%d,%d,%s\n", md_get_module_position(instrace_head, module_data->full_path), pc, stringop);
+			dr_fprintf(data->outfile, "%d,%d,%s,%s\n", md_get_module_position(instrace_head, module_data->full_path), pc, stringop, module_data->full_path);
 		}
 		else{
-			dr_fprintf(data->outfile, "%d,%d,%s\n",0, 0, stringop);
+			dr_fprintf(data->outfile, "%d,%d,%s,%s\n",0, 0, stringop, "NONE");
 		}
 		
 	}

@@ -99,7 +99,7 @@
 
  /* stage to stop */
 #define MEM_INFO_STAGE			1	
-#define CONDITIONAL_ANALYSIS	2
+#define CONDITIONAL_STAGE		2
 #define TREE_BUILD_STAGE		3
 #define ABSTRACTION_STAGE		4
 #define HALIDE_OUTPUT_STAGE		5
@@ -445,6 +445,8 @@
 		 print_disasm(static_info);
 	 }
 
+	 print_disasm(static_info);
+
 	 /* get all the instructions and preprocess */
 	 instrace_file.clear();
 	 instrace_file.seekg(0, instrace_file.beg);
@@ -507,7 +509,9 @@
 	 vector<mem_regions_t *> input_regions;
 	 if ( (anaopt & INPUT_REGION_SELECTION) == INPUT_REGION_SELECTION){
 		 input_regions = get_input_regions(total_mem_regions, pc_mem_info, start_points_mem, instrs_forward);
+		 log_file << " input regions " << endl;
 		 print_mem_regions(log_file, input_regions);
+		 log_file << "input done " << endl;
 	 }
 	 else{
 		 input_regions.push_back(input_mem_region);
@@ -551,6 +555,7 @@
 	*/
 	
 	if ((anaopt & DEPENDANT_ANALYSIS) == DEPENDANT_ANALYSIS){
+		log_file << " dependant analysis " << endl;
 		app_pc_vec = find_dependant_statements_with_indirection(instrs_forward, input_regions, static_info, start_points_mem);
 	}
 	else{
@@ -623,7 +628,7 @@
 		 }
 	 }
 
-	 if (mode == CONDITIONAL_ANALYSIS){
+	 if (mode == CONDITIONAL_STAGE){
 		 exit(0);
 	 }
 

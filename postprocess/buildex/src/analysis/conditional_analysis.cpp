@@ -121,8 +121,17 @@ void update_merge_points(vec_cinstr &instrs, vector<Jump_Info *> &jumps){
 			}
 		}
 
-		sort(not_taken_pc.begin(), not_taken_pc.end());
-		sort(taken_pc.begin(), taken_pc.end());
+		log_file << "not taken" << endl;
+		for (int j = 0; j < not_taken_pc.size(); j++){
+			log_file << not_taken_pc[j] << endl;
+		}
+		log_file << "taken" << endl;
+		for (int j = 0; j < taken_pc.size(); j++){
+			log_file << taken_pc[j] << endl;
+		}
+
+		//sort(not_taken_pc.begin(), not_taken_pc.end());
+		//sort(taken_pc.begin(), taken_pc.end());
 
 
 		for (int j = 0; j < not_taken_pc.size(); j++){

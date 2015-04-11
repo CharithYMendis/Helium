@@ -371,7 +371,7 @@ void walk_instructions(ifstream &file, uint32_t version){
 
 void print_disasm(vector<Static_Info *> &static_info){
 	for (int i = 0; i < static_info.size(); i++){
-		cout << static_info[i]->module_no << "," << static_info[i]->pc << "," << static_info[i]->disassembly << endl;
+		LOG(log_file,static_info[i]->module_no << "," << static_info[i]->pc << "," << static_info[i]->disassembly << endl)
 	}
 }
 
