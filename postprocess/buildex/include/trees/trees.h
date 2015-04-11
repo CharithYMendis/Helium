@@ -100,6 +100,9 @@ void * empty_ret_mutator(void * value, vector<void *> values, void * ori_value);
 
 	 frontier_t * frontier;  /*this is actually a hash table keeping pointers to the Nodes already allocated */
 	 std::vector<uint32_t> mem_in_frontier; /* memoization structures for partial mem and reg writes and reads */
+	 
+	 bool func_inside;
+	 uint32_t func_index;
 
 	 
 	 Node * create_or_get_node(operand_t * opnd);
@@ -138,7 +141,7 @@ void * empty_ret_mutator(void * value, vector<void *> values, void * ori_value);
 	 void remove_registers_from_frontier();
 
 	 //bool update_depandancy_backward(rinstr_t * instr, cinstr_t * cinstr, Static_Info * info, uint32_t line);
-	 bool update_depandancy_backward(rinstr_t * instr, cinstr_t * cinstr, Static_Info * info, uint32_t line, vector<mem_regions_t *> region);
+	 bool update_depandancy_backward(rinstr_t * instr, cinstr_t * cinstr, Static_Info * info, uint32_t line, vector<mem_regions_t *> region, vector<Func_Info_t *> func_info);
 	 bool update_dependancy_forward(rinstr_t * instr, uint32_t pc, std::string disasm, uint32_t line);
 	 bool update_dependancy_forward_with_indirection(rinstr_t * instr, uint32_t pc, std::string disasm, uint32_t line);
 	 bool update_depandancy_forward_with_src(rinstr_t * instr, uint32_t pc, std::string disasm, uint32_t line, bool * src_dep);

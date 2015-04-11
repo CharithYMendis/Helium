@@ -23,6 +23,7 @@
 		bool sign; /* indicates whether the operation is signed */
 
 		bool minus;
+		std::string func_name;
 
 		operand_t * symbol;  /* operand information for this node - this is concrete */
 

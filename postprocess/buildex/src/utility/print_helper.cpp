@@ -72,6 +72,7 @@ string operation_to_string(uint operation){
 	case op_neq: return "!=";
 
 	case op_indirect: return "indirect";
+	case op_call: return "call";
 
 	default: return "__";
 	}

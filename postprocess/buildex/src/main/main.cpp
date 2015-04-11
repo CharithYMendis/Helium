@@ -628,6 +628,10 @@
 		 }
 	 }
 
+
+	 vector<Func_Info_t *> func_replacements;
+	 populate_standard_funcs(func_replacements);
+
 	 if (mode == CONDITIONAL_STAGE){
 		 exit(0);
 	 }
@@ -672,16 +676,16 @@
 
 		 //Node * node = create_tree_for_dest(dest, stride, instrace_file, start_points, start_trace, end_trace, disasm)->get_head();
 		 Conc_Tree * tree = new Conc_Tree();
-		 Conc_Tree * initial = build_conc_tree(dest, stride, start_points, start_trace, end_trace, tree, instrs_backward, farthest, total_mem_regions);
+		 Conc_Tree * initial = build_conc_tree(dest, stride, start_points, start_trace, end_trace, tree, instrs_backward, farthest, total_mem_regions, func_replacements);
 		 tree->print_conditionals();
 		 cout << "creating conditional trees" << endl;
-		 build_conc_trees_for_conditionals(start_points, tree, instrs_backward, farthest, total_mem_regions);
+		 build_conc_trees_for_conditionals(start_points, tree, instrs_backward, farthest, total_mem_regions, func_replacements);
 		 for (int i = 0; i < tree->conditionals.size(); i++){
 			 conc_trees.push_back(tree->conditionals[i]->tree);
 		 }
 		 conc_trees.push_back(tree);
 		 if (initial != NULL){
-			 build_conc_trees_for_conditionals(start_points, initial, instrs_backward, farthest, total_mem_regions);
+			 build_conc_trees_for_conditionals(start_points, initial, instrs_backward, farthest, total_mem_regions, func_replacements);
 			 conc_trees.push_back(initial);
 		 }
 
@@ -696,12 +700,12 @@
 		 for (int i = 0; i < nbd_locations.size(); i++){
 
 			 Conc_Tree * tree = new Conc_Tree();
-			 Conc_Tree * initial = build_conc_tree(nbd_locations[i], stride, start_points, FILE_BEGINNING, end_trace, tree, instrs_backward, farthest, total_mem_regions);
-			 build_conc_trees_for_conditionals(start_points, tree, instrs_backward,farthest, total_mem_regions);
+			 Conc_Tree * initial = build_conc_tree(nbd_locations[i], stride, start_points, FILE_BEGINNING, end_trace, tree, instrs_backward, farthest, total_mem_regions, func_replacements);
+			 build_conc_trees_for_conditionals(start_points, tree, instrs_backward,farthest, total_mem_regions, func_replacements);
 
 			 conc_trees.push_back(tree);
 			 if (initial != NULL){
-				 build_conc_trees_for_conditionals(start_points, initial, instrs_backward, farthest, total_mem_regions);
+				 build_conc_trees_for_conditionals(start_points, initial, instrs_backward, farthest, total_mem_regions, func_replacements);
 				 conc_trees.push_back(initial);
 			 }
 
@@ -715,11 +719,11 @@
 	 }
 	 else if (tree_build == BUILD_SIMILAR){
 		 uint64_t farthest = get_farthest_mem_access_point(total_mem_regions);
-		 conc_trees = get_similar_trees(image_regions, total_mem_regions, seed, &stride, start_points, start_trace, end_trace, farthest, instrs_backward);
+		 conc_trees = get_similar_trees(image_regions, total_mem_regions, seed, &stride, start_points, start_trace, end_trace, farthest, instrs_backward, func_replacements);
 	 }
 	 else if (tree_build == BUILD_CLUSTERS){
 		 uint64_t farthest = get_farthest_mem_access_point(total_mem_regions);
-		 clustered_trees = cluster_trees(image_regions, total_mem_regions, start_points, instrs_backward, farthest, output_folder + file_substr);
+		 clustered_trees = cluster_trees(image_regions, total_mem_regions, start_points, instrs_backward, farthest, output_folder + file_substr, func_replacements);
 	 }
 
 

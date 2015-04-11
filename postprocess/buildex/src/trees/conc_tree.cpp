@@ -22,6 +22,7 @@ Conc_Tree::Conc_Tree() : Tree()
 {
 
 	dummy_tree = false;
+	func_inside = false;
 	frontier = new frontier_t[MAX_FRONTIERS];
 
 	for (int i = 0; i < MAX_FRONTIERS; i++){
@@ -376,7 +377,28 @@ void Conc_Tree::add_address_dependancy(Node * node, operand_t * opnds){
 
 }
 
-bool Conc_Tree::update_depandancy_backward(rinstr_t * instr, cinstr_t * cinstr, Static_Info * info, uint32_t line, vector<mem_regions_t *> regions)
+void create_call_dependancy(Conc_Tree * tree, Node * node, Func_Info_t * info){
+
+	Node * call_node = new Conc_Node(REG_TYPE, 0, node->symbol->width, 0.0);
+	call_node->operation = op_call;
+	call_node->func_name = info->func_name;
+	//node->add_forward_ref(call_node);
+	for (int i = 0; i < node->prev.size(); i++){
+		Node * prev_node = node->prev[i];
+		if (prev_node->remove_forward_ref_single(node)) i--;
+		prev_node->add_forward_ref(call_node);
+	}
+
+	for (int i = 0; i < info->parameters.size(); i++){
+		Node * para = new Conc_Node(info->parameters[i]);
+		call_node->add_forward_ref(para);
+		tree->add_to_frontier(tree->generate_hash(info->parameters[i]), para);
+	}
+
+}
+
+
+bool Conc_Tree::update_depandancy_backward(rinstr_t * instr, cinstr_t * cinstr, Static_Info * info, uint32_t line, vector<mem_regions_t *> regions, vector<Func_Info_t *> func_info)
 {
 
 
@@ -384,7 +406,14 @@ bool Conc_Tree::update_depandancy_backward(rinstr_t * instr, cinstr_t * cinstr, 
 #define INDIRECTION
 #define ASSIGN_OPT
 //#define SIMPLIFICATIONS
-
+	if (func_inside){
+		if (info->pc >= func_info[func_index]->start && info->pc <= func_info[func_index]->end){
+			return false;
+		}
+		else{
+			func_inside = false;
+		}
+	}
 
 	//TODO: have precomputed nodes for immediate integers -> can we do it for floats as well? -> just need to point to them in future (space optimization)
 	Node * head = get_head();
@@ -480,6 +509,16 @@ bool Conc_Tree::update_depandancy_backward(rinstr_t * instr, cinstr_t * cinstr, 
 		dst->line = line;
 		dst->pc = info->pc;
 
+		for (int i = 0; i < func_info.size(); i++){
+			/* BUG - should add module dependancy as well */
+			if (func_info[i]->start <= info->pc && func_info[i]->end >= info->pc){
+				func_inside = true;
+				func_index = i;
+				remove_from_frontier(&instr->dst);
+				create_call_dependancy(this, dst, func_info[i]);
+				return true;
+			}
+		}
 	}
 
 	//update operation

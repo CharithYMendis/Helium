@@ -8,6 +8,9 @@ all the static information found about dynamically executed instructions */
 #include <stdint.h>
 #include <vector>
 
+#include  "..\..\..\dr_clients\include\output.h"
+
+
 //#include "analysis/x86_analysis.h"
 
 struct Jump_Info {
@@ -54,7 +57,21 @@ public:
 
 };
 
+
+struct Func_Info_t{
+
+	std::string func_name;
+	std::string module_name;
+	std::vector<operand_t *> parameters;
+	operand_t * ret;
+	uint32_t start;
+	uint32_t end;
+
+};
+
 Static_Info * get_static_info(std::vector<Static_Info *> instr, uint32_t pc);
 Static_Info * get_static_info(std::vector<Static_Info *> instr, Jump_Info * jump);
+
+void populate_standard_funcs(std::vector<Func_Info_t *> &funcs);
 
 #endif

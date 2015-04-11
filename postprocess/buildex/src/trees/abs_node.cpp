@@ -28,6 +28,7 @@ Abs_Node::Abs_Node(Conc_Node * head, Conc_Node * conc_node, vector<mem_regions_t
 	this->operation = conc_node->operation;
 	this->para_num = conc_node->para_num;
 	this->symbol = conc_node->symbol;
+	this->func_name = conc_node->func_name;
 
 	bool filter = false;
 	if (conc_node == head) filter = true;

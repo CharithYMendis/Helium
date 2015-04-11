@@ -410,19 +410,20 @@ string Halide_Program::print_full_overlap_node(Abs_Node * node, Node * head, vec
 	}
 
 	uint32_t mask = uint32_t(~0) >> (32 - node->symbol->width * 8);
+	mask = mask > 65535 ? 65535 : mask;
 
 	
-	if(node->symbol->type == REG_TYPE && overlap->symbol->type == REG_TYPE && overlap_end != node_end){
+	/*if(node->symbol->type == REG_TYPE && overlap->symbol->type == REG_TYPE && overlap_end != node_end){
 		ret += " ( ( ";
 		ret += print_abs_tree(overlap,head, vars);
 		ret += " >> " + to_string((overlap_end - node_end) * 8) + " ) ";
 		ret += " ) & " + to_string(mask);
 	}
-	else{
+	else{*/
 		ret += " ( ";
 		ret += print_abs_tree(overlap, head, vars);
 		ret += " ) & " + to_string(mask);
-	}
+	//}
 
 	return ret;
 
@@ -745,6 +746,11 @@ std::string Halide_Program::print_abs_tree(Node * nnode, Node * head ,vector<str
 	Abs_Node * node = static_cast<Abs_Node *>(nnode);
 
 	string ret = "";
+	
+	if (node->minus){
+		ret += "- (";
+	}
+	
 	if (node->type == Abs_Node::OPERATION_ONLY){
 		if (node->operation == op_full_overlap){
 			ret += " ( ";
@@ -769,6 +775,18 @@ std::string Halide_Program::print_abs_tree(Node * nnode, Node * head ,vector<str
 		else if (node->operation == op_indirect){
 			ret += "(";
 			ret += get_indirect_string(node, (Abs_Node *)head, vars);
+			ret += ")";
+		}
+		else if (node->operation == op_call){
+			ret += "(";
+			ret += node->func_name + "(";
+			for (int k = 0; k < node->srcs.size(); k++){
+				Abs_Node * abs_nodes = (Abs_Node *)node->srcs[k];
+				ret += print_abs_tree(abs_nodes, head, vars);
+				if (k != node->srcs.size() - 1){
+					ret += ",";
+				}
+			}
 			ret += ")";
 		}
 		else if (node->srcs.size() == 1){
@@ -844,6 +862,11 @@ std::string Halide_Program::print_abs_tree(Node * nnode, Node * head ,vector<str
 		
 
 	}
+
+	if (node->minus){
+		ret += ")";
+	}
+
 	return ret;
 }
 

@@ -200,7 +200,6 @@ uint32_t Abs_Tree::get_maximum_dimensions(){
 			if (abs_node->mem_info.dimensions > *max_dim) *max_dim = abs_node->mem_info.dimensions;
 		}
 
-
 		return NULL;
 
 
@@ -231,7 +230,6 @@ void Abs_Tree::print_dot_algebraic(std::ostream &file, std::string name, uint32_
 			else{
 				node->mem_info.indexes[i][j] = 0;
 			}
-
 		}
 	}
 

@@ -798,6 +798,8 @@ rinstr_t * cinstr_to_rinstrs(cinstr_t * cinstr, int &amount, std::string disasm,
 
 		/******************************************************control flow instructions**************************************************************************************************/
 
+	case OP_btr:
+
 	case OP_cmpxchg:
 	case OP_rep_stos:
 	case OP_cld:

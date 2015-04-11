@@ -24,7 +24,8 @@ Conc_Tree * build_conc_tree(uint64_t destination,
 				Conc_Tree * tree,
 				vec_cinstr &instrs,
 				uint64_t farthest,
-				std::vector<mem_regions_t *> &regions);
+				std::vector<mem_regions_t *> &regions,
+				std::vector<Func_Info_t *> &func_info);
 	
 
 void build_conc_tree(uint64_t destination, 
@@ -34,14 +35,16 @@ void build_conc_tree(uint64_t destination,
 				int end_trace, 
 				Conc_Tree * tree,
 				std::ifstream &file,
-				std::vector<mem_regions_t *> &regions);
+				std::vector<mem_regions_t *> &regions,
+				std::vector<Func_Info_t *> &func_info);
 	
 void build_conc_trees_for_conditionals(
 				std::vector<uint32_t> start_points, 
 				Conc_Tree * tree, 
 				vec_cinstr &instrs,
 				uint64_t farthest,
-				std::vector<mem_regions_t *> &regions);
+				std::vector<mem_regions_t *> &regions,
+				std::vector<Func_Info_t *> &func_info);
 
 /* tree clustering and other categorizing */				
 				
@@ -57,7 +60,8 @@ std::vector<Conc_Tree *> get_similar_trees(
 				int32_t start_trace,
 				int32_t end_trace, 
 				uint64_t farthest,
-				vec_cinstr &instrs);
+				vec_cinstr &instrs,
+				std::vector<Func_Info_t *> &func_info);
 
 std::vector< std::vector <Conc_Tree *> > cluster_trees
 				(std::vector<mem_regions_t *> mem_regions, 
@@ -65,7 +69,8 @@ std::vector< std::vector <Conc_Tree *> > cluster_trees
 				std::vector<uint32_t> start_points, 
 				vec_cinstr &instrs, 
 				uint64_t farthest,
-				std::string output_folder);
+				std::string output_folder,
+				std::vector<Func_Info_t *> &func_info);
 
 /* abs tree building */	
 

@@ -55,6 +55,9 @@ enum {
 	/*address dependancy*/
 	op_indirect,
 
+	/*call*/
+	op_call,
+
 	op_unknown
 
 };

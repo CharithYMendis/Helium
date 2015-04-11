@@ -74,7 +74,8 @@ void build_conc_tree_helper(
 	int end_trace,
 	Conc_Tree * tree,
 	vec_cinstr &instrs,
-	vector<mem_regions_t *> &regions){
+	vector<mem_regions_t *> &regions,
+	vector<Func_Info_t *> &func_info){
 
 	int32_t no_rinstrs;
 	cinstr_t * instr;
@@ -96,7 +97,7 @@ void build_conc_tree_helper(
 		bool updated = false;
 		bool affected = false;
 		for (int i = no_rinstrs - 1; i >= 0; i--){
-			updated = tree->update_depandancy_backward(&rinstr[i], instrs[curpos].first, instrs[curpos].second, curpos, regions);
+			updated = tree->update_depandancy_backward(&rinstr[i], instrs[curpos].first, instrs[curpos].second, curpos, regions, func_info);
 			if (updated){
 				affected = true;
 				lines.push_back(make_pair(curpos, instr->pc));
@@ -118,7 +119,8 @@ void build_tree_intial_update(uint64_t destination,
 					   Conc_Tree * tree, 
 					   vec_cinstr &instrs, 
 					   uint32_t original_start,
-					   vector<mem_regions_t *> &regions){
+					   vector<mem_regions_t *> &regions,
+					   vector<Func_Info_t *> &func_info){
 
 	DEBUG_PRINT(("initial update tree building\n"), 2);
 
@@ -129,7 +131,7 @@ void build_tree_intial_update(uint64_t destination,
 	int curpos = -1;
 
 	/* get the first assignment to the destination */
-	for (int i = end; i >= start; i--){
+	for (int i = end - 1; i >= start; i--){
 		instr = instrs[i].first;
 		bool found = false;
 		for (int j = 0; j < instr->num_dsts; j++){
@@ -163,7 +165,7 @@ void build_tree_intial_update(uint64_t destination,
 	ASSERT_MSG((index != -1), ("ERROR: could not find the destination or overlap\n"));
 
 	for (int i = index; i >= 0; i--){
-		tree->update_depandancy_backward(&rinstr[i], instr, instrs[curpos].second, curpos, regions);
+		tree->update_depandancy_backward(&rinstr[i], instr, instrs[curpos].second, curpos, regions, func_info);
 	}
 	delete[] rinstr;
 
@@ -176,7 +178,7 @@ void build_tree_intial_update(uint64_t destination,
 
 	/* ok now build the tree */
 	
-	build_conc_tree_helper(start_trace, end_trace, tree, instrs, regions);
+	build_conc_tree_helper(start_trace, end_trace, tree, instrs, regions, func_info);
 	remove_reg_leaves(tree);
 	
 
@@ -217,7 +219,8 @@ Conc_Tree * build_conc_tree(uint64_t destination,
 								Conc_Tree * tree,
 								vec_cinstr &instrs,
 								uint64_t farthest,
-								vector<mem_regions_t *> &regions
+								vector<mem_regions_t *> &regions,
+								vector<Func_Info_t *> &func_info
 								){
 
 	int32_t initial_endtrace = end_trace;
@@ -274,7 +277,7 @@ Conc_Tree * build_conc_tree(uint64_t destination,
 	/* build the initial part of the tree */
 	for (int i = index; i >= 0; i--){
 		
-		tree->update_depandancy_backward(&rinstr[i], instrs[curpos].first, instrs[curpos].second, curpos, regions);
+		tree->update_depandancy_backward(&rinstr[i], instrs[curpos].first, instrs[curpos].second, curpos, regions, func_info);
 	}
 	delete[] rinstr;
 
@@ -290,6 +293,8 @@ Conc_Tree * build_conc_tree(uint64_t destination,
 		if (start_points[i] < start_to_initial){ start_to_initial = start_points[i]; break; }
 	}
 
+	if (start_to_initial == start_trace) start_to_initial = 0;
+
 	if (index == -1) end_trace = instrs.size();
 
 	ASSERT_MSG((index != -1), ("ERROR: should find end trace in start points\n"));
@@ -300,7 +305,7 @@ Conc_Tree * build_conc_tree(uint64_t destination,
 
 			cout << start_trace << " - " << end_trace << endl;
 
-			build_conc_tree_helper(start_trace, end_trace, tree, instrs, regions);
+			build_conc_tree_helper(start_trace, end_trace, tree, instrs, regions, func_info);
 			remove_reg_leaves(tree);
 
 			//start_trace = end_trace;
@@ -314,7 +319,7 @@ Conc_Tree * build_conc_tree(uint64_t destination,
 		initial_tree = new Conc_Tree();
 		/* ok we need to build a tree for the initial update definition */
 
-		build_tree_intial_update(destination, stride, start_to_initial, end_trace, initial_tree, instrs, initial_start, regions);
+		build_tree_intial_update(destination, stride, start_to_initial, end_trace, initial_tree, instrs, initial_start, regions, func_info);
 
 		if (initial_tree->get_head() == NULL){
 			/* ok, there is no initial first create a new region if the dummy region is not built */
@@ -407,7 +412,8 @@ void build_conc_tree_single_func(uint64_t destination,
 					int end_trace,
 					Conc_Tree * tree,
 					vec_cinstr &instrs,
-					vector<mem_regions_t *> &regions){
+					vector<mem_regions_t *> &regions,
+					vector<Func_Info_t *> &func_info){
 
 	DEBUG_PRINT(("build_tree(concrete)....\n"), 2);
 
@@ -485,10 +491,10 @@ void build_conc_tree_single_func(uint64_t destination,
 	//do the initial processing
 	for (int i = index; i >= 0; i--){
 		if (instrs[curpos].second != NULL){
-			tree->update_depandancy_backward(&rinstr[i], instrs[curpos].first, instrs[curpos].second, curpos, regions);
+			tree->update_depandancy_backward(&rinstr[i], instrs[curpos].first, instrs[curpos].second, curpos, regions, func_info);
 		}
 		else{
-			tree->update_depandancy_backward(&rinstr[i], instrs[curpos].first, NULL, curpos, regions);
+			tree->update_depandancy_backward(&rinstr[i], instrs[curpos].first, NULL, curpos, regions, func_info);
 		}
 	}
 
@@ -522,10 +528,10 @@ void build_conc_tree_single_func(uint64_t destination,
 			bool affected = false;
 			for (int i = no_rinstrs - 1; i >= 0; i--){
 				if (instrs[curpos].second != NULL){
-					updated = tree->update_depandancy_backward(&rinstr[i], instrs[curpos].first, instrs[curpos].second, curpos, regions);
+					updated = tree->update_depandancy_backward(&rinstr[i], instrs[curpos].first, instrs[curpos].second, curpos, regions, func_info);
 				}
 				else{
-					updated = tree->update_depandancy_backward(&rinstr[i], instrs[curpos].first, NULL, curpos, regions);
+					updated = tree->update_depandancy_backward(&rinstr[i], instrs[curpos].first, NULL, curpos, regions, func_info);
 				}
 
 				if (updated){
@@ -645,7 +651,8 @@ void build_conc_trees_for_conditionals(
 	Conc_Tree * tree,
 	vec_cinstr &instrs,
 	uint64_t farthest,
-	vector<mem_regions_t *> &regions){
+	vector<mem_regions_t *> &regions,
+	vector<Func_Info_t *> &func_info){
 
 
 	DEBUG_PRINT(("build conc tree for conditionals.....\n"), 2);
@@ -683,7 +690,7 @@ void build_conc_trees_for_conditionals(
 				ASSERT_MSG((dst_line != 0), ("ERROR: couldn't find the conditional destination\n"));
 
 				Conc_Tree * cond_tree = new Conc_Tree();
-				build_conc_tree(instr->srcs[j].value, instr->srcs[j].width, start_points, dst_line + 1, FILE_ENDING, cond_tree, instrs, farthest, regions);
+				build_conc_tree(instr->srcs[j].value, instr->srcs[j].width, start_points, dst_line + 1, FILE_ENDING, cond_tree, instrs, farthest, regions, func_info);
 				cond_trees.push_back(cond_tree);
 
 			}
@@ -782,7 +789,8 @@ std::vector<Conc_Tree *> get_similar_trees(
 	int32_t start_trace,
 	int32_t end_trace,
 	uint64_t farthest,
-	vec_cinstr &instrs){
+	vec_cinstr &instrs,
+	vector<Func_Info_t *> &func_info){
 
 
 	vector<Conc_Tree *> nodes;
@@ -805,7 +813,7 @@ std::vector<Conc_Tree *> get_similar_trees(
 
 	/* build the expression tree for this node */
 	Conc_Tree * main_tree = new Conc_Tree();
-	Conc_Tree * initial_tree = build_conc_tree(mem_location, *stride, start_points, FILE_BEGINNING, end_trace, main_tree, instrs, farthest, total_regions);
+	Conc_Tree * initial_tree = build_conc_tree(mem_location, *stride, start_points, FILE_BEGINNING, end_trace, main_tree, instrs, farthest, total_regions, func_info);
 	nodes.push_back(main_tree);
 	if (initial_tree != NULL) nodes.push_back(initial_tree);
 
@@ -864,7 +872,7 @@ std::vector<Conc_Tree *> get_similar_trees(
 
 			if (success){
 				Conc_Tree * created_tree = new Conc_Tree();
-				initial_tree = build_conc_tree(mem_location, random_mem_region->bytes_per_pixel, start_points, FILE_BEGINNING, end_trace, created_tree, instrs, farthest, total_regions); 
+				initial_tree = build_conc_tree(mem_location, random_mem_region->bytes_per_pixel, start_points, FILE_BEGINNING, end_trace, created_tree, instrs, farthest, total_regions, func_info); 
 				created_tree->print_tree(cout);
 				cout << endl;
 				main_tree->print_tree(cout);
@@ -943,7 +951,8 @@ std::vector< std::vector <Conc_Tree *> > cluster_trees
 		std::vector<uint32_t> start_points,
 		vec_cinstr &instrs,
 		uint64_t farthest,
-		std::string output_folder){
+		std::string output_folder,
+		std::vector<Func_Info_t *> &func_info){
 
 
 
@@ -982,11 +991,11 @@ std::vector< std::vector <Conc_Tree *> > cluster_trees
 
 		Conc_Tree * tree = new Conc_Tree();
 		tree->tree_num = i;
-		Conc_Tree * initial_tree = build_conc_tree(location, mem->bytes_per_pixel, start_points, FILE_BEGINNING, FILE_ENDING, tree, instrs, farthest, total_regions);
-		build_conc_trees_for_conditionals(start_points, tree, instrs, farthest, total_regions);
+		Conc_Tree * initial_tree = build_conc_tree(location, mem->bytes_per_pixel, start_points, FILE_BEGINNING, FILE_ENDING, tree, instrs, farthest, total_regions, func_info);
+		build_conc_trees_for_conditionals(start_points, tree, instrs, farthest, total_regions, func_info);
 		trees.push_back(tree);
 		if (initial_tree != NULL){
-			build_conc_trees_for_conditionals(start_points, initial_tree, instrs, farthest, total_regions);
+			build_conc_trees_for_conditionals(start_points, initial_tree, instrs, farthest, total_regions, func_info);
 			trees.push_back(initial_tree);
 		}
 
