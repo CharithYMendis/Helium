@@ -27,6 +27,7 @@ static module_t * head;
 
 /* we only have a global count */
 static uint64 global_count;
+static uint bbcount = 0;
 /* A simple clean call that will be automatically inlined because it has only
  * one argument and contains no calls to other functions.
  */
@@ -89,8 +90,8 @@ void inscount_exit_event(void)
     char msg[512];
     int len;
     len = dr_snprintf(msg, sizeof(msg)/sizeof(msg[0]),
-                      "process name - %s\nInstrumentation results: %llu instructions executed\n"
-                      ,dr_get_application_name(),global_count);
+                      "process name - %s\nInstrumentation results: %llu instructions executed - %d bbcount\n"
+                      ,dr_get_application_name(),global_count,bbcount);
     DR_ASSERT(len > 0);
     NULL_TERMINATE(msg);
     DISPLAY_STRING(msg);
@@ -132,6 +133,7 @@ inscount_bb_instrumentation(void *drcontext, void *tag, instrlist_t *bb,
 		for(instr = first ; instr!=NULL ; instr = instr_get_next(instr)){
 			num_instrs++;
 		}
+		bbcount++;
 	}
 
 		
@@ -140,6 +142,12 @@ inscount_bb_instrumentation(void *drcontext, void *tag, instrlist_t *bb,
 							(void *)inscount, false /* save fpstate */, 1,
 							OPND_CREATE_INT32(num_instrs));
 	}
+
+
+	
+
+
+
 			
 	return DR_EMIT_DEFAULT;
 }

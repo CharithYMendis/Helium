@@ -41,7 +41,7 @@ pair<int32_t, int32_t> get_start_and_end_points(vector<uint32_t> start_points, u
 			}
 			if (found) break;
 		}
-		ASSERT_MSG(found, ("ERROR: dest not found within the instruction trace\n"));
+		//ASSERT_MSG(found, ("ERROR: dest not found within the instruction trace\n"));
 	}
 
 
@@ -272,6 +272,9 @@ Conc_Tree * build_conc_tree(uint64_t destination,
 		}
 	}
 
+
+	if (dest_present == false || index < 0) return NULL;
+
 	ASSERT_MSG((dest_present == true) && (index >= 0), ("ERROR: couldn't find the dest to start trace\n")); //we should have found the destination
 
 	/* build the initial part of the tree */
@@ -315,6 +318,20 @@ Conc_Tree * build_conc_tree(uint64_t destination,
 	}
 
 	Conc_Tree * initial_tree = NULL;
+
+	if (conctree_opt){
+		tree->remove_assign_nodes();
+		tree->remove_multiplication();
+		tree->remove_po_nodes();
+		tree->canonicalize_tree();
+		tree->simplify_immediates();
+		tree->remove_or_minus_1();
+		tree->number_parameters(regions);
+		tree->recursive = false;
+		tree->mark_recursive();
+	}
+
+
 	if (tree->recursive){
 		initial_tree = new Conc_Tree();
 		/* ok we need to build a tree for the initial update definition */
@@ -350,14 +367,15 @@ Conc_Tree * build_conc_tree(uint64_t destination,
 		}
 	}
 	
-	if (conctree_opt){
+	/*if (conctree_opt){
 		tree->remove_assign_nodes();
 		tree->remove_multiplication();
 		tree->remove_po_nodes();
 		tree->canonicalize_tree();
 		tree->simplify_immediates();
+		tree->remove_or_minus_1();
 		tree->number_parameters(regions);
-	}
+	}*/
 
 
 	if (debug_tree){
@@ -591,6 +609,7 @@ void update_jump_conditionals(Conc_Tree * tree,
 			}
 		}
 
+		
 		ASSERT_MSG((line_cond != 0), ("ERROR: couldn't find the conditional instruction\n"));
 		ASSERT_MSG((line_jump != 0), ("ERROR: couldn't find the jump instruction\n"));
 
@@ -1028,6 +1047,10 @@ std::vector< std::vector <Conc_Tree *> > cluster_trees
 	
 
 	DEBUG_PRINT(("clustering trees\n"), 2);
+
+	for (int i = 0; i < trees.size(); i++){
+		if (trees[i]->get_head() == NULL) trees.erase(trees.begin() + i--);
+	}
 	
 	/* cluster based on the similarity */
 	vector< vector<Conc_Tree *> > clustered_trees = categorize_trees(trees);
@@ -1165,9 +1188,9 @@ Abs_Tree* abstract_the_trees(vector<Conc_Tree *> cluster, uint32_t no_trees, uin
 	vector<Tree *> trees;
 
 
-	vector<Tree *> ind_trees = get_linearly_independant_trees(cluster, total_regions);
+	//vector<Tree *> ind_trees = get_linearly_independant_trees(cluster, total_regions);
 
-	/* for (int j = 0; j < skip * no_trees; j+= skip){
+	for (int j = 0; j < skip * no_trees; j+= skip){
 		Abs_Tree  * abs_tree = new Abs_Tree();
 		//identify_parameters(cluster[j]->head, pc_mem);
 		abs_tree->build_abs_tree_unrolled(cluster[j], total_regions);
@@ -1183,10 +1206,10 @@ Abs_Tree* abstract_the_trees(vector<Conc_Tree *> cluster, uint32_t no_trees, uin
 
 		abs_trees.push_back(abs_tree);
 		trees.push_back(abs_tree);
-	} */
+	} 
 
 	
-	for (int j = 0; j < ind_trees.size(); j++){
+	/*for (int j = 0; j < ind_trees.size(); j++){
 		Abs_Tree  * abs_tree = new Abs_Tree();
 		//identify_parameters(cluster[j]->head, pc_mem);
 		abs_tree->build_abs_tree_unrolled((Conc_Tree *)ind_trees[j], total_regions);
@@ -1202,7 +1225,7 @@ Abs_Tree* abstract_the_trees(vector<Conc_Tree *> cluster, uint32_t no_trees, uin
 
 		abs_trees.push_back(abs_tree);
 		trees.push_back(abs_tree);
-	}
+	}*/
 
 	
 
@@ -1390,7 +1413,12 @@ vector<Abs_Tree_Charac *> build_abs_trees(
 				}
 				else{
 					charac->gaps_in_rdom = true;
-					ASSERT_MSG(false, ("build_abs_tree: not yet implemented\n"));
+
+					for (int j = 0; j < first_head->mem_info.dimensions; j++){
+						charac->extents.push_back(make_pair(0, first_head->mem_info.associated_mem->extents[j] - 1));
+					}
+					
+					//ASSERT_MSG(false, ("build_abs_tree: not yet implemented\n"));
 				}
 
 

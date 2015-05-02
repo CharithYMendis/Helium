@@ -430,7 +430,10 @@ vector<mem_regions_t *> get_image_regions_from_dump(vector<string> filenames, st
 			/* locate the image */
 			if (write){
 				mem = locate_image_CN2(file_values, results.st_size, &start, &end, out_image);
-				if(mem == NULL) mem = locate_image_CN2_backward_write(file_values, results.st_size, &start_back, &end_back, out_image, 1);
+				if (mem == NULL){
+					//mem = locate_image_CN2_backward(file_values, results.st_size, &start_back, &end_back, in_image);
+					mem = locate_image_CN2_backward_write(file_values, results.st_size, &start_back, &end_back, out_image, 1);
+				}
 			}
 			else{
 				mem = locate_image_CN2(file_values, results.st_size, &start, &end, in_image);

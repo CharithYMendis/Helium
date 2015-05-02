@@ -81,6 +81,8 @@ void * empty_ret_mutator(void * value, vector<void *> values, void * ori_value);
 	 void simplify_minus();
 	 void verify_minus();
 	 void remove_po_nodes();
+	 void remove_or_minus_1();
+	 void mark_recursive();
  };
 
 
@@ -154,6 +156,7 @@ void * empty_ret_mutator(void * value, vector<void *> values, void * ori_value);
 	 std::string serialize_tree();
 	 void construct_tree(std::string stree);
 	 void print_conditionals();
+	 bool tree_add_to_frontier(rinstr_t * instr, Node * src);
  };
 
 

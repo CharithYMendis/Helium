@@ -645,6 +645,13 @@ vector< vector< mem_info_t * > > get_merge_opportunities(vector<mem_info_t *> me
 			}
 		}
 
+		LOG(log_file, pc_mems[i]->pc << " - " << endl);
+		LOG(log_file, "overlapped - ");
+		for (int j = 0; j < overlapped.size(); j++){
+			LOG(log_file, overlapped[j]->start << ",");
+		}
+		LOG(log_file, endl);
+
 		vector< vector< mem_info_t *> > regions;
 		vector<mem_info_t *> temp_info;
 		/* find sequences which are fairly close to each other */
@@ -659,7 +666,14 @@ vector< vector< mem_info_t * > > get_merge_opportunities(vector<mem_info_t *> me
 			uint32_t second_stride = get_stride(overlapped[j], second_dim, second_dim);
 			uint32_t left_second = overlapped[j]->start - second_extent*second_stride;
 
-			if (j == 1){
+			temp_info.push_back(overlapped[j - 1]);
+			if (right_first < left_second){
+				vector<mem_info_t *> temp(temp_info);
+				regions.push_back(temp);
+				temp_info.clear();
+			}
+
+			/*if (j == 1){
 				if (right_first >= left_second){
 					temp_info.push_back(overlapped[j - 1]);
 				}
@@ -671,10 +685,14 @@ vector< vector< mem_info_t * > > get_merge_opportunities(vector<mem_info_t *> me
 					temp_info.clear();
 				}
 			}
-			temp_info.push_back(overlapped[j]);
+			temp_info.push_back(overlapped[j]);*/
 		}
 
-		LOG(log_file, pc_mems[i]->pc << " - " << endl);
+
+		//if (temp_info.size() > 0){
+			temp_info.push_back(overlapped[overlapped.size() - 1]);
+			regions.push_back(temp_info);
+		//}
 
 		LOG(log_file, "regions" << endl);
 		for (int j = 0; j < regions.size(); j++){

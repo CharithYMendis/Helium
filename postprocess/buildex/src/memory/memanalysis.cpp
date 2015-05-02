@@ -418,11 +418,12 @@ vector<mem_regions_t *> get_input_output_regions(vector<mem_regions_t *> &image_
 		for (int i = 0; i < total_regions.size(); i++){
 			if ((total_regions[i]->type & OUTPUT_BUFFER) == OUTPUT_BUFFER){
 				output_mem_region = total_regions[i];
+				DEBUG_PRINT(("new output region found\n"), 2);
 				break;
 			}
 		}
 
-		DEBUG_PRINT(("new output region found\n"), 2);
+		
 
 	}
 	else if (output_mem_region != NULL && input_mem_region == NULL){

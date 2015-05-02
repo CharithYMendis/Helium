@@ -20,6 +20,8 @@ std::vector<uint32_t> get_instrace_startpoints(vec_cinstr &instrs, std::vector<u
 vec_cinstr filter_instr_trace(uint32_t start_pc, uint32_t end_pc, vec_cinstr &unfiltered_instrs);
 vec_cinstr filter_instr_trace(std::vector<uint32_t> start_pcs, std::vector<uint32_t> end_pcs, vec_cinstr &unfiltered_instrs);
 
+std::pair<uint32_t, uint32_t> get_start_end_pcs(std::vector<Static_Info *> &infos, Static_Info * first);
+
 
 
  #endif

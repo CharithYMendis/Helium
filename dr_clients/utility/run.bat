@@ -33,10 +33,11 @@ set PHOTOSHOP="C:\Program Files (x86)\Adobe\Adobe Photoshop CS6\Photoshop.exe"
 set HALIDE_TEST=%EXALGO_TEST_FOLDER%\halide_tests\bin32\%4
 set ASM_TEST=%EXALGO_TEST_FOLDER%\asm_tests\bin32\%4
 set C_TEST=%EXALGO_TEST_FOLDER%\c_tests\bin32\%4
-set GIMP="C:\Program Files\GIMP 2\bin\gimp-2.8.exe"
+set GIMP="C:\Program Files\GIMP 2\bin\gimp_2.8.exe"
 set PPT="C:\Program Files (x86)\Microsoft Office\Office15\POWERPNT.EXE"
 set IRFAN="C:\Program Files (x86)\IrfanView\i_view32.exe"
 set HPGMG="C:\Charith\libraries\hpgmg\build\bin\hpgmg_fv.exe"
+set MINIGMG="C:\Charith\libraries\minigmg\miniGMG\run.exe"
 )
 
 set INPUT_IMAGE=%EXALGO_IMAGE_FOLDER%\%IN_IMAGE%
@@ -70,6 +71,10 @@ if "%2" == "hpgmg" (
 
 if "%2" == "irfan" (
 	set EXEC=%IRFAN%
+)
+
+if "%2" == "minigmg" (
+	set EXEC=%MINIGMG%
 )
  
  ::-msgbox_mask 0xf

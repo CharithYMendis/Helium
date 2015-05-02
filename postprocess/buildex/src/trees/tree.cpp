@@ -780,6 +780,66 @@ void Tree::remove_po_nodes(){
 }
 
 
+void Tree::remove_or_minus_1(){
+
+	traverse_tree(head, head, [](Node * node, void * value)-> void* {
+
+		if (node->operation == op_or){
+
+
+			int32_t index = -1;
+			for (int i = 0; i < node->srcs.size(); i++){
+
+				if (node->srcs[i]->symbol->type == IMM_INT_TYPE && (int32_t)node->srcs[i]->symbol->value == -1){
+					index = i; break;
+				}
+			}
+
+
+			if (index != -1){
+				node->srcs.clear();
+				node->symbol->type = IMM_INT_TYPE;
+				node->symbol->value = 255;
+			}
+
+			return NULL;
+
+		}
+
+		return NULL;
+
+
+	}, empty_ret_mutator);
+
+
+}
+
+
+void Tree::mark_recursive(){
+
+	traverse_tree(head, this, [](Node * node, void * value)-> void * {
+
+
+		Tree * tree = (Tree *)value;
+		Node * head = tree->get_head();
+
+
+		mem_regions_t * head_region = ((Conc_Node *)head)->region;
+		mem_regions_t * conc_region = ((Conc_Node *)node)->region;
+
+		if (head_region == NULL || conc_region == NULL) return NULL;
+
+		if (head_region == conc_region && head->symbol->value != node->symbol->value){
+			tree->recursive = true;
+		}
+
+		return NULL;
+
+	}, empty_ret_mutator);
+
+
+
+}
 
 
 

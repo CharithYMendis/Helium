@@ -44,6 +44,7 @@ public:
 	};
 
 	uint32_t module_no; // module for this instruction (we encode as integers)
+	std::string module_name;
 	uint32_t pc; // the program counter value for this instruction - for a jump instruction this is the jump pc
 	std::string disassembly; // disassembly string
 

@@ -17,7 +17,7 @@
 /* parse the extracted files */
 cinstr_t * get_next_from_ascii_file(std::ifstream &file, uint32_t version);
 cinstr_t * get_next_from_bin_file(std::ifstream &file, uint32_t version);
-void parse_debug_disasm(std::vector<Static_Info *> &info, std::ifstream &file);
+Static_Info * parse_debug_disasm(std::vector<Static_Info *> &info, std::ifstream &file);
 vector<cinstr_t * > get_all_instructions(std::ifstream &file, uint32_t version);
 vec_cinstr walk_file_and_get_instructions(std::ifstream &file, 
 										  std::vector<Static_Info *> &static_info, uint32_t version);

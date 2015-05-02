@@ -41,6 +41,11 @@ if "%DR_PHASE%" == "memtrace" (
 	call run_client %ARCH% %EXEC% %TEST_NAME% %DEBUG% "funcwrap memtrace" %FILTER_FILE% %FILTER_MODE_STRING% %INSTRACE_MODE_STRING%	
 )
 
+if "%DR_PHASE%" == "inscount" (
+
+	call run_client %ARCH% %EXEC% %TEST_NAME% %DEBUG% "funcwrap inscount" %FILTER_FILE% %FILTER_MODE_STRING%
+)
+
 
 if "%DR_PHASE%" == "memdump" (
 

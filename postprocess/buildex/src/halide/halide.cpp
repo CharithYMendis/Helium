@@ -62,9 +62,17 @@ string print_Halide_output_to_file(Abs_Node * node, string filename, uint32_t fi
 /* ImageParam name(type,dim); */
 string print_Halide_input_declaration(Abs_Node * node){
 
-	ASSERT_MSG((node->type == Abs_Node::INPUT_NODE || node->type == Abs_Node::INTERMEDIATE_NODE), ("ERROR: the node cannot be a input"))
+	//ASSERT_MSG((node->type == Abs_Node::INPUT_NODE || node->type == Abs_Node::INTERMEDIATE_NODE), ("ERROR: the node cannot be a output"));
+	
 
-	return "ImageParam " + node->mem_info.associated_mem->name + "(" 
+	cout << node->mem_info.associated_mem->name << " " << node->mem_info.associated_mem->trees_direction << endl;
+
+
+	if ((node->mem_info.associated_mem->trees_direction & MEM_INPUT) != MEM_INPUT) return "";
+
+	string in_string =  ((node->mem_info.associated_mem->trees_direction & MEM_OUTPUT) == MEM_OUTPUT) ? "_buf_in" : "" ;
+
+	return "ImageParam " + node->mem_info.associated_mem->name + in_string + "(" 
 		+ print_Halide_type(node->symbol->width, node->sign, node->is_double) + ","
 		+ to_string(node->mem_info.dimensions) + ");" ;
 
@@ -112,6 +120,44 @@ void Halide_Program::populate_vars(uint32_t dim){
 	for (int i = 0; i < dim; i++){
 		vars.push_back(x + + "_" +  to_string(i)); 
 	}
+
+}
+
+void Halide_Program::resolve_conditionals(){
+
+	/* if there is no else; if assume it is coming from outside */
+
+	/* BUG - need to handle all cases */
+
+	for (int i = 0; i < funcs.size(); i++){
+
+		/* check whether there is no statement with no conditionals */
+		if (funcs[i]->pure_trees.size() == 1){
+			if (funcs[i]->pure_trees[0]->conditional_trees.size() > 0){
+				/* add a new tree output = output values coming from outside */
+				Abs_Tree * existing_tree = funcs[i]->pure_trees[0];
+				Abs_Tree * new_tree = new Abs_Tree();
+				
+				Abs_Node * new_head = new Abs_Node(*(Abs_Node *)existing_tree->get_head());
+				new_head->operation = op_assign;
+				new_head->minus = false;
+
+				Abs_Node * assign_node = new Abs_Node(*(Abs_Node *)existing_tree->get_head());
+				for (int j = 0; j < assign_node->mem_info.dimensions; j++){
+					for (int k = 0; k < assign_node->mem_info.head_dimensions + 1; k++){
+						if (j == k) assign_node->mem_info.indexes[j][k] = 1;
+						else assign_node->mem_info.indexes[j][k] = 0;
+					}
+				}
+				assign_node->minus = false;
+				new_tree->set_head(new_head);
+				new_head->add_forward_ref(assign_node); 
+				funcs[i]->pure_trees.push_back(new_tree);
+			}
+		}
+		
+	}
+
 
 }
 
@@ -328,14 +374,18 @@ void Halide_Program::populate_paras_input_paras(bool para)
 
 		/* now first populate the outputs */
 		for (int i = 0; i < funcs.size(); i++){
-			output.push_back((Abs_Node *)funcs[i]->pure_trees[0]->get_head());
+			Abs_Node * output_node = (Abs_Node *)funcs[i]->pure_trees[0]->get_head();
+			output.push_back(output_node);
+			mem_regions_t * head_region = output_node->mem_info.associated_mem;
+			head_region->trees_direction |= MEM_OUTPUT;
 		}
 
 		for (int i = 0; i < total.size(); i++){
+			total[i]->mem_info.associated_mem->trees_direction |= MEM_INPUT;
 			for (int j = 0; j < output.size(); j++){
 				if (total[i]->mem_info.associated_mem == output[j]->mem_info.associated_mem){
-					total.erase(total.begin() + i--);
-					break;
+					if (total[i]->is_node_indirect() != -1) total[i]->mem_info.associated_mem->trees_direction &= ~((uint32_t)MEM_INPUT);
+						break;
 				}
 			}
 		}
@@ -349,11 +399,9 @@ void Halide_Program::populate_input_params(){
 
 	populate_paras_input_paras(false);
 	
-
 }
 
 void Halide_Program::populate_params(){
-
 
 	populate_paras_input_paras(true);
 
@@ -620,7 +668,9 @@ string Halide_Program::print_predicated_tree(vector<Abs_Tree *> trees, string ex
 	for (int i = 0; i < exprs.size() - 1; i++){
 		statements.push_back(print_select_statement(exprs[i], exprs[i + 1]));
 	}
+
 	statements.push_back(print_select_statement(exprs[exprs.size() - 1], NULL));
+	
 
 	string output = "";
 

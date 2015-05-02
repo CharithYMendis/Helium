@@ -35,6 +35,8 @@ struct mem_regions_t {
 	bool dependant;
 
 
+	uint32_t trees_direction;
+
 	uint32_t dimensions;
 
 	/* emulate halide's buffer_t structure here */
@@ -61,6 +63,7 @@ struct mem_regions_t {
 		type = 0;
 		direction = 0;
 		dump_type = 0;
+		trees_direction = 0;
 		dependant = false;
 	}
 

@@ -175,6 +175,35 @@ int32_t is_indirect_access(Comp_Abs_Node * node){
 
 }
 
+void remove_same_values(bool * deleted_index, vector < vector< double> > &A){
+
+	deleted_index[A[0].size() - 1] = false;
+	uint32_t temp_count = 0;
+
+	/* check if a particular dimension is the same? */
+	for (int j = 0; j < A[0].size() - 1; j++){
+
+		bool same = true;
+		double value = A[0][j];
+		for (int i = 1; i < A.size(); i++){
+			if (abs(value - A[i][j]) > 1e-6){
+				same = false; break;
+			}
+		}
+
+		/* if same true */
+		if (same){
+			for (int i = 0; i < A.size(); i++){
+				A[i].erase(A[i].begin() + j);
+			}
+			j--;
+		}
+		deleted_index[temp_count++] = same;
+
+	}
+
+}
+
 
 void abstract_buffer_indexes_traversal(Comp_Abs_Node * head, Comp_Abs_Node * node){
 
@@ -191,6 +220,9 @@ void abstract_buffer_indexes_traversal(Comp_Abs_Node * head, Comp_Abs_Node * nod
 
 	if ( ((first->type == Abs_Node::INPUT_NODE) || (first->type == Abs_Node::INTERMEDIATE_NODE)) && !indirect ){
 		/*make a system of linear equations and solve them*/
+
+
+
 		vector<vector<double> > A;
 		//for (int i = 0; i < head->nodes.size(); i++){
 		for (int i = 0; i < node->nodes.size(); i++){
@@ -201,6 +233,9 @@ void abstract_buffer_indexes_traversal(Comp_Abs_Node * head, Comp_Abs_Node * nod
 			coeff.push_back(1.0);
 			A.push_back(coeff);
 		}
+
+		bool  * deleted_index = new bool[A[0].size()];
+		remove_same_values(deleted_index, A);
 
 		cout << "A" << endl;
 		printout_matrices(A);
@@ -220,9 +255,16 @@ void abstract_buffer_indexes_traversal(Comp_Abs_Node * head, Comp_Abs_Node * nod
 			cout << "results" << endl;
 			printout_vector(results);
 
+			uint32_t head_dimensions = head->nodes[0]->mem_info.dimensions;
 			//ASSERT_MSG((results.size() == (first->mem_info.dimensions + 1)), ("ERROR: the result vector is inconsistent\n"));
-			for (int i = 0; i < results.size(); i++){
-				first->mem_info.indexes[dim][i] = double_to_int(results[i]);
+			uint32_t tcount = 0;
+			for (int i = 0; i < head_dimensions + 1; i++){
+				if (deleted_index[i] == false){
+					first->mem_info.indexes[dim][i] = double_to_int(results[tcount++]);
+				}
+				else{
+					first->mem_info.indexes[dim][i] = 0;
+				}
 				//cout << first->mem_info.indexes[dim][i] << " ";
 			}
 			//cout << endl;
@@ -242,6 +284,10 @@ void abstract_buffer_indexes_traversal(Comp_Abs_Node * head, Comp_Abs_Node * nod
 			coeff.push_back(1.0);
 			A.push_back(coeff);
 		}
+
+		bool  * deleted_index = new bool[A[0].size()];
+		remove_same_values(deleted_index, A);
+
 		cout << "imm" << endl;
 		cout << "A" << endl;
 		printout_matrices(A);
@@ -260,15 +306,20 @@ void abstract_buffer_indexes_traversal(Comp_Abs_Node * head, Comp_Abs_Node * nod
 		printout_vector(b);
 
 		vector<double> results = solve_linear_eq(A, b);
-
-		
 		cout << "imm results" << endl;
 
 		printout_vector(results);
 
-
-		for (int i = 0; i < results.size(); i++){
-			first->mem_info.indexes[0][i] = double_to_int(results[i]);
+		uint32_t head_dimensions = head->nodes[0]->mem_info.dimensions;
+		//ASSERT_MSG((results.size() == (first->mem_info.dimensions + 1)), ("ERROR: the result vector is inconsistent\n"));
+		uint32_t tcount = 0;
+		for (int i = 0; i < head_dimensions + 1; i++){
+			if (deleted_index[i] ==  false){
+				first->mem_info.indexes[0][i] = double_to_int(results[tcount++]);
+			}
+			else{
+				first->mem_info.indexes[0][i] = 0;
+			}
 		}
 
 	}

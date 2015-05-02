@@ -398,6 +398,36 @@ void create_call_dependancy(Conc_Tree * tree, Node * node, Func_Info_t * info){
 }
 
 
+bool Conc_Tree::tree_add_to_frontier(rinstr_t * instr,Node * src){
+
+	Conc_Node * head_conc = (Conc_Node *)head;
+	Conc_Node * src_conc = (Conc_Node *)src;
+
+	bool add = true;
+
+	if (head_conc->region != NULL && head_conc->region == src_conc->region){
+		add = false;
+	}
+
+	/* <opnd> OR <0xff> */
+	if (instr->operation == op_or){
+		for (int k = 0; k < instr->num_srcs; k++){
+			if ((int32_t)instr->srcs[k].value == -1 && instr->srcs[k].type == IMM_INT_TYPE){
+				add = false;
+			}
+		}
+	}
+
+	if (add){
+		add_to_frontier(generate_hash(src->symbol), src);
+	}
+
+
+	return add;
+
+}
+
+
 bool Conc_Tree::update_depandancy_backward(rinstr_t * instr, cinstr_t * cinstr, Static_Info * info, uint32_t line, vector<mem_regions_t *> regions, vector<Func_Info_t *> func_info)
 {
 
@@ -623,12 +653,7 @@ bool Conc_Tree::update_depandancy_backward(rinstr_t * instr, cinstr_t * cinstr, 
 			Conc_Node * src_conc = (Conc_Node *)src;
 
 #ifndef INTERMEDIATE_BUFFER_ANALYSIS
-			if (head_conc->region != NULL && head_conc->region == src_conc->region){
-				recursive = true;
-			}
-			else{
-				add_to_frontier(hash_src, src);
-			}
+			tree_add_to_frontier(instr, src); 
 #else			
 			if (src_conc->region != NULL){
 				if (head_conc->region != NULL && head_conc->region == src_conc->region){
@@ -640,6 +665,8 @@ bool Conc_Tree::update_depandancy_backward(rinstr_t * instr, cinstr_t * cinstr, 
 			}
 #endif
 		}
+
+		
 
 		DEBUG_PRINT(("completed adding a src\n"), 4);
 

@@ -246,6 +246,8 @@ int main(int argc, char **argv){
 		vector<mem_info_t *> total_mem_info = get_mem_info_from_memtrace(memtrace_files[0], module);
 		link_mem_regions_greedy_dim(total_mem_info, 0);
 
+		//print_mem_layout(log_file, pc_mems);
+
 		if (total_size == 0){
 			filter_mem_regions(pc_mems, in_image, out_image, threshold);
 		}

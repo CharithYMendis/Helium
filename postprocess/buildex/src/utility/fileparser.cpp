@@ -134,7 +134,7 @@ cinstr_t * get_next_from_bin_file(ifstream &file){
 }
 
 /* parsing the disasm file */
-string parse_line_disasm(string line, uint32_t * module, uint32_t * app_pc){
+pair<string, string> parse_line_disasm(string line, uint32_t * module, uint32_t * app_pc){
 
 	int i = 0;
 	string value = "";
@@ -152,11 +152,21 @@ string parse_line_disasm(string line, uint32_t * module, uint32_t * app_pc){
 	*app_pc = atoi(value.c_str());
 
 	i++; value = "";
+	while (line[i] != '-'){
+		value += line[i];
+		i++;
+	}
+	
+
+	string disasm_string = value;
+	value = ""; i++;
+	
 	for (; i < line.size(); i++){
 		value += line[i];
 	}
+	string module_name = value;
 
-	return value;
+	return make_pair(disasm_string,module_name);
 
 }
 
@@ -169,7 +179,7 @@ bool compare_static_info(Static_Info * first, Static_Info * second){
 	}
 }
 
-void parse_debug_disasm(vector<Static_Info *> &static_info, ifstream &file){
+Static_Info * parse_debug_disasm(vector<Static_Info *> &static_info, ifstream &file){
 
 	DEBUG_PRINT(("getting disassembly trace\n"), 2);
 
@@ -185,7 +195,10 @@ void parse_debug_disasm(vector<Static_Info *> &static_info, ifstream &file){
 			uint32_t module_no;
 			uint32_t app_pc;
 
-			string disasm_string = parse_line_disasm(string_cpp, &module_no, &app_pc);
+			pair<string, string> ret = parse_line_disasm(string_cpp, &module_no, &app_pc);
+
+			string disasm_string = ret.first;
+			string module_name = ret.second;
 
 			Static_Info * disasm;
 
@@ -203,6 +216,7 @@ void parse_debug_disasm(vector<Static_Info *> &static_info, ifstream &file){
 				disasm->module_no = module_no;
 				disasm->pc = app_pc;
 				disasm->disassembly = disasm_string;
+				disasm->module_name = module_name;
 				static_info.push_back(disasm);
 			}
 
@@ -211,8 +225,11 @@ void parse_debug_disasm(vector<Static_Info *> &static_info, ifstream &file){
 
 	}
 
+	Static_Info * first = static_info[0];
 
 	sort(static_info.begin(), static_info.end(), compare_static_info);
+
+	return first;
 
 }
 

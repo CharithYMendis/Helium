@@ -38,8 +38,8 @@
 
  using namespace std;
 
- bool debug = false;
- uint32_t debug_level = 0;
+ bool debug = true;
+ uint32_t debug_level = 2;
  ofstream log_file;
 
  uint32_t Tree::num_paras = 0;
@@ -131,19 +131,19 @@
 	 int32_t thread_id = -1;
 	 uint32_t start_pc = 0; /* start pc of the function */
 	 uint32_t end_pc = 0; /* end pc of the function */
-	 uint32_t seed = 10;
+	 uint32_t seed = 50;
 
-	 uint32_t tree_build = BUILD_RANDOM;
-	 uint32_t mode = TREE_BUILD_STAGE;
+	 uint32_t tree_build = BUILD_CLUSTERS;
+	 uint32_t mode = HALIDE_OUTPUT_STAGE;
 
 	 uint32_t dump = 1;
-	 uint32_t version = VER_NO_ADDR_OPND;
+	 uint32_t version = VER_WITH_ADDR_OPND;
 
 	 vector<uint32_t> start_pcs;
 	 vector<uint32_t> end_pcs;
 
-	 uint32_t skip = 4;
-	 uint32_t no_trees = 30;
+	 uint32_t skip = 30;
+	 uint32_t no_trees = 4;
 
 	 uint32_t anaopt = ALL_ANALYSIS;
 
@@ -413,18 +413,29 @@
 
 	 sort_mem_info(mem_info);
 	 link_mem_regions_greedy_dim(mem_info, 0);
+	 //link_mem_regions(pc_mem_info, GREEDY);
 	 
 	 LOG(log_file, "*********** pc_mem_info *************" << endl);
 	 print_mem_layout(log_file, pc_mem_info);
 	 LOG(log_file, "*********** mem_info *************" << endl);
 	 print_mem_layout(log_file, mem_info);
-
 	 
 	 vector<vector<mem_info_t *> > mergable = get_merge_opportunities(mem_info, pc_mem_info);
 	 merge_mem_regions_pc(mergable, mem_info);
 
+	 /* print based on levels */
+	 for (int i = 0; i < mem_info.size(); i++){
+		 LOG(log_file, "start main " << mem_info[i]->start << " " << mem_info[i]->end << endl);
+		 mem_info_t * mems = mem_info[i];
+		 while (mems->mem_infos.size() > 0){
+			 LOG(log_file, "stage");
+			 for (int j = 0; j < mems->mem_infos.size(); j++){
+				 LOG(log_file, mems->mem_infos[j]->start << " " << mems->mem_infos[j]->end << endl);
+			 }
+			 mems = mems->mem_infos[0];
+		 }
+	 }
 
-	 
 
 	 DEBUG_PRINT(("*******************end of mem info stage*********************\n"), 2);
 
@@ -439,13 +450,16 @@
 
 	 /* disassembly of instructions acquired */
 	 vector<Static_Info *> static_info;
-	 parse_debug_disasm(static_info, disasm_file);
-
-	 if (debug_level >= 4){
-		 print_disasm(static_info);
-	 }
-
+	 Static_Info * first = parse_debug_disasm(static_info, disasm_file);
 	 print_disasm(static_info);
+
+	 if (start_pcs.size() == 0){
+		 DEBUG_PRINT(("Estimating start and end locations of the function\n"), 2);
+		 pair<uint32_t, uint32_t> locs =  get_start_end_pcs(static_info, first);
+		 DEBUG_PRINT(("start - %d; end - %d\n", locs.first, locs.second), 2);
+		 start_pcs.push_back(locs.first);
+		 end_pcs.push_back(locs.second);
+	 }
 
 	 /* get all the instructions and preprocess */
 	 instrace_file.clear();
@@ -781,7 +795,7 @@
 
 
 	 if (clustered_trees.size() > 0){
-		 abs_trees = build_abs_trees(clustered_trees, output_folder, 4, total_mem_regions, 30, pc_mem_info);
+		 abs_trees = build_abs_trees(clustered_trees, output_folder, no_trees, total_mem_regions, skip, pc_mem_info);
 		 cout << "building abstract trees done" << endl;
 	 }
 
@@ -841,6 +855,7 @@
 		 }
 	 }
 
+	 halide->resolve_conditionals();
 	 halide->populate_vars(4);
 	 halide->populate_input_params();
 	 halide->populate_params();

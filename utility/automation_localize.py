@@ -45,11 +45,11 @@ def run_code_diff(files,executable):
         p = subprocess.Popen(command)
         p.communicate()
 
-def run_profiling(program, executable):
+def run_profiling(program, executable, in_image):
         os.chdir(parent_folder + '/dr_clients/utility')
         args = ['m32', program, executable, '1',
-                'profile_memtrace', diff_file_name, 'bb', 'low.png',
-                'low.png']
+                'profile_memtrace', diff_file_name, 'bb', in_image,
+                in_image]
         command = 'run_tests.bat '
         for arg in args:
                 command += arg + ' '
@@ -57,11 +57,11 @@ def run_profiling(program, executable):
         p.communicate()
         
 
-def run_filter_funcs(executable):
+def run_filter_funcs(executable, in_image):
         os.chdir(parent_folder + '/preprocess/filter_funcs/build32/bin')
         args = ['-exec ' + executable,
-                '-in_image low.png',
-                '-out_image low.png',
+                '-in_image ' + in_image,
+                '-out_image ' + in_image,
                 '-debug 1',
                 '-debug_level 5',
                 '-mode 1',
@@ -78,12 +78,14 @@ if __name__ == '__main__':
         executable = ''
         program = ''
         filter = ''
+	in_image = ''
         try:
-                opts, args = getopt.getopt(sys.argv[1:],"e:p:f:h",["exec=","program="])
+                opts, args = getopt.getopt(sys.argv[1:],"e:p:f:h:i:",["exec=","program="])
         except getopt.GetoptError:
                 print 'test.py -e <exec>'
                 sys.exit(2)
         for opt, arg in opts:
+                print opt, arg
                 if opt in ("-e","--exec"):
                         executable = arg
                 elif opt in ("-p","--program"):
@@ -92,11 +94,15 @@ if __name__ == '__main__':
                         print 'test.py -e <exec>'
                 elif opt == "-f":
                         filter = arg
+		elif opt == "-i":
+                        in_image = arg
+
+        print in_image
         
         run_code_coverage(program)
         files = get_coverage_files(executable)
         run_code_diff(files, filter)
-        run_profiling(program, executable)
-        run_filter_funcs(executable)
+        run_profiling(program, executable, in_image)
+        run_filter_funcs(executable,in_image)
         
     

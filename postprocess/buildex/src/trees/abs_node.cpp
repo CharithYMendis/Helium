@@ -136,7 +136,10 @@ string Abs_Node::get_mem_string(){
 /* input(x,y) */
 string Abs_Node::get_mem_string(vector<string> vars){
 
-	string ret = this->mem_info.associated_mem->name + "(";
+
+	string in_string = ((this->mem_info.associated_mem->trees_direction & MEM_OUTPUT) == MEM_OUTPUT) ? "_buf_in" : "";
+
+	string ret = this->mem_info.associated_mem->name + in_string + "(";
 	for (int i = 0; i < this->mem_info.dimensions; i++){
 
 		bool first = true;

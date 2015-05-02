@@ -170,7 +170,7 @@ vector<Abs_Node *> Abs_Tree::get_buffer_region_nodes(){
 		Abs_Node * abs_node = (Abs_Node *)node;
 		if (abs_node->type == Abs_Node::INPUT_NODE || abs_node->type == Abs_Node::OUTPUT_NODE || abs_node->type == Abs_Node::INTERMEDIATE_NODE){
 			vector<Abs_Node *> * nodes = (vector<Abs_Node *> *)value;
-			for (int i = 0; i < (*nodes).size(); i++){
+			for (int i = 1; i < (*nodes).size(); i++){ /* trick to get rid of the head node */
 				if (abs_node->mem_info.associated_mem == (*nodes)[i]->mem_info.associated_mem){
 					return NULL;
 				}
@@ -181,6 +181,8 @@ vector<Abs_Node *> Abs_Tree::get_buffer_region_nodes(){
 		return NULL;
 
 	}, empty_ret_mutator);
+
+	nodes.erase(nodes.begin()); /* remove head node */
 
 	return nodes;
 }

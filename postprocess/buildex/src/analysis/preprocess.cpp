@@ -141,6 +141,35 @@ vec_cinstr filter_instr_trace(vector<uint32_t> start_pc, vector<uint32_t> end_pc
 }
 
 
+/* for a single function get start and end points */
+pair<uint32_t, uint32_t> get_start_end_pcs(vector<Static_Info *> &infos, Static_Info * first){
+
+	uint32_t start = first->pc;
+
+	vector<uint32_t> pcs;
+	//get all ret instructions
+	for (int i = 0; i < infos.size(); i++){
+		if (infos[i]->disassembly.find("ret") != string::npos){
+			pcs.push_back(infos[i]->pc);
+		}
+	}
+
+
+	ASSERT_MSG(pcs.size() > 0, ("ERROR: no return instructions found\n"));
+
+	uint32_t end = 0;
+	for (int i = 0; i < pcs.size(); i++){
+		if (pcs[i] > start){
+			end = pcs[i]; break;
+		}
+	}
+
+	return make_pair(start, end);
+	
+
+}
+
+
 
 
 
