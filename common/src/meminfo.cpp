@@ -389,7 +389,7 @@ vector<mem_info_t *> extract_mem_regions(vector<pc_mem_region_t *> &pc_mems){
 
 void print_mem_layout(ostream &file, vector<pc_mem_region_t *> &pc_mems){
 	
-	DEBUG_PRINT(("printing pc_meminfo...\n"), 2);
+	//DEBUG_PRINT(("printing pc_meminfo...\n"), 2);
 
 	for (int i = 0; i < pc_mems.size(); i++){
 		if (!pc_mems[i]->module.empty()){
@@ -510,7 +510,7 @@ bool random_dest_select(vector<mem_info_t *> &mem_info, uint64_t * dest, uint32_
 
 void print_mem_layout(ostream &file, vector<mem_info_t *> &mem_info){
 
-	DEBUG_PRINT(("print_mem_layout(mem_info) \n"), 2);
+	//DEBUG_PRINT(("print_mem_layout(mem_info) \n"), 2);
 
 	for (int i = 0; i < mem_info.size(); i++){
 		mem_info_t * info = mem_info[i];
@@ -672,27 +672,10 @@ vector< vector< mem_info_t * > > get_merge_opportunities(vector<mem_info_t *> me
 				regions.push_back(temp);
 				temp_info.clear();
 			}
-
-			/*if (j == 1){
-				if (right_first >= left_second){
-					temp_info.push_back(overlapped[j - 1]);
-				}
-			}
-			else{
-				if (right_first < left_second){
-					vector<mem_info_t *> temp(temp_info);
-					regions.push_back(temp);
-					temp_info.clear();
-				}
-			}
-			temp_info.push_back(overlapped[j]);*/
 		}
 
-
-		//if (temp_info.size() > 0){
-			temp_info.push_back(overlapped[overlapped.size() - 1]);
-			regions.push_back(temp_info);
-		//}
+		temp_info.push_back(overlapped[overlapped.size() - 1]);
+		regions.push_back(temp_info);
 
 		LOG(log_file, "regions" << endl);
 		for (int j = 0; j < regions.size(); j++){
@@ -736,12 +719,16 @@ vector< vector< mem_info_t * > > get_merge_opportunities(vector<mem_info_t *> me
 	
 
 	LOG(log_file, "final mergable regions..." << endl);
+	DEBUG_PRINT(("final mergable regions....\n"), 2);
 	for (int i = 0; i < ret.size(); i++){
 		for (int j = 0; j < ret[i].size(); j++){
+			DEBUG_PRINT(("%d,", ret[i][j]->start), 2);
 			LOG(log_file,ret[i][j]->start << ",");
 		}
+		DEBUG_PRINT(("\n"),2);
 		LOG(log_file,endl);
 	}
+
 
 	return ret;
 

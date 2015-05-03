@@ -56,12 +56,12 @@ vector<mem_regions_t *> merge_instrace_and_dump_regions(vector<mem_regions_t *> 
 		if (mem_regions[i]->start > mem_regions[i]->end){
 			region_start = mem_regions[i]->end;
 			region_end = mem_regions[i]->start;
-			DEBUG_PRINT(("region start is greater than end\n"), 2);
+			DEBUG_PRINT(("region start is greater than end\n"), 4);
 		}
 		else{
 			region_start = mem_regions[i]->start;
 			region_end = mem_regions[i]->end;
-			DEBUG_PRINT(("region start is lesser than end\n"), 2);
+			DEBUG_PRINT(("region start is lesser than end\n"), 4);
 		}
 
 		for (int j = 0; j < mem_info.size(); j++){
@@ -223,7 +223,7 @@ vector<mem_regions_t *> merge_instrace_and_dump_regions(vector<mem_regions_t *> 
 	DEBUG_PRINT((" no of image mem regions after merging - %d\n", final_regions.size()), 2);
 	DEBUG_PRINT((" total number of mem regions (from instrace) - %d\n", total_regions.size()), 2);
 
-	DEBUG_PRINT((" merge_instrace_and_dump_regions - done\n"), 2);
+	DEBUG_PRINT(("merge_instrace_and_dump_regions - done\n"), 2);
 
 	cout << dec;
 
@@ -264,7 +264,7 @@ void  mark_regions_type(vector<mem_regions_t *> regions, vector<mem_regions_t *>
 
 	for (uint32_t i = start; i < end; i++){
 
-		if (i % 10000 == 0) cout << "->" << i << endl;
+		if (i % 10000 == 0) DEBUG_PRINT(("."),2);
 
 		cinstr_t * instr = instrs[i].first;
 		rinstr_t * rinstr;
@@ -322,6 +322,8 @@ void  mark_regions_type(vector<mem_regions_t *> regions, vector<mem_regions_t *>
 
 	}
 
+	DEBUG_PRINT(("\n"), 2);
+
 }
 
 
@@ -371,7 +373,6 @@ vector<mem_regions_t *> get_input_output_regions(vector<mem_regions_t *> &image_
 		}
 	}
 
-
 	vector<mem_regions_t *> input_regions;
 	if (input_mem_region != NULL){
 		input_regions.push_back(input_mem_region);
@@ -388,26 +389,6 @@ vector<mem_regions_t *> get_input_output_regions(vector<mem_regions_t *> &image_
 			start = end;
 		}
 	}
-
-
-
-
-	/*for (int i = 0; i < total_regions.size(); i++){
-		if ( (total_regions[i]->type & INPUT_BUFFER) == INPUT_BUFFER){
-		cout << "INPUT" << endl;
-		print_mem_regions(total_regions[i]);
-		}
-		if ( (total_regions[i]->type & OUTPUT_BUFFER) == OUTPUT_BUFFER){
-		cout << "OUTPUT" << endl;
-		print_mem_regions(total_regions[i]);
-		}
-		if ( (total_regions[i]->type & INTERMEDIATE_BUFFER) == INTERMEDIATE_BUFFER){
-		cout << "INTERMEDIATE " << endl;
-		print_mem_regions(total_regions[i]);
-		}
-		}*/
-
-
 
 	if (output_mem_region == NULL && input_mem_region == NULL){
 

@@ -389,7 +389,7 @@
 	 vector<mem_regions_t *> dump_regions;
 	 if (dump){
 		 dump_regions = get_image_regions_from_dump(memdump_files, in_image_filename, out_image_filename);
-		 LOG(log_file, "dump regions....." << endl);
+		 LOG(log_file, "*************** dump regions ***********" << endl);
 		 print_mem_regions(log_file, dump_regions);
 	 }
 	 
@@ -415,6 +415,7 @@
 	 link_mem_regions_greedy_dim(mem_info, 0);
 	 //link_mem_regions(pc_mem_info, GREEDY);
 	 
+	 DEBUG_PRINT(("printing pc mems and mem info to log file\n"), 2);
 	 LOG(log_file, "*********** pc_mem_info *************" << endl);
 	 print_mem_layout(log_file, pc_mem_info);
 	 LOG(log_file, "*********** mem_info *************" << endl);
@@ -508,24 +509,24 @@
 	 vector<mem_regions_t *> total_mem_regions;
 	 vector<mem_regions_t *> image_regions = merge_instrace_and_dump_regions(total_mem_regions, mem_info, dump_regions);
 
-	 /* get possible buffers */
+	 /* get possible buffers - should be able to merge these analysis?? */
 	 mark_possible_buffers(pc_mem_info, total_mem_regions, static_info, instrs_forward);
-	 
 	 vector<mem_regions_t*> regions = get_input_output_regions(image_regions, total_mem_regions, pc_mem_info, candidate_ins, instrs_forward, start_points_mem);
 	 
-	 for (int i = 0; i < total_mem_regions.size(); i++){
-		 total_mem_regions[i]->dependant = false;
-	 }
-
 	 input_mem_region = regions[0];
 	 output_mem_region = regions[1];
 
 	 vector<mem_regions_t *> input_regions;
 	 if ( (anaopt & INPUT_REGION_SELECTION) == INPUT_REGION_SELECTION){
+		 /* selects the pure input regions needed for forward analysis */
+		 DEBUG_PRINT(("getting input regions....\n"), 2);
+		 for (int i = 0; i < total_mem_regions.size(); i++){
+			 total_mem_regions[i]->dependant = false;
+		 }
 		 input_regions = get_input_regions(total_mem_regions, pc_mem_info, start_points_mem, instrs_forward);
-		 log_file << " input regions " << endl;
+		 LOG(log_file," input regions " << endl);
 		 print_mem_regions(log_file, input_regions);
-		 log_file << "input done " << endl;
+		 LOG(log_file,"input done " << endl);
 	 }
 	 else{
 		 input_regions.push_back(input_mem_region);
@@ -548,6 +549,9 @@
 
 	 /**************************** forward analysis for conditionals, indirection *************************************************************/
 	 
+	 DEBUG_PRINT(("******************forward analysis********************************\n"), 2);
+
+
 	 vector<uint32_t> app_pc;
 	 vector<uint32_t> app_pc_indirect;
 	 vector<uint32_t> app_pc_total;
@@ -558,18 +562,9 @@
 	DEBUG_PRINT(("before filter static ins : %d\n", static_info.size()), 2);
 	filter_disasm_vector(instrs_forward, static_info);
 	DEBUG_PRINT(("after filter static ins : %d\n", static_info.size()), 2);
-
-	/*vector<mem_regions_t *> inputs;
-	for (int i = 0; i < total_mem_regions.size(); i++){
-		if ((total_mem_regions[i]->direction & MEM_INPUT) == MEM_INPUT){
-			inputs.push_back(total_mem_regions[i]);
-		}
-	}
-	app_pc = find_dependant_statements(instrs_forward, input_mem_region, static_info);
-	*/
 	
 	if ((anaopt & DEPENDANT_ANALYSIS) == DEPENDANT_ANALYSIS){
-		log_file << " dependant analysis " << endl;
+		LOG(log_file," dependant analysis " << endl);
 		app_pc_vec = find_dependant_statements_with_indirection(instrs_forward, input_regions, static_info, start_points_mem);
 	}
 	else{
@@ -646,6 +641,9 @@
 	 vector<Func_Info_t *> func_replacements;
 	 populate_standard_funcs(func_replacements);
 
+	 DEBUG_PRINT(("******************forward analysis done********************************\n"), 2);
+
+
 	 if (mode == CONDITIONAL_STAGE){
 		 exit(0);
 	 }
@@ -653,6 +651,8 @@
 
 
 	 /********************************* tree construction *******************************************************************/
+
+	 DEBUG_PRINT(("******************tree building********************************\n"), 2);
 
 	 vector<Conc_Tree *> conc_trees;
 	 vector< vector< Conc_Tree *> > clustered_trees;
@@ -692,7 +692,7 @@
 		 Conc_Tree * tree = new Conc_Tree();
 		 Conc_Tree * initial = build_conc_tree(dest, stride, start_points, start_trace, end_trace, tree, instrs_backward, farthest, total_mem_regions, func_replacements);
 		 tree->print_conditionals();
-		 cout << "creating conditional trees" << endl;
+		 DEBUG_PRINT(("creating conditional trees\n"), 2);
 		 build_conc_trees_for_conditionals(start_points, tree, instrs_backward, farthest, total_mem_regions, func_replacements);
 		 for (int i = 0; i < tree->conditionals.size(); i++){
 			 conc_trees.push_back(tree->conditionals[i]->tree);
@@ -722,8 +722,6 @@
 				 build_conc_trees_for_conditionals(start_points, initial, instrs_backward, farthest, total_mem_regions, func_replacements);
 				 conc_trees.push_back(initial);
 			 }
-
-
 		 }
 
 		 /* checking similarity of the trees and if not repeat?? */
@@ -748,38 +746,39 @@
 				 clustered_trees[i][j]->number_tree_nodes();
 			 }
 		 }
-		 cout << "numbering done" << endl;
+		 DEBUG_PRINT(("numbering done\n"),2);
 
 	 }
 	 else{
 		 for (int i = 0; i < conc_trees.size(); i++){
 			 conc_trees[i]->number_tree_nodes();
-			 cout << "number of nodes : " << conc_trees[i]->num_nodes << endl;
+			 DEBUG_PRINT(("number of nodes : %d\n",conc_trees[i]->num_nodes),2);
 		 }
 	 }
 
 
 
 	 /* debug printing - need to change the branches */
-	 for (int i = 0; i < conc_trees.size(); i++){
-
-		 /* Expression printing */
-		 DEBUG_PRINT(("printing out the expression\n"), 2);
-		 ofstream expression_file(output_folder + file_substr + "_expression_" + to_string(i) + ".txt", ofstream::out);
-		 
-		 DEBUG_PRINT(("printing to dot file...\n"), 2);
-		 ofstream conc_file(output_folder + file_substr + "_conctree_" + to_string(i) + ".dot", ofstream::out);
-		 conc_trees[i]->print_dot(conc_file,"conc",i);
-		 
-	 }
-
 	 if (clustered_trees.size() > 0){
 		 for (int i = 0; i < clustered_trees.size(); i++){
-			 cout << i << " size: " << clustered_trees[i].size() << endl;
+			 DEBUG_PRINT(("cluster - %d, size - %d\n",i, clustered_trees[i].size()), 2);
 			 DEBUG_PRINT(("printing to dot file...\n"), 2);
 			 ofstream conc_file(output_folder + file_substr + "_conctree_" + to_string(i) + ".dot", ofstream::out);
 			 clustered_trees[i][0]->print_dot(conc_file, "conc", i);
-			 cout << "conditionals: " << clustered_trees[i][0]->conditionals.size() << endl;
+			 DEBUG_PRINT(("conditionals: %d\n", clustered_trees[i][0]->conditionals.size()),2);
+		 }
+	 }
+	 else{
+		 for (int i = 0; i < conc_trees.size(); i++){
+
+			 /* Expression printing */
+			 DEBUG_PRINT(("printing out the expression\n"), 2);
+			 ofstream expression_file(output_folder + file_substr + "_expression_" + to_string(i) + ".txt", ofstream::out);
+
+			 DEBUG_PRINT(("printing to dot file...\n"), 2);
+			 ofstream conc_file(output_folder + file_substr + "_conctree_" + to_string(i) + ".dot", ofstream::out);
+			 conc_trees[i]->print_dot(conc_file, "conc", i);
+
 		 }
 	 }
 
@@ -796,39 +795,40 @@
 
 	 if (clustered_trees.size() > 0){
 		 abs_trees = build_abs_trees(clustered_trees, output_folder, no_trees, total_mem_regions, skip, pc_mem_info);
-		 cout << "building abstract trees done" << endl;
+		 DEBUG_PRINT(("building abstract trees done"), 2);
 	 }
+	 else if (conc_trees.size() > 0){
+		vector<Abs_Tree *> abs_trees;
+		for (int i = 0; i < conc_trees.size(); i++){
+			Abs_Tree * abs_tree = new Abs_Tree();
+			abs_tree->build_abs_tree_unrolled(conc_trees[i], total_mem_regions);
+			abs_tree->number_tree_nodes();
+			abs_trees.push_back(abs_tree);
+		}
 
 
-	 if (conc_trees.size() > 0){
-		 vector<Abs_Tree *> abs_trees;
-		 for (int i = 0; i < conc_trees.size(); i++){
-			 Abs_Tree * abs_tree = new Abs_Tree();
-			 abs_tree->build_abs_tree_unrolled(conc_trees[i], total_mem_regions);
-			 abs_tree->number_tree_nodes();
-			 abs_trees.push_back(abs_tree);
-		 }
+		/* debug printing */
+		for (int i = 0; i < abs_trees.size(); i++){
+			ofstream abs_file(output_folder + file_substr + "_abstree_" + to_string(i) + ".dot", ofstream::out);
+			abs_trees[i]->print_dot(abs_file, "abs", i);
+		}
 
+		Comp_Abs_Tree * comp_tree = new Comp_Abs_Tree();
+		comp_tree->build_compound_tree_unrolled(abs_trees);
+		comp_tree->number_tree_nodes();
+		ofstream comp_file(output_folder + file_substr + "_comp_tree.dot", ofstream::out);
+		comp_tree->print_dot(comp_file, "comp", 0);
+		comp_tree->abstract_buffer_indexes();
+		final_abs_tree = comp_tree->compound_to_abs_tree();
 
-		 /* debug printing */
-		 for (int i = 0; i < abs_trees.size(); i++){
-			 ofstream abs_file(output_folder + file_substr + "_abstree_" + to_string(i) + ".dot", ofstream::out);
-			 abs_trees[i]->print_dot(abs_file,"abs",i);
-		 }
+		ofstream alg_file(output_folder + file_substr + "_algebraic.dot", ofstream::out);
+		uint32_t max_dimensions = final_abs_tree->get_maximum_dimensions();
+		final_abs_tree->print_dot_algebraic(alg_file, "alg", 0, get_vars("x", max_dimensions));
 
-		 Comp_Abs_Tree * comp_tree = new Comp_Abs_Tree();
-		 comp_tree->build_compound_tree_unrolled(abs_trees);
-		 comp_tree->number_tree_nodes();
-		 ofstream comp_file(output_folder + file_substr + "_comp_tree.dot", ofstream::out);
-		 comp_tree->print_dot(comp_file,"comp",0);
-		 comp_tree->abstract_buffer_indexes();
-		 final_abs_tree = comp_tree->compound_to_abs_tree();
+	}
+	 
 
-		 ofstream alg_file(output_folder + file_substr + "_algebraic.dot", ofstream::out);
-		 uint32_t max_dimensions = final_abs_tree->get_maximum_dimensions();
-		 final_abs_tree->print_dot_algebraic(alg_file, "alg", 0, get_vars("x",max_dimensions));
-
-	 }
+	 DEBUG_PRINT(("******************tree building done********************************\n"), 2);
 
 	 if (mode == ABSTRACTION_STAGE){
 		 exit(0);
@@ -837,19 +837,22 @@
 
 	 /**************************************HALIDE OUTPUT + ALGEBRIC FILTERS********************************************************/
 
+	 DEBUG_PRINT(("******************Halide population********************************\n"), 2);
+
 	 Halide_Program * halide = new Halide_Program(); 
 
 	 if (abs_trees.size() == 0){
 		 halide->populate_pure_funcs(final_abs_tree);
 	 }
 	 else{
+		 DEBUG_PRINT(("halide population...\n"), 2);
 		 for (int i = 0; i < abs_trees.size(); i++){
 			 if (abs_trees[i]->is_recursive){
-				 cout << "red func populated" << endl;
+				 DEBUG_PRINT(("red func populated\n"), 2);
 				 halide->populate_red_funcs(abs_trees[i]->tree, abs_trees[i]->extents, abs_trees[i]->red_node);
 			 }
 			 else{
-				 cout << "pure func populated" << endl;
+				 DEBUG_PRINT(("pure func populated\n"), 2);
 				 halide->populate_pure_funcs(abs_trees[i]->tree); 
 			 }
 		 }
@@ -862,6 +865,10 @@
 
 	 vector<string> red_variables;
 	 halide->print_halide_program(halide_file, red_variables);
+
+	 DEBUG_PRINT(("******************Halide population done********************************\n"), 2);
+
+	 /* dumping memory values to files for debugging lifted halide filters - should be done separately */
 	 halide->get_memory_regions(memdump_files);
 
 	 shutdown_image_subsystem(token);

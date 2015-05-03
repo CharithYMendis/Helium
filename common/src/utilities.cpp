@@ -175,6 +175,13 @@ bool is_b_consistent(vector<double> b, uint32_t start){
 
 }
 
+void print_system(vector<vector<double> > A, vector<double> b){
+	DEBUG_PRINT(("A\n"), 2);
+	printout_matrices(A);
+	DEBUG_PRINT(("b\n"), 2);
+	printout_vector(b);
+}
+
 vector<double> solve_linear_eq(vector<vector<double> > A, vector<double> b){
 
 	int M = b.size();
@@ -183,6 +190,7 @@ vector<double> solve_linear_eq(vector<vector<double> > A, vector<double> b){
 	//M x N matrix
 
 	if (M < N){
+		print_system(A, b);
 		ASSERT_MSG(false, ("ERROR: no of equations smaller than no of unknowns\n"));
 	}
 
@@ -200,6 +208,7 @@ vector<double> solve_linear_eq(vector<vector<double> > A, vector<double> b){
 
 		// singular or nearly singular
 		if (abs(A[p][p]) <= EPSILON) {
+			print_system(A, b);
 			ASSERT_MSG((false), ("ERROR: the matrix is singular\n"));
 		}
 
@@ -222,9 +231,11 @@ vector<double> solve_linear_eq(vector<vector<double> > A, vector<double> b){
 
 
 	if (rank < N) {
+		print_system(A, b);
 		ASSERT_MSG((false), (" not enough independent equations\n"));
 	}
 	else if ( (rank > N)  || !is_b_consistent(b,rank) ){
+		print_system(A, b);
 		ASSERT_MSG((false), (" equations are not consistent; system may be non linear\n"));
 	}
 

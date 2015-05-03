@@ -237,23 +237,14 @@ void abstract_buffer_indexes_traversal(Comp_Abs_Node * head, Comp_Abs_Node * nod
 		bool  * deleted_index = new bool[A[0].size()];
 		remove_same_values(deleted_index, A);
 
-		cout << "A" << endl;
-		printout_matrices(A);
-
-
 		for (int dim = 0; dim < first->mem_info.dimensions; dim++){
 			vector<double> b;
 			//for (int i = 0; i < node->nodes.size(); i++){
 			for (int i = 0; i < node->nodes.size(); i++){
 				b.push_back((double)node->nodes[i]->mem_info.pos[dim]);
 			}
-			cout << "b" << endl;
-			printout_vector(b);
 
 			vector<double> results = solve_linear_eq(A, b);
-
-			cout << "results" << endl;
-			printout_vector(results);
 
 			uint32_t head_dimensions = head->nodes[0]->mem_info.dimensions;
 			//ASSERT_MSG((results.size() == (first->mem_info.dimensions + 1)), ("ERROR: the result vector is inconsistent\n"));
@@ -265,10 +256,7 @@ void abstract_buffer_indexes_traversal(Comp_Abs_Node * head, Comp_Abs_Node * nod
 				else{
 					first->mem_info.indexes[dim][i] = 0;
 				}
-				//cout << first->mem_info.indexes[dim][i] << " ";
 			}
-			//cout << endl;
-
 		}
 
 	}
@@ -288,10 +276,6 @@ void abstract_buffer_indexes_traversal(Comp_Abs_Node * head, Comp_Abs_Node * nod
 		bool  * deleted_index = new bool[A[0].size()];
 		remove_same_values(deleted_index, A);
 
-		cout << "imm" << endl;
-		cout << "A" << endl;
-		printout_matrices(A);
-
 		vector<double> b;
 
 		first->mem_info.indexes = new int * [1];
@@ -302,13 +286,8 @@ void abstract_buffer_indexes_traversal(Comp_Abs_Node * head, Comp_Abs_Node * nod
 		for (int i = 0; i < node->nodes.size(); i++){
 			b.push_back((long long)node->nodes[i]->symbol->value);
 		}
-		cout << "b" << endl;
-		printout_vector(b);
 
 		vector<double> results = solve_linear_eq(A, b);
-		cout << "imm results" << endl;
-
-		printout_vector(results);
 
 		uint32_t head_dimensions = head->nodes[0]->mem_info.dimensions;
 		//ASSERT_MSG((results.size() == (first->mem_info.dimensions + 1)), ("ERROR: the result vector is inconsistent\n"));
@@ -343,7 +322,7 @@ void Comp_Abs_Tree::abstract_buffer_indexes()
 	if (pos != -1){
 		Comp_Abs_Node * node = static_cast<Comp_Abs_Node *>(act_head->srcs[pos]);
 		act_head = get_indirect_access_node(node);
-		cout << "indirect head node access" << endl;
+		DEBUG_PRINT(("indirect head node access\n"), 2);
 	}
 
 	/* assert that the comp node is an input or an intermediate node */

@@ -57,11 +57,10 @@ std::vector<uint32_t> find_dependant_statements(vec_cinstr &instrs, mem_regions_
 
 void update_merge_points(vec_cinstr &instrs, vector<Jump_Info *> &jumps){
 
-
 	DEBUG_PRINT(("finding merge points\n"), 2);
 	for (int i = 0; i < jumps.size(); i++){
 
-
+		jumps[i]->merge_pc = 0;
 		if (jumps[i]->target_pc != 0 && jumps[i]->fall_pc != 0){
 
 			if (jumps[i]->target_pc < jumps[i]->fall_pc){
@@ -85,7 +84,7 @@ void update_merge_points(vec_cinstr &instrs, vector<Jump_Info *> &jumps){
 
 		if (true_line == 1 || false_line == 1){
 			DEBUG_PRINT(("WARNING: either taken or not taken information is missing for this trace for jump %d\n", jumps[i]->jump_pc), 2);
-			ASSERT_MSG(false, ("ERROR: missing a certain direction of the branch; please use another representative input\n"));
+			//ASSERT_MSG(false, ("ERROR: missing a certain direction of the branch; please use another representative input\n"));
 			continue;
 		}
 
@@ -121,18 +120,17 @@ void update_merge_points(vec_cinstr &instrs, vector<Jump_Info *> &jumps){
 			}
 		}
 
-		log_file << "not taken" << endl;
+		LOG(log_file,"not taken" << endl);
 		for (int j = 0; j < not_taken_pc.size(); j++){
-			log_file << not_taken_pc[j] << endl;
+			LOG(log_file, not_taken_pc[j] << endl);
 		}
-		log_file << "taken" << endl;
+		LOG(log_file, "taken" << endl);
 		for (int j = 0; j < taken_pc.size(); j++){
-			log_file << taken_pc[j] << endl;
+			LOG(log_file, taken_pc[j] << endl);
 		}
 
 		//sort(not_taken_pc.begin(), not_taken_pc.end());
 		//sort(taken_pc.begin(), taken_pc.end());
-
 
 		for (int j = 0; j < not_taken_pc.size(); j++){
 			for (int k = 0; k < taken_pc.size(); k++){
@@ -143,8 +141,13 @@ void update_merge_points(vec_cinstr &instrs, vector<Jump_Info *> &jumps){
 			}
 			if (merge_done) break;
 		}
+	}
 
-
+	for (int i = 0; i < jumps.size(); i++){
+		if (jumps[i]->merge_pc == 0){
+			DEBUG_PRINT(("jump at %d cannot find merge point; removing from analysis\n"), 2);
+			jumps.erase(jumps.begin() + i--);
+		}
 	}
 
 }

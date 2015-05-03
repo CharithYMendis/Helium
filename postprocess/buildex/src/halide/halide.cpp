@@ -65,7 +65,7 @@ string print_Halide_input_declaration(Abs_Node * node){
 	//ASSERT_MSG((node->type == Abs_Node::INPUT_NODE || node->type == Abs_Node::INTERMEDIATE_NODE), ("ERROR: the node cannot be a output"));
 	
 
-	cout << node->mem_info.associated_mem->name << " " << node->mem_info.associated_mem->trees_direction << endl;
+	//cout << node->mem_info.associated_mem->name << " " << node->mem_info.associated_mem->trees_direction << endl;
 
 
 	if ((node->mem_info.associated_mem->trees_direction & MEM_INPUT) != MEM_INPUT) return "";

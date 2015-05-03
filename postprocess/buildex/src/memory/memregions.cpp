@@ -371,7 +371,7 @@ void print_mem_regions(ostream &file, vector<mem_regions_t *> regions){
 
 void remove_possible_stack_frames(vector<pc_mem_region_t *> &pc_mem, vector<mem_info_t *> &mem, vector<Static_Info *> &info, vec_cinstr &instrs){
 
-	DEBUG_PRINT(("removing stack frames and out of scope mem infos\n"), 2);
+	DEBUG_PRINT(("removing stack frames and out of scope mem infos...\n"), 2);
 	DEBUG_PRINT(("mem info size - %d\n", mem.size()), 2);
 
 	for (int i = 0; i < mem.size(); i++){

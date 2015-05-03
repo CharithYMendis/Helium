@@ -65,7 +65,7 @@ pair<int32_t, int32_t> get_start_and_end_points(vector<uint32_t> start_points, u
 
 void remove_reg_leaves(Conc_Tree * tree){
 
-	DEBUG_PRINT(("WARNING: unimplemented\n"), 1);
+	//DEBUG_PRINT(("WARNING: unimplemented\n"), 1);
 
 }
 
@@ -225,7 +225,7 @@ Conc_Tree * build_conc_tree(uint64_t destination,
 
 	int32_t initial_endtrace = end_trace;
 	
-	DEBUG_PRINT(("build_tree_multi_func(concrete)....\n"), 2);
+	DEBUG_PRINT(("build_tree_multi_func(concrete)....\n"), 3);
 
 	/* get the initial starting and ending positions */
 	uint curpos;
@@ -235,7 +235,7 @@ Conc_Tree * build_conc_tree(uint64_t destination,
 	start_trace = points.first;
 	end_trace = points.second;
 
-	cout << "from get start " << start_trace << " end " << end_trace << endl;
+	//cout << "from get start " << start_trace << " end " << end_trace << endl;
 
 	if (end_trace != FILE_ENDING) { ASSERT_MSG((end_trace >= start_trace), ("ERROR: trace end should be greater than the trace start\n")); }
 	else { end_trace = instrs.size(); }
@@ -306,12 +306,12 @@ Conc_Tree * build_conc_tree(uint64_t destination,
 	/* ok now build the tree */
 	while (start_trace != instrs.size() && start_trace != initial_endtrace){
 
-			cout << start_trace << " - " << end_trace << endl;
+			DEBUG_PRINT(("%d - %d\n",start_trace,end_trace),3);
 
 			build_conc_tree_helper(start_trace, end_trace, tree, instrs, regions, func_info);
 			remove_reg_leaves(tree);
 
-			//start_trace = end_trace;
+			//start_trace = end_trace; - affects initial tree building
 			//if (index + 1 < start_points.size()) end_trace = start_points[++index];
 			break;
 
@@ -415,7 +415,7 @@ Conc_Tree * build_conc_tree(uint64_t destination,
 
 	}
 
-	DEBUG_PRINT(("build_tree_multi_func(concrete) - done\n"), 2);
+	DEBUG_PRINT(("build_tree_multi_func(concrete) - done\n"), 3);
 
 	return initial_tree;
 
@@ -674,7 +674,7 @@ void build_conc_trees_for_conditionals(
 	vector<Func_Info_t *> &func_info){
 
 
-	DEBUG_PRINT(("build conc tree for conditionals.....\n"), 2);
+	DEBUG_PRINT(("build conc tree for conditionals.....\n"), 3);
 
 	for (int i = 0; i < tree->conditionals.size(); i++){
 
@@ -1002,11 +1002,12 @@ std::vector< std::vector <Conc_Tree *> > cluster_trees
 		uint64_t location = get_mem_location(indexes[i], offset, mem, &success);
 		ASSERT_MSG(success, ("ERROR: getting mem location error\n"));
 
-		DEBUG_PRINT(("building tree for location %llx\n", location, i), 2);
+		DEBUG_PRINT(("building tree for location %llx\n", location, i), 3);
 		for (int j = 0; j < mem->dimensions; j++){
-			DEBUG_PRINT(("%d,", indexes[i][j]), 2);
+			DEBUG_PRINT(("%d,", indexes[i][j]), 3);
 		}
-		DEBUG_PRINT(("\n"),2);
+		DEBUG_PRINT(("."), 2);
+		DEBUG_PRINT(("\n"),3);
 
 		Conc_Tree * tree = new Conc_Tree();
 		tree->tree_num = i;
@@ -1028,6 +1029,7 @@ std::vector< std::vector <Conc_Tree *> > cluster_trees
 
 		if (count == indexes.size()/fraction) done = true;
 	}
+	DEBUG_PRINT(("\n"), 2);
 
 	/*BUG - incrementing by +1 is not general; should increment by the stride */
 	/*for (uint64 i = mem->start; i < mem->end; i+= mem->bytes_per_pixel){
@@ -1252,7 +1254,7 @@ Abs_Tree* abstract_the_trees(vector<Conc_Tree *> cluster, uint32_t no_trees, uin
 			trees[i]->number_tree_nodes();
 			trees[i]->print_dot(file, "abs", i);
 		}
-
+		ASSERT_MSG(false, ("abs trees are not similar - aborting\n"));
 
 		return NULL;
 	}
@@ -1304,16 +1306,15 @@ vector<Abs_Tree_Charac *> build_abs_trees(
 
 	/* sanity print */
 	for (int i = 0; i < clusters.size(); i++){
-		log_file << "cluster " << i << endl;
+
+		LOG(log_file, "cluster - " << i << endl);
 		mem_regions_t * cluster_region = get_mem_region(clusters[i][0]->get_head()->symbol->value, total_regions);
 		for (int j = 0; j < clusters[i].size(); j++){
-
 			vector<int32_t> pos = get_mem_position(cluster_region, clusters[i][j]->get_head()->symbol->value);
 			for (int k = 0; k < pos.size(); k++){
-				log_file << pos[k] << ",";
+				LOG(log_file,pos[k] << ",");
 			}
-			log_file << endl;
-
+			LOG(log_file,endl);
 		}
 
 
@@ -1337,9 +1338,7 @@ vector<Abs_Tree_Charac *> build_abs_trees(
 	/* for each cluster */
 	for (int i = 0; i < clusters.size(); i++){
 
-		cout << "cluster " << i << endl;
-
-		
+		DEBUG_PRINT(("cluster %d\n", i), 2);
 
 		/* get the abstract tree for the computational path */
 		uint32_t skip_trees = skip;
@@ -1358,7 +1357,7 @@ vector<Abs_Tree_Charac *> build_abs_trees(
 		/* get the conditional trees*/
 		abs_tree->conditional_trees = get_conditional_trees(clusters[i], no_trees, total_regions, skip_trees, pc_mem);
 
-		ofstream abs_file(folder + "\\hello_cluster_rec_abs_" + to_string(i) + ".dot", ofstream::out);
+		ofstream abs_file(folder + "\\symbolic_tree_" + to_string(i) + ".dot", ofstream::out);
 		uint32_t max_dimensions = abs_tree->get_maximum_dimensions();
 		abs_tree->number_tree_nodes();
 		abs_tree->print_dot_algebraic(abs_file, "alg", 0, get_vars("x", max_dimensions));
@@ -1394,7 +1393,7 @@ vector<Abs_Tree_Charac *> build_abs_trees(
 				Abs_Node * last_head = (Abs_Node *)last_tree->get_head();
 
 				for (int j = 0; j < first_head->mem_info.dimensions ; j++){
-					cout << first_head->mem_info.pos[j] << " " << last_head->mem_info.pos[j] << endl;
+					DEBUG_PRINT(("%d %d\n", first_head->mem_info.pos[j], last_head->mem_info.pos[j]), 2);
 				}
 
 				bool gap = false;
@@ -1405,7 +1404,7 @@ vector<Abs_Tree_Charac *> build_abs_trees(
 				}
 
 				if (!gap){ /* get the abs pos of the first and last trees */
-					DEBUG_PRINT(("no gaps\n"), 2);
+					//DEBUG_PRINT(("no gaps\n"), 2);
 					for (int j = 0; j < first_head->mem_info.dimensions; j++){
 						charac->extents.push_back(make_pair(first_head->mem_info.pos[j], last_head->mem_info.pos[j]));
 					}
@@ -1417,15 +1416,10 @@ vector<Abs_Tree_Charac *> build_abs_trees(
 					for (int j = 0; j < first_head->mem_info.dimensions; j++){
 						charac->extents.push_back(make_pair(0, first_head->mem_info.associated_mem->extents[j] - 1));
 					}
-					
-					//ASSERT_MSG(false, ("build_abs_tree: not yet implemented\n"));
 				}
-
-
-				
 			}
 
-			cout << "red func built" << endl;
+			DEBUG_PRINT(("red tree built\n"), 2);
 
 			charac->tree = abs_tree;
 			charac->is_recursive = true;
@@ -1434,7 +1428,7 @@ vector<Abs_Tree_Charac *> build_abs_trees(
 		}
 		else{ /* if no, then populate pure functions */
 
-			cout << "pure function built" << endl;
+			DEBUG_PRINT(("pure tree built\n"), 2);
 
 			Abs_Tree_Charac * charac = new Abs_Tree_Charac();
 			charac->tree = abs_tree;
