@@ -165,10 +165,12 @@ string Abs_Node::get_mem_string(vector<string> vars){
 
 		}
 
-		if (this->mem_info.indexes[i][this->mem_info.head_dimensions] != 0){
-			if (!first){
-				ret += "+";
+		if (!first){
+			if (this->mem_info.indexes[i][this->mem_info.head_dimensions] != 0){
+				ret += "+" + to_string(this->mem_info.indexes[i][this->mem_info.head_dimensions]);
 			}
+		}
+		else{
 			ret += to_string(this->mem_info.indexes[i][this->mem_info.head_dimensions]);
 		}
 

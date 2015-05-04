@@ -89,8 +89,8 @@ void build_conc_tree_helper(
 
 		instr = instrs[curpos].first;
 		rinstr = NULL;
-		DEBUG_PRINT(("->line - %d\n", curpos), 3);
-		DEBUG_PRINT(("%s\n", instrs[curpos].second->disassembly.c_str()), 3);
+		DEBUG_PRINT(("->line - %d\n", curpos), 4);
+		DEBUG_PRINT(("%s\n", instrs[curpos].second->disassembly.c_str()), 4);
 		rinstr = cinstr_to_rinstrs(instr, no_rinstrs, instrs[curpos].second->disassembly, curpos);
 		if (debug_level >= 4){ print_rinstrs(log_file,rinstr, no_rinstrs); }
 
@@ -273,7 +273,7 @@ Conc_Tree * build_conc_tree(uint64_t destination,
 	}
 
 
-	if (dest_present == false || index < 0) return NULL;
+	//if (dest_present == false || index < 0) return NULL;
 
 	ASSERT_MSG((dest_present == true) && (index >= 0), ("ERROR: couldn't find the dest to start trace\n")); //we should have found the destination
 
@@ -326,6 +326,7 @@ Conc_Tree * build_conc_tree(uint64_t destination,
 		tree->canonicalize_tree();
 		tree->simplify_immediates();
 		tree->remove_or_minus_1();
+		tree->remove_identities();
 		tree->number_parameters(regions);
 		tree->recursive = false;
 		tree->mark_recursive();
@@ -525,7 +526,7 @@ void build_conc_tree_single_func(uint64_t destination,
 
 		instr = instrs[curpos].first;
 		rinstr = NULL;
-		DEBUG_PRINT(("->line - %d\n", curpos), 3);
+		DEBUG_PRINT(("->line - %d\n", curpos), 4);
 		if (instr != NULL){
 
 			if (debug && debug_level >= 4){
@@ -616,8 +617,13 @@ void update_jump_conditionals(Conc_Tree * tree,
 		//added
 		bool actual_taken = is_branch_taken(instrs[line_jump].first->opcode, instrs[line_jump].first->eflags);
 
+		if (jump_info->target_pc != jump_info->fall_pc){ 
+			ASSERT_MSG((actual_taken == taken), ("ERROR: branch direction information is inconsistent\n"));
+		}
+		else{ /* for sbbs and adcs */
+			taken = actual_taken;
+		}
 
-		ASSERT_MSG((actual_taken == taken), ("ERROR: branch direction information is inconsistent\n"));
 
 		bool is_there = false;
 		for (int j = 0; j < tree->conditionals.size(); j++){
@@ -1228,8 +1234,6 @@ Abs_Tree* abstract_the_trees(vector<Conc_Tree *> cluster, uint32_t no_trees, uin
 		abs_trees.push_back(abs_tree);
 		trees.push_back(abs_tree);
 	}*/
-
-	
 
 	bool similar = Tree::are_trees_similar(trees);
 	if (similar){

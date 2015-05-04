@@ -689,7 +689,7 @@ string Halide_Program::print_predicated_tree(vector<Abs_Tree *> trees, string ex
 	uint32_t clamp_min = 0;
 
 	/* BUG - what to do with the sign?? */
-	output += " = " + get_cast_string(head_node,false) + "( clamp(" + exprs[exprs.size() - 1]->name + "," + to_string(clamp_min) + "," + to_string(clamp_max) + ") );\n";
+	output += " = " + get_cast_string(head_node,false) + "( clamp(" + exprs[0]->name + "," + to_string(clamp_min) + "," + to_string(clamp_max) + ") );\n";
 
 	return output;
 
@@ -849,7 +849,7 @@ std::string Halide_Program::print_abs_tree(Node * nnode, Node * head ,vector<str
 			for (int i = 0; i < node->srcs.size(); i++){
 
 				if (node->srcs[i]->symbol->width != node->symbol->width){
-						ret += get_cast_string(node, false) + "(";
+						ret += get_cast_string(node, node->srcs[i]->minus) + "(";
 				}
 				ret += print_abs_tree(node->srcs[i],head, vars);
 				if (node->srcs[i]->symbol->width != node->symbol->width){
@@ -943,6 +943,10 @@ std::string Halide_Program::print_conditional_trees(std::vector< std::pair<Abs_T
 		if (!taken){
 			ret += ")";
 		}
+	}
+
+	if (ret == ""){
+		ret += "true";
 	}
 
 	return ret;

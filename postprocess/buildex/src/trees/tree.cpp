@@ -247,9 +247,9 @@ void * empty_ret_mutator(void * value, vector<void *> values, void * ori_value){
 
 void Tree::number_tree_nodes()
 {
-	DEBUG_PRINT(("numbering tree\n"), 3);
+	DEBUG_PRINT(("numbering tree\n"), 4);
 	traverse_tree(head, &num_nodes, node_numbering, empty_ret_mutator);
-	DEBUG_PRINT(("number of nodes %d\n", num_nodes), 3);
+	DEBUG_PRINT(("number of nodes %d\n", num_nodes), 4);
 }
 
 void Tree::cleanup_visit()
@@ -837,6 +837,30 @@ void Tree::mark_recursive(){
 
 	}, empty_ret_mutator);
 
+
+
+}
+
+void Tree::remove_identities(){
+
+	traverse_tree(head, NULL, [](Node * node, void * value)->void*{
+
+		if (node->operation == op_add){
+
+			for (int i = 0; i < node->srcs.size(); i++){
+				if (node->srcs[i]->symbol->type == IMM_INT_TYPE && node->srcs[i]->symbol->value == 0){
+					node->remove_forward_ref_single(node->srcs[i]);
+					i--;
+				}
+			}
+
+
+		}
+
+		return NULL;
+
+
+	}, empty_ret_mutator);
 
 
 }

@@ -218,10 +218,8 @@ void abstract_buffer_indexes_traversal(Comp_Abs_Node * head, Comp_Abs_Node * nod
 
 	bool indirect = (is_indirect_access(node) != -1);
 
-	if ( ((first->type == Abs_Node::INPUT_NODE) || (first->type == Abs_Node::INTERMEDIATE_NODE)) && !indirect ){
+	if ( ((first->type == Abs_Node::INPUT_NODE) || (first->type == Abs_Node::INTERMEDIATE_NODE) || (first->type == Abs_Node::OUTPUT_NODE)) && !indirect ){
 		/*make a system of linear equations and solve them*/
-
-
 
 		vector<vector<double> > A;
 		//for (int i = 0; i < head->nodes.size(); i++){
@@ -237,12 +235,17 @@ void abstract_buffer_indexes_traversal(Comp_Abs_Node * head, Comp_Abs_Node * nod
 		bool  * deleted_index = new bool[A[0].size()];
 		remove_same_values(deleted_index, A);
 
+		//cout << "mem" << endl;
+		//printout_matrices(A);
+
 		for (int dim = 0; dim < first->mem_info.dimensions; dim++){
 			vector<double> b;
 			//for (int i = 0; i < node->nodes.size(); i++){
 			for (int i = 0; i < node->nodes.size(); i++){
 				b.push_back((double)node->nodes[i]->mem_info.pos[dim]);
 			}
+
+			//printout_vector(b);
 
 			vector<double> results = solve_linear_eq(A, b);
 
@@ -273,6 +276,10 @@ void abstract_buffer_indexes_traversal(Comp_Abs_Node * head, Comp_Abs_Node * nod
 			A.push_back(coeff);
 		}
 
+
+		//cout << "imm" << endl;
+		//printout_matrices(A);
+
 		bool  * deleted_index = new bool[A[0].size()];
 		remove_same_values(deleted_index, A);
 
@@ -286,6 +293,8 @@ void abstract_buffer_indexes_traversal(Comp_Abs_Node * head, Comp_Abs_Node * nod
 		for (int i = 0; i < node->nodes.size(); i++){
 			b.push_back((long long)node->nodes[i]->symbol->value);
 		}
+
+		//printout_vector(b);
 
 		vector<double> results = solve_linear_eq(A, b);
 

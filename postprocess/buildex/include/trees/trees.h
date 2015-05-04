@@ -83,6 +83,7 @@ void * empty_ret_mutator(void * value, vector<void *> values, void * ori_value);
 	 void remove_po_nodes();
 	 void remove_or_minus_1();
 	 void mark_recursive();
+	 void remove_identities();
  };
 
 

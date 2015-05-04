@@ -230,7 +230,7 @@ rinstr_t * cinstr_to_rinstrs(cinstr_t * cinstr, int &amount, std::string disasm,
 
 	int operation;
 
-	DEBUG_PRINT(("entering canonicalization - app_pc %u\n", cinstr->pc), 3);
+	DEBUG_PRINT(("entering canonicalization - app_pc %u\n", cinstr->pc), 4);
 
 	rinstr_t * rinstr;
 	rinstr = NULL;
@@ -872,10 +872,10 @@ rinstr_t * cinstr_to_rinstrs(cinstr_t * cinstr, int &amount, std::string disasm,
 		cinstr->num_dsts, cinstr->num_srcs, cinstr->pc));
 
 	if (rinstr == NULL){
-		DEBUG_PRINT(("opcode skipped\n"), 3);
+		DEBUG_PRINT(("opcode skipped\n"), 4);
 	}
 	else{
-		DEBUG_PRINT(("opcode reduced\n"), 3);
+		DEBUG_PRINT(("opcode reduced\n"), 4);
 	}
 
 	for (int i = 0; i < amount; i++){
