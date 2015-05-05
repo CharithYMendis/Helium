@@ -156,6 +156,15 @@ vector<mem_regions_t *> merge_instrace_and_dump_regions(vector<mem_regions_t *> 
 
 					}
 
+					/* added - for invert */
+					if (mem_regions[i]->bytes_per_pixel != info->prob_stride){
+						uint32_t factor = info->prob_stride / mem_regions[i]->bytes_per_pixel;
+						mem_regions[i]->bytes_per_pixel = info->prob_stride;
+						mem_regions[i]->strides[0] = info->prob_stride;
+						mem_regions[i]->extents[0] /= factor;
+					
+					}
+
 					final_regions.push_back(mem_regions[i]);
 					total_regions.push_back(mem_regions[i]);
 					mem_regions[i]->order = info->order;

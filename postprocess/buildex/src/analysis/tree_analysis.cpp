@@ -273,7 +273,7 @@ Conc_Tree * build_conc_tree(uint64_t destination,
 	}
 
 
-	//if (dest_present == false || index < 0) return NULL;
+	if (dest_present == false || index < 0) return NULL;
 
 	ASSERT_MSG((dest_present == true) && (index >= 0), ("ERROR: couldn't find the dest to start trace\n")); //we should have found the destination
 
