@@ -9,6 +9,7 @@ set PPT="C:\Program Files (x86)\Microsoft Office\Office15\POWERPNT.EXE"
 set IRFAN="C:\Program Files (x86)\IrfanView\i_view32.exe"
 set HPGMG="C:\Charith\libraries\hpgmg\build\bin\hpgmg_fv.exe"
 set MINIGMG="C:\Charith\libraries\minigmg\miniGMG\run.exe"
+set KRITA="C:\Program Files (x86)\Krita (x86)\bin\krita.exe"
 
 
 
@@ -33,6 +34,10 @@ if "%1"=="m32" (
  
  if "%2"=="minigmg" (
 	%DREXPORT%\bin32\drrun.exe -root %DREXPORT% -t drcov -dump_text -logdir %LOGDIR% -- %MINIGMG%
+ )
+ 
+ if "%2"=="krita" (
+	%DREXPORT%\bin32\drrun.exe -root %DREXPORT% -t drcov -dump_text -logdir %LOGDIR% -- %KRITA%
  )
  
 )

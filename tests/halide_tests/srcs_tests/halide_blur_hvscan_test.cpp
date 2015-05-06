@@ -12,7 +12,8 @@ extern "C" {
 
 Image<uint8_t> halide_function(Image<uint8_t> in) {
 
-	Image<uint8_t> out(in.width(), in.height());
+	cout << in.width() << " " << in.height() << endl;
+	Image<uint8_t> out(in.width() - 2, in.height() - 2);
 
 	// Call it once to initialize the halide runtime stuff
 	halide_blur_hvscan_gen(in, out);

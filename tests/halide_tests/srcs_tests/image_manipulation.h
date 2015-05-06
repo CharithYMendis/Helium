@@ -185,8 +185,10 @@ Image<T> load_image(char * filename){
 	int width, height;
 	width = image->GetWidth();
 	height = image->GetHeight();
+	cout << width << endl;
+	cout << height << endl;
 
-	Image<T> im(COLORS, width, height);
+	Image<T> im(width, height, COLORS);
 
 	T *im_data = (T*)im.data();
 
@@ -201,9 +203,9 @@ Image<T> load_image(char * filename){
 			convert(color.GetG(), im_data[(1 * height + j)*width + i]);
 			convert(color.GetB(), im_data[(2 * height + j)*width + i]);*/
 
-			im_data[j*width*3 + i*3 + 0] = color.GetR();
-			im_data[j*width*3 + i*3 + 1] = color.GetG();
-			im_data[j*width*3 + i*3 + 2] = color.GetB();
+			im_data[i + j*width + 0 * width * height] = color.GetR();
+			im_data[i + j*width + 1 * width * height] = color.GetG();
+			im_data[i + j*width + 2 * width * height] = color.GetB();
 
 
 		}
@@ -220,9 +222,9 @@ template<typename T>
 void save_image(char * filename, Image<T> im){
 
 	int width, height, channels;
-	width = im.height();
-	height = im.channels();
-	channels = 3;
+	width = im.width();
+	height = im.height();
+	channels = im.channels();
 
 	Gdiplus::Bitmap * image = new Gdiplus::Bitmap(width,height);
 
@@ -239,7 +241,7 @@ void save_image(char * filename, Image<T> im){
 
 			value |= ((uint32_t)255) << 24;  /* we don't care about this */
 			for (int k = 0; k < COLORS; k++){
-				color_val = im((channels <= k) ? channels - 1 : k,i, j);
+				color_val = im(i, j, (channels <= k) ? channels - 1 : k);
 				/*convert(im(i, j, (channels <= k) ? channels - 1 : k), color_val);*/
 				value |= ((uint32_t)color_val) << (16 - 8 * k);
 			}

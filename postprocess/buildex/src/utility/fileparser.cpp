@@ -265,10 +265,22 @@ vec_cinstr walk_file_and_get_instructions(ifstream &file, vector<Static_Info *> 
 		count++;
 		if (instr != NULL){
 			info = get_static_info(static_info, instr->pc);
-			ASSERT_MSG((info != NULL), ("ERROR: static disassembly not found %d, %d\n",instr->pc, count));
+			if (info == NULL){
+				DEBUG_PRINT(("WARNING: static disassembly not found %d, %d\n", instr->pc, count), 2);
+				Static_Info * stat = new Static_Info;
+				stat->pc = instr->pc;
+				stat->disassembly = "unknown";
+				stat->module_no = 65535;
+				stat->module_name = "unknown";
+				static_info.push_back(stat);
+				info = stat;
+			}
+			//ASSERT_MSG((info != NULL), ("ERROR: static disassembly not found %d, %d\n",instr->pc, count));
 			instrs.push_back(make_pair(instr, info));
 		}
 	}
+
+	sort(static_info.begin(), static_info.end(), compare_static_info);
 
 	return instrs;
 

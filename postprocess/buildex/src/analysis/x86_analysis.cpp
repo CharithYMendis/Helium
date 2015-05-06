@@ -1005,7 +1005,11 @@ void reg_to_mem_range(operand_t * opnd){
 
 	}
 	else if (((opnd->type == MEM_HEAP_TYPE) || (opnd->type == MEM_STACK_TYPE)) && (opnd->width != 0)){
-		ASSERT_MSG((opnd->value > MAX_SIZE_OF_REG * 57), ("ERROR: memory and register space overlap\n"));
+		if (opnd->value > MAX_SIZE_OF_REG * 57){
+			DEBUG_PRINT(("WARNING: memory and register space overlap\n"), 2);
+			DEBUG_PRINT(("mem value - %d, min allowed - %d\n", opnd->value, (uint32_t)(MAX_SIZE_OF_REG * 57)),2);
+		}
+		//ASSERT_MSG((opnd->value > MAX_SIZE_OF_REG * 57), ("ERROR: memory and register space overlap\n"));
 	}
 
 
@@ -1103,6 +1107,7 @@ void update_regs_to_mem_range(vec_cinstr &instrs){
 
 	for (int i = 0; i < instrs.size(); i++){
 		cinstr_t * instr = instrs[i].first;
+		//print_cinstr(instrs[i].first);
 		for (int i = 0; i < instr->num_srcs; i++){
 			if ((instr->srcs[i].type == REG_TYPE) && (instr->srcs[i].value > DR_REG_ST7)) instr->srcs[i].value += 8;
 			reg_to_mem_range(&instr->srcs[i]);

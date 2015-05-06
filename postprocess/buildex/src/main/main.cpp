@@ -440,6 +440,15 @@
 
 	 DEBUG_PRINT(("*******************end of mem info stage*********************\n"), 2);
 
+	 vector<mem_info_t *> mems_temp = mem_info;
+	 sort(mems_temp.begin(), mems_temp.end(), [](mem_info_t * first, mem_info_t * second)->bool{
+		 return (first->end - first->start) > (second->end - second->start);
+	 });
+	 log_file << "******************new*******************************" << endl;
+	 print_mem_layout(log_file, mems_temp);
+
+
+
 	 if (mode == MEM_INFO_STAGE){
 		 exit(0);
 	 }
