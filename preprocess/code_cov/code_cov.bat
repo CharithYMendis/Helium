@@ -10,6 +10,7 @@ set IRFAN="C:\Program Files (x86)\IrfanView\i_view32.exe"
 set HPGMG="C:\Charith\libraries\hpgmg\build\bin\hpgmg_fv.exe"
 set MINIGMG="C:\Charith\libraries\minigmg\miniGMG\run.exe"
 set KRITA="C:\Program Files (x86)\Krita (x86)\bin\krita.exe"
+set HALIDE="C:\Charith\Dropbox\Research\development\exalgo\tests\halide_tests\bin32\halide_blur_hvscan_test.exe"
 
 
 
@@ -38,6 +39,10 @@ if "%1"=="m32" (
  
  if "%2"=="krita" (
 	%DREXPORT%\bin32\drrun.exe -root %DREXPORT% -t drcov -dump_text -logdir %LOGDIR% -- %KRITA%
+ )
+ 
+ if "%2"=="halide" (
+	%DREXPORT%\bin32\drrun.exe -root %DREXPORT% -t drcov -dump_text -logdir %LOGDIR% -- %HALIDE% %EXALGO_IMAGE_FOLDER%\low.png %EXALGO_IMAGE_FOLDER%\low_halide.png
  )
  
 )

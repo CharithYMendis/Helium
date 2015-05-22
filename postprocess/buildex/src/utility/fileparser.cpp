@@ -145,14 +145,14 @@ pair<string, string> parse_line_disasm(string line, uint32_t * module, uint32_t 
 	*module = atoi(value.c_str());
 	i++; value = "";
 
-	while (line[i] != ','){
+	while (line[i] != '_'){
 		value += line[i];
 		i++;
 	}
 	*app_pc = atoi(value.c_str());
 
 	i++; value = "";
-	while (line[i] != '-'){
+	while (line[i] != '_'){
 		value += line[i];
 		i++;
 	}
@@ -400,7 +400,8 @@ void walk_instructions(ifstream &file, uint32_t version){
 
 void print_disasm(vector<Static_Info *> &static_info){
 	for (int i = 0; i < static_info.size(); i++){
-		LOG(log_file,static_info[i]->module_no << "," << static_info[i]->pc << "," << static_info[i]->disassembly << endl)
+		//LOG(log_file,static_info[i]->module_no << "," << static_info[i]->pc << "," << static_info[i]->disassembly << endl)
+		LOG(log_file,static_info[i]->disassembly << endl);
 	}
 }
 

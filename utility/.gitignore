@@ -1,0 +1,8 @@
+log/
+generated_files/
+old_versions/
+test_client/
+images/
+results/
+*.swp
+*.pyc

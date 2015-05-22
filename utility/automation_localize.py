@@ -78,6 +78,7 @@ if __name__ == '__main__':
         executable = ''
         program = ''
         filter = ''
+	print sys.argv
 	in_image = ''
         try:
                 opts, args = getopt.getopt(sys.argv[1:],"e:p:f:h:i:",["exec=","program="])

@@ -185,8 +185,6 @@ Image<T> load_image(char * filename){
 	int width, height;
 	width = image->GetWidth();
 	height = image->GetHeight();
-	cout << width << endl;
-	cout << height << endl;
 
 	Image<T> im(width, height, COLORS);
 

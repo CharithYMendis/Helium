@@ -111,7 +111,7 @@ dr_init(client_id_t id)
 	//dr_messagebox("client id - %d\n", id);
 	DEBUG_PRINT("%s is starting\n", dr_get_application_name());
 	/* if you are using it only for photoshop do no instrument other exes */
-	if (strcmp(exec, "photoshop") == 0){
+	if (strcmp(exec, "Photoshop.exe") == 0 ||  strcmp(exec, "photoshop") == 0){
 		DEBUG_PRINT("photoshop detected only instrumenting Photoshop.exe\n");
 		if(strcmp(dr_get_application_name(), "Photoshop.exe") != 0){
 			return;

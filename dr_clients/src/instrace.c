@@ -787,7 +787,7 @@ static void operand_trace(instr_t * instr, void * drcontext){
 			if (md_get_module_position(instrace_head, module_data->full_path) == -1){
 				md_add_module(instrace_head, module_data->full_path, MAX_BBS_PER_MODULE);
 			}
-			dr_fprintf(data->outfile, "%d,%d,%s-%s\n", md_get_module_position(instrace_head, module_data->full_path), pc, stringop, module_data->full_path);
+			dr_fprintf(data->outfile, "%d,%d_%s_%s\n", md_get_module_position(instrace_head, module_data->full_path), pc, stringop, module_data->full_path);
 		}
 		else{
 			dr_fprintf(data->outfile, "%d,%d,%s,%s\n",0, 0, stringop, "NONE");

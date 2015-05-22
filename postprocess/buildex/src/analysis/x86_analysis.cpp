@@ -330,12 +330,43 @@ rinstr_t * cinstr_to_rinstrs(cinstr_t * cinstr, int &amount, std::string disasm,
 	case OP_mov_seg:
 	case OP_movaps: // Kevin - to test
 
-	case OP_cvttsd2si:
+	case OP_vmovss: // check!!
+	case OP_vmovsd: //check !
+
+	case OP_vcvtsi2ss: // check!!
+	case OP_vcvtsi2sd: // check !!
+	case OP_vcvttss2si: // check !! 
+	case OP_vcvttsd2si: // cehck !!
+
+	case OP_cvttsd2si: // check !!
+	
 		// dst[0] <- src[0]
 		if_bounds(1, 1){
 			rinstr = new rinstr_t[1];
 			amount = 1;
 			rinstr[0] = { op_assign, cinstr->dsts[0], 1, { cinstr->srcs[0] }, false };
+		}
+		elseif_bounds(1, 2){
+			rinstr = new rinstr_t[1];
+			amount = 1;
+			rinstr[0] = { op_assign, cinstr->dsts[0], 1, { cinstr->srcs[1] }, false };
+		}
+		else_bounds;
+
+	case OP_vmulss: // check !!
+	case OP_vmulsd:
+		if_bounds(1, 2){
+			rinstr = new rinstr_t[1];
+			amount = 1;
+			rinstr[0] = { op_mul, cinstr->dsts[0], 2, { cinstr->srcs[0], cinstr->srcs[1] }, false };
+		}
+		else_bounds;
+
+	case OP_vaddsd:
+		if_bounds(1, 2){
+			rinstr = new rinstr_t[1];
+			amount = 1;
+			rinstr[0] = { op_add, cinstr->dsts[0], 2, { cinstr->srcs[0], cinstr->srcs[1] }, false };
 		}
 		else_bounds;
 
@@ -660,6 +691,40 @@ rinstr_t * cinstr_to_rinstrs(cinstr_t * cinstr, int &amount, std::string disasm,
 		}
 		else_bounds;
 
+	case OP_cmovle:
+	case OP_cmovnle:
+	case OP_cmovl:
+	case OP_cmovnl:
+	case OP_cmovz:
+	case OP_cmovns:
+	case OP_cmovnz:
+		if_bounds(1, 2){
+
+			bool zf = check_lahf_bit(Zero_lahf, cinstr->eflags);
+			bool sf = check_lahf_bit(Sign_lahf, cinstr->eflags);
+			bool of = check_lahf_bit(Overflow_lahf, cinstr->eflags);
+
+
+			bool check = false;
+			if (cinstr->opcode == OP_cmovl) check = sf != of;
+			else if (cinstr->opcode == OP_cmovle) check = zf || (sf != of) ;
+			else if (cinstr->opcode == OP_cmovnle) check = !zf || (sf == of);
+			else if (cinstr->opcode == OP_cmovnl) check = sf == of;
+			else if (cinstr->opcode == OP_cmovz) check = zf;
+			else if (cinstr->opcode == OP_cmovnz) check = !zf;
+			else if (cinstr->opcode == OP_cmovns) check = !sf;
+
+			if (check){
+				rinstr = new rinstr_t[1];
+				amount = 1;
+				rinstr[0] = { op_assign, cinstr->dsts[0], 1, { cinstr->srcs[0] }, true };
+			}
+			else{
+				amount = 0;
+			}
+
+		}
+		else_bounds;
 
 	case OP_setz:
 	case OP_sets:
@@ -855,6 +920,8 @@ rinstr_t * cinstr_to_rinstrs(cinstr_t * cinstr, int &amount, std::string disasm,
 	case OP_stmxcsr:
 	case OP_fwait:
 
+	case OP_nop_modrm:
+
 
 
 	case OP_nop:
@@ -1005,7 +1072,7 @@ void reg_to_mem_range(operand_t * opnd){
 
 	}
 	else if (((opnd->type == MEM_HEAP_TYPE) || (opnd->type == MEM_STACK_TYPE)) && (opnd->width != 0)){
-		if (opnd->value > MAX_SIZE_OF_REG * 57){
+		if (opnd->value < MAX_SIZE_OF_REG * 57){
 			DEBUG_PRINT(("WARNING: memory and register space overlap\n"), 2);
 			DEBUG_PRINT(("mem value - %d, min allowed - %d\n", opnd->value, (uint32_t)(MAX_SIZE_OF_REG * 57)),2);
 		}
@@ -1473,6 +1540,14 @@ bool is_instr_handled(uint32_t opcode){
 	case OP_nop:
 	case OP_adc:
 	case OP_cwde:
+
+	case OP_cmovle:
+	case OP_cmovnle:
+	case OP_cmovl:
+	case OP_cmovnl:
+	case OP_cmovz:
+	case OP_cmovnz:
+
 		return true;
 	default:
 		return false;
@@ -1634,6 +1709,21 @@ bool is_branch_taken(uint32_t opcode, uint32_t flags){
 	case OP_jnbe:
 		return !cf && !zf;
 
+	case OP_cmovle:
+		return zf || (sf != of);
+	case OP_cmovnle:
+		return !zf || (sf == of);
+	case OP_cmovl:
+		return (sf != of);
+	case OP_cmovnl:
+		return (sf == of);
+	case OP_cmovz:
+		return zf;
+	case OP_cmovns:
+		return !sf;
+	case OP_cmovnz:
+		return !zf;
+
 	default:
 		unhandled = true;
 	}
@@ -1717,6 +1807,20 @@ bool is_jmp_conditional_affected(uint32_t opcode, uint32_t flags){
 		return cf;
 	case OP_jnbe:
 		return cf && zf;
+
+	case OP_cmovnle:
+	case OP_cmovle:
+		return zf || (sf && of);
+	case OP_cmovl:
+	case OP_cmovnl:
+		return sf && of;
+	case OP_cmovz:
+		return zf;
+	case OP_cmovns:
+		return sf;
+	case OP_cmovnz:
+		return zf;
+
 	default:
 		unhandled = true;
 	}
@@ -1768,6 +1872,13 @@ bool is_conditional_jump_ins(uint32_t opcode){
 
 	//sbb and other computation involving eflags
 	case OP_sbb:
+	case OP_adc:
+	case OP_cmovnle:
+	case OP_cmovle:
+	case OP_cmovl:
+	case OP_cmovnl:
+	case OP_cmovz:
+	case OP_cmovns:
 
 		return true;
 	default:
