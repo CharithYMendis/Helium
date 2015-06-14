@@ -1,9 +1,9 @@
 Helium: Lifting High-Performance Stencil Kernels from Stripped x86 Binaries to Halide DSL Code
 ==============================================================================================
 
-All the paths mentioned here are relative to the project parent folder.
+### Dependencies
 
-Please install the following dependencies
+All the paths mentioned here are relative to the project parent folder.
 
 *	Install VS2013 and have VC++ 2013 runtime. (MSDN allows free download and activation for @edu emails)
 	Make sure you do a default installation with default paths.
