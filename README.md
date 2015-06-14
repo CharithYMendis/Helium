@@ -27,7 +27,7 @@ In the utility folder,
 2. run setup.bat
 3. run build_all_exalgo.bat {arch} {debug/release} {halide_dir}
 
-now everything should be built (hopefully)
+now everything should be built
 
 ### Project structure
 
@@ -43,15 +43,13 @@ now everything should be built (hopefully)
 
 procedure for running the tools (obsolete)
 
-1.	get the code_coverage -> preprocess\code_cov\code_cov.bat {arch}
-2.	get the diff -> preprocess\code_diff\build32\bin\code_diff.exe {first} {second}  {output_file}
-3.	run profile_memtrace dr_client ->  
-a.	run dr_clients\utility\run_tests.bat help
-4.	filter the function we need to track
-a.	run preprocess\build32\bin\filter.exe 
-5.	run instrace_memdump 
-a.	run dr_clients\utility\run_tests.bat help
-6.	run ins_distrace
-a.	run dr_clients\utility\run_tests.bat help
-7.	run buildex.exe
-a.	run postprocess\buildex\build32\bin\buildex.exe
+* Run utility/automation_all.py - you can run the entire tool chain or parts of it. Please look at the help of the script to figure out command line arguments.
+* There are legacy batch scripts used to automate the tools. 
+
+### Publications
+
+The ideas of the project are published in the following paper.
+
+* [Helium: Lifting High-Performance Stencil Kernels from Stripped x86 Binaries to Halide DSL Code](http://groups.csail.mit.edu/commit/papers/2015/mendis-pldi15-helium.pdf)
+Charith Mendis, Jeffrey Bosboom, Kevin Wu, Shoaib Kamil, Jonathan Ragan-Kelley, Sylvain Paris, Qin Zhao, Saman Amarasinghe
+
