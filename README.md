@@ -1,7 +1,5 @@
-Helium
-======
-
 Helium: Lifting High-Performance Stencil Kernels from Stripped x86 Binaries to Halide DSL Code
+==============================================================================================
 
 All the paths mentioned here are relative to the project parent folder.
 
@@ -16,20 +14,7 @@ Please install the following dependencies
 *	Installing Dynamorio – run the batch file utility\dr_build.bat {folder} {dr_folder_name}
 *	Installing Halide – just use the nightly builds of Halide from [here](https://drive.google.com/folderview?id=0B3x1cdB8WoSDSy1ZMVZoYmhnaTQ&usp=sharing) (do not try to build it in windows, but if you insist use the powershell scripts in <repo>\utility\halide_<type>_build.ps -> but this is PAINFUL!!)
 
-
-### building the project 
-
-All batch files should be run inside their folders.
-
-In the utility folder,
-
-1. run setup_folders.bat
-2. run setup.bat
-3. run build_all_exalgo.bat {arch} {debug/release} {halide_dir}
-
-now everything should be built
-
-### Project structure
+### Folder Structure
 
 * dr_clients - contains all the DynamoRIO instrumentation clients
 * preprocess - contains all analysis for code localization
@@ -40,8 +25,17 @@ now everything should be built
 * postprocess - contains all analysis for expression extraction
 	+ buildex - main analysis project which processes instruction traces and memory dumps to come up with halide version of the filter. This includes various other utilitties for debugging.
 
+### Building the project 
 
-procedure for running the tools (obsolete)
+All batch files should be run inside their folders.
+
+In the utility folder,
+
+1. Run setup_folders.bat
+2. Run setup.bat
+3. Run build_all_exalgo.bat {arch} {debug/release} {halide_dir}
+
+### Running the tools
 
 * Run utility/automation_all.py - you can run the entire tool chain or parts of it. Please look at the help of the script to figure out command line arguments.
 * There are legacy batch scripts used to automate the tools. 
