@@ -11,8 +11,8 @@ All the paths mentioned here are relative to the project parent folder. Currentl
 *  Install Cygwin64 from [here](https://cygwin.com/install.html) and install Perl, but not its SVN!! Put Cygwin's bin into the path.
 *  Install CMake's latest version from [here](http://www.cmake.org/download/)
 *	Download the github repository for the project
-*	Installing Dynamorio – run the batch file utility\dr_build.bat {folder} {dr_folder_name}
-*	Installing Halide – just use the nightly builds of Halide from [here](https://drive.google.com/folderview?id=0B3x1cdB8WoSDSy1ZMVZoYmhnaTQ&usp=sharing) (do not try to build it in windows, but if you insist use the powershell scripts in <repo>\utility\halide_<type>_build.ps -> but this is PAINFUL!!)
+*	Installing Dynamorio – run the batch file utility/dr_build.bat {folder} {dr_folder_name}
+*	Installing Halide – just use the nightly builds of Halide from [here](http://halide-lang.org/#gettingstarted) (do not try to build it in Windows, but if you insist use the powershell scripts in <repo>utility/halide_[type]_build.ps -> but this is PAINFUL!!)
 
 ### Folder Structure
 
