@@ -4,7 +4,8 @@
 @echo off
 
 if "%1" == "help" (
-	echo {library} {dr_folder_name}
+	echo {folder} - folder in which DynamoRIO will reside 
+	echo {dr_folder_name} - sub folder within {folder} in which DynamoRIO should reside (The default is {folder}/dynamorio).
 	exit /b
 )
 

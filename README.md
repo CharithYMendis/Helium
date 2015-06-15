@@ -11,7 +11,7 @@ All the paths mentioned here are relative to the project parent folder. Currentl
 *  Install Cygwin64 from [here](https://cygwin.com/install.html) and install Perl, but not its SVN!! Put Cygwin's bin into the path.
 *  Install CMake's latest version from [here](http://www.cmake.org/download/)
 *	Download the github repository for the project
-*	Installing Dynamorio – run the batch file utility/dr_build.bat {folder} {dr_folder_name}
+*	Installing Dynamorio – run the batch file utility/dr_build.bat (use 'dr_build.bat help' for command line arguments).
 *	Installing Halide – just use the nightly builds of Halide from [here](http://halide-lang.org/#gettingstarted) (do not try to build it in Windows, but if you insist use the powershell scripts in <repo>utility/halide_[type]_build.ps -> but this is PAINFUL!!)
 
 ### Folder Structure
@@ -37,7 +37,7 @@ In the utility folder,
 
 ### Running the tools
 
-* Run utility/automation_all.py - you can run the entire tool chain or parts of it. Please look at the help of the script to figure out command line arguments.
+* Run utility/automation_all.py - you can run the entire tool chain or parts of it. Please look at the help in the script to figure out command line arguments.
 * There are legacy batch scripts used to automate the tools. 
 
 ### Publications
