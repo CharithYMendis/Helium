@@ -232,11 +232,12 @@ void abstract_buffer_indexes_traversal(Comp_Abs_Node * head, Comp_Abs_Node * nod
 			A.push_back(coeff);
 		}
 
+		printout_matrices(A);
 		bool  * deleted_index = new bool[A[0].size()];
 		remove_same_values(deleted_index, A);
+		cout << endl;
+		printout_matrices(A);
 
-		//cout << "mem" << endl;
-		//printout_matrices(A);
 
 		for (int dim = 0; dim < first->mem_info.dimensions; dim++){
 			vector<double> b;
@@ -245,8 +246,7 @@ void abstract_buffer_indexes_traversal(Comp_Abs_Node * head, Comp_Abs_Node * nod
 				b.push_back((double)node->nodes[i]->mem_info.pos[dim]);
 			}
 
-			//printout_vector(b);
-
+			printout_vector(b);
 			vector<double> results = solve_linear_eq(A, b);
 
 			uint32_t head_dimensions = head->nodes[0]->mem_info.dimensions;

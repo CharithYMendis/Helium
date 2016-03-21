@@ -1197,8 +1197,9 @@ Abs_Tree* abstract_the_trees(vector<Conc_Tree *> cluster, uint32_t no_trees, uin
 
 
 	//vector<Tree *> ind_trees = get_linearly_independant_trees(cluster, total_regions);
-
-	for (int j = 0; j < skip * no_trees; j+= skip){
+	int count = 0;
+	srand(4);
+	for (int j = 0; ; j += (skip  + rand() % 10 + 1 ) ){
 		Abs_Tree  * abs_tree = new Abs_Tree();
 		//identify_parameters(cluster[j]->head, pc_mem);
 		abs_tree->build_abs_tree_unrolled(cluster[j], total_regions);
@@ -1214,6 +1215,9 @@ Abs_Tree* abstract_the_trees(vector<Conc_Tree *> cluster, uint32_t no_trees, uin
 
 		abs_trees.push_back(abs_tree);
 		trees.push_back(abs_tree);
+		cout << "sedd " << j << endl;
+		count++;
+		if (count == no_trees) break;
 	} 
 
 	
