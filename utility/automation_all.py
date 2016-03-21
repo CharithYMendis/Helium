@@ -13,10 +13,11 @@ def parse_arguments():
         required.add_argument('--path','-p',required=True, help='full path to the executable')
         required.add_argument('--stage','-s', required=True, help='which Helium stage should be run',
                               choices=['all','local','extract','buildex'])
+        required.add_argument('--exe','-e',required=True, help='Program Name')
 
         #optional, but recommended arguments
         recommended = parser.add_argument_group('recommended','these arguments are mandatory for certain stages')
-        recommended.add_argument('--word','-w', help='filter phrase (localization)')
+        #recommended.add_argument('--word','-w', help='filter phrase (localization)')
         recommended.add_argument('--f_image','-f', help='filter image (localization)')
         recommended.add_argument('--tsize','-t', help='for non-image programs specify a size of the buffer (localization)')
         recommended.add_argument('--in_image','-i', help='input image (extraction)')
@@ -28,7 +29,7 @@ def parse_arguments():
         optional.add_argument('--debug','-d', default=False, action='store_true', help='turns on debugging')
         optional.add_argument('--args' ,'-a', help='arguments for the executable')
         optional.add_argument('--debug_level','-dl', default='2', help='specifies the debug level')
-        optional.add_argument('--buildex_args','-ba', nargs='+', help='specifies overriding optional arguments to buildex in double quotes')
+        optional.add_argument('--buildex_args','-ba', help='specifies overriding optional arguments to buildex in double quotes')
        
         args = parser.parse_args()
         print args
@@ -51,6 +52,7 @@ def main():
 
         #populating some variables
         exec_name = common.get_executable_name(args.path)
+        pathname = args.exe
         path = '\"' + args.path + '\"'
 
         total_size = '0'
@@ -65,8 +67,8 @@ def main():
 
         #check stage-wise arguments
         if args.stage == 'all' or args.stage == 'local':
-                if args.f_image == None or args.word == None:
-                        raise argparse.ArgumentTypeError('need to specify f_image and word for localization')
+                if args.f_image == None:
+                        raise argparse.ArgumentTypeError('need to specify f_image for localization')
         if args.stage == 'all' or args.stage == 'extract' or args.stage == 'buildex':
                 if args.in_image == None or args.out_image == None:
                         raise argparse.ArgumentTypeError('need to specify in_image and out_image for extraction')
@@ -83,7 +85,7 @@ def main():
                 localize.run_code_coverage(path,common.xstr(args.args))
 
                 #2. get the code coverage difference
-                localize.run_code_diff(exec_name)
+                localize.run_code_diff(exec_name, pathname)
 
                 #3. run memtrace and profiling
                 localize.run_profiling(path, exec_name, args.args, args.debug, args.f_image)
@@ -100,8 +102,11 @@ def main():
         if args.stage == 'all' or args.stage == 'extract' or args.stage == 'buildex':
                 
                 #2. run buildex for expression extraction
-                extract.run_buildex(exec_name, args.in_image, args.out_image, args.debug, args.debug_level, dump, buildex_opts[0])
-                
+                if buildex_opts != '':
+                        extract.run_buildex(exec_name, args.in_image, args.out_image, args.debug, args.debug_level, dump, buildex_opts)
+                else:
+                        extract.run_buildex(exec_name, args.in_image, args.out_image, args.debug, args.debug_level, dump, '')
+   
         
 if __name__ == '__main__':
 

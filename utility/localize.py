@@ -43,7 +43,7 @@ def run_code_coverage(executable, args):
 '''
 This function gets the code coverage diffs
 '''
-def run_code_diff(executable):
+def run_code_diff(executable, pathname):
 
         files = get_coverage_files(executable)
         os.chdir(parent_folder + '/preprocess/code_diff/build32/bin')
@@ -52,7 +52,7 @@ def run_code_diff(executable):
         command += ' -first ' + files[0]
         command += ' -second ' + files[1]
         command += ' -output ' + files[2]
-        command += ' -exec ' + executable
+        command += ' -exec ' + pathname
         p = subprocess.Popen(command)
         p.communicate()
 
