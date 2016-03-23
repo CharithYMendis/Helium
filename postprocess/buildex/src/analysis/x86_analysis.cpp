@@ -242,6 +242,135 @@ rinstr_t * cinstr_to_rinstrs(cinstr_t * cinstr, int &amount, std::string disasm,
 	switch (cinstr->opcode){
 
 		/************************* vector instructions ****************************/
+	case OP_addps:
+	case OP_mulps:
+		// kevin - to test
+		if_bounds(1,2){
+			uint32_t operation;
+			switch (cinstr->opcode){
+			case OP_addps:
+				operation = op_add; break;
+			case OP_mulps:
+				operation = op_mul; break;
+			}
+
+			// multiply 32 bit sections of inputs and place into corresponding output
+			operand_t dst = cinstr -> dsts[0];
+			operand_t src1 = cinstr -> srcs[0];
+			operand_t src2 = cinstr -> srcs[1];
+
+			rinstr = new rinstr_t[4];
+
+			// get 32-bit sections of srcs and dsts
+			operand_t * src1_sections = new operand_t[4];
+			src1_sections[0] = { src1.type, 4, src1.value + src1.width - 4, NULL };
+			src1_sections[1] = { src1.type, 4, src1.value + src1.width - 8, NULL };
+			src1_sections[2] = { src1.type, 4, src1.value + src1.width - 12, NULL };
+			src1_sections[3] = { src1.type, 4, src1.value + src1.width - 16, NULL };
+
+			operand_t * src2_sections = new operand_t[4];
+			src2_sections[0] = { src2.type, 4, src2.value + src2.width - 4, NULL };
+			src2_sections[1] = { src2.type, 4, src2.value + src2.width - 8, NULL };
+			src2_sections[2] = { src2.type, 4, src2.value + src2.width - 12, NULL };
+			src2_sections[3] = { src2.type, 4, src2.value + src2.width - 16, NULL };
+
+			operand_t * dst_sections = new operand_t[4];
+			dst_sections[0] = { dst.type, 4, dst.value + dst.width - 4, NULL };
+			dst_sections[1] = { dst.type, 4, dst.value + dst.width - 8, NULL };
+			dst_sections[2] = { dst.type, 4, dst.value + dst.width - 12, NULL };
+			dst_sections[3] = { dst.type, 4, dst.value + dst.width - 16, NULL };
+
+			for (int i = 0; i < 4; i++) {
+				rinstr[i] = { operation, dst_sections[i], 2, { src1_sections[i], src2_sections[i] } , true};
+			}
+		}
+		else_bounds;
+	case OP_shufps:
+		// kevin - to test
+		if_bounds(1,3){
+			// dsts[0] = dst - 0
+			// srcs[0] = src2 - shuffled into dst[127:64]
+			// srcs[1] = select - immediate, determines shuffling
+			// srcs[2] = src1 - shuffled into dst[63:0]
+			if(cinstr -> srcs[1].type == IMM_INT_TYPE){
+				operand_t dst = cinstr -> dsts[0];
+				operand_t src1 = cinstr -> srcs[2];
+				operand_t src2 = cinstr -> srcs[0];
+				int select = cinstr -> srcs[1].value;
+
+				rinstr = new rinstr_t[5];
+
+				// get 32-bit sections of srcs and dsts
+				operand_t * src1_sections = new operand_t[4];
+				src1_sections[0] = { src1.type, 4, src1.value + src1.width - 4, NULL };
+				src1_sections[1] = { src1.type, 4, src1.value + src1.width - 8, NULL };
+				src1_sections[2] = { src1.type, 4, src1.value + src1.width - 12, NULL };
+				src1_sections[3] = { src1.type, 4, src1.value + src1.width - 16, NULL };
+
+				operand_t * src2_sections = new operand_t[4];
+				src2_sections[0] = { src2.type, 4, src2.value + src2.width - 4, NULL };
+				src2_sections[1] = { src2.type, 4, src2.value + src2.width - 8, NULL };
+				src2_sections[2] = { src2.type, 4, src2.value + src2.width - 12, NULL };
+				src2_sections[3] = { src2.type, 4, src2.value + src2.width - 16, NULL };
+
+				operand_t * dst_sections = new operand_t[4];
+				dst_sections[0] = { dst.type, 4, dst.value + dst.width - 4, NULL };
+				dst_sections[1] = { dst.type, 4, dst.value + dst.width - 8, NULL };
+				dst_sections[2] = { dst.type, 4, dst.value + dst.width - 12, NULL };
+				dst_sections[3] = { dst.type, 4, dst.value + dst.width - 16, NULL };
+				// temporary register to store what goes into first section of dst
+				// because dst and src1 should be the same, this avoids overwriting
+				// src1 before we finish using it
+				operand_t temporary = { REG_TYPE, 4 , DR_REG_VIRTUAL_1 , NULL};
+				reg_to_mem_range(&temporary);
+
+				// handle dst_sections[0] - select % 4 gives which src1 section to use
+				rinstr[0] = { op_assign, temporary, 1, { src1_sections[select % 4] }, true };
+				// handle dst_sections[1] - (select) / 4 % 4 gives src1 section to use
+				rinstr[1] = { op_assign, dst_sections[1], 1, { src1_sections[ (select / 4) % 4] }, true };
+				// move temp into dst_sections[0]
+				rinstr[2] = { op_assign, dst_sections[0], 1, { temporary }, true };
+				// handle dst_sections[1] - (select) / 16 % 4 gives src1 section to use
+				rinstr[3] = { op_assign, dst_sections[2], 1, { src1_sections[ (select / 16) % 4] }, true };
+				// handle dst_sections[1] - (select) / 64 % 4 gives src1 section to use
+				rinstr[4] = { op_assign, dst_sections[3], 1, { src1_sections[ (select / 64) % 4] }, true };
+			}
+			else_bounds;
+		}
+		else_bounds;
+
+	case OP_addss:
+		//kevin - to test
+		if_bounds(1,2){
+			// dst[0][31:0] <- src[0][31:0] * src[1][31:0]
+			operand_t dst = cinstr -> dsts[0];
+			operand_t src1 = cinstr -> srcs[0];
+			operand_t src2 = cinstr -> srcs[1];
+			rinstr = new rinstr_t[1];
+			// get low 32 bits
+			operand_t dst_low = { dst.type, 4, dst.value + dst.width - 4, NULL };
+			operand_t src1_low = { src1.type, 4, src1.value + src1.width - 4, NULL };
+			operand_t src2_low = { src2.type, 4, src2.value + src2.width - 4, NULL };
+			rinstr[0] = { op_add, dst_low, 2, { src1_low, src2_low }, true };
+		}
+		else_bounds;
+
+	case OP_mulss:
+		//kevin - to test
+		if_bounds(1,2){
+			// dst[0][31:0] <- src[0][31:0] * src[1][31:0]
+			operand_t dst = cinstr -> dsts[0];
+			operand_t src1 = cinstr -> srcs[0];
+			operand_t src2 = cinstr -> srcs[1];
+			rinstr = new rinstr_t[1];
+			// get low 32 bits
+			operand_t dst_low = { dst.type, 4, dst.value + dst.width - 4, NULL };
+			operand_t src1_low = { src1.type, 4, src1.value + src1.width - 4, NULL };
+			operand_t src2_low = { src2.type, 4, src2.value + src2.width - 4, NULL };
+			rinstr[0] = { op_mul, dst_low, 2, { src1_low, src2_low }, true };
+		}
+		else_bounds;
+
 	case OP_movss:
 		//Kevin - to test
 		if_bounds(1,1){
@@ -250,15 +379,15 @@ rinstr_t * cinstr_to_rinstrs(cinstr_t * cinstr, int &amount, std::string disasm,
 			operand_t dst = cinstr -> dsts[0];
 			operand_t src = cinstr -> srcs[0];
 			// get low 32 bits of dst (or 4 bytes)
-			operand_t dst_low = {dst.type, 4, dst.value + dst.width - 4, NULL };
-			operand_t src_low = {src.type, 4, src.value + src.width - 4, NULL };
+			operand_t dst_low = { dst.type, 4, dst.value + dst.width - 4, NULL };
+			operand_t src_low = { src.type, 4, src.value + src.width - 4, NULL };
 			if ( dst.type == MEM_STACK_TYPE || dst.type == MEM_HEAP_TYPE ){
 				rinstr = new rinstr_t[2];
 				rinstr[0] = { op_assign, dst_low, 1, { src_low }, true };
 				//get upper bits
-				operand_t dst_high = {dst.type, 12, dst.value + dst.width - 16, NULL};
+				operand_t dst_high = { dst.type, 12, dst.value + dst.width - 16, NULL };
 				// move zeros into upper bits
-				operand_t immediate = { IMM_INT_TYPE, 12, 0 , NULL};
+				operand_t immediate = { IMM_INT_TYPE, 12, 0 , NULL };
 				rinstr[1] = { op_assign, dst_high, 1, { immediate }, true };
 			}
 			else {
@@ -268,9 +397,83 @@ rinstr_t * cinstr_to_rinstrs(cinstr_t * cinstr, int &amount, std::string disasm,
 		}
 		else_bounds;
 
+	case OP_movhps:
+		//kevin - to test
+		if_bounds(1,1){
+			// move  dst[127:64]  <- src[63:0]
+			operand_t dst = cinstr -> dsts[0];
+			operand_t src = cinstr -> srcs[0];
+			operand_t dst_high = { dst.type, 8, dst.value + dst.width - 16, NULL };
+			operand_t src_low = { src.type, 8, src.value + src.width - 8, NULL };
+			rinstr = new rinstr_t[1];
+			rinstr[0] = { op_assign, dst_high, 1, {src_low}, true};
+		}
+		else_bounds;
+
+	case OP_movlps:
+		//kevin - to test
+		if_bounds(1,1){
+			// move  dst[63:0]  <- src[63:0]
+			operand_t dst = cinstr -> dsts[0];
+			operand_t src = cinstr -> srcs[0];
+			operand_t dst_low = { dst.type, 8, dst.value + dst.width - 8, NULL };
+			operand_t src_low = { src.type, 8, src.value + src.width - 8, NULL };
+			rinstr = new rinstr_t[1];
+			rinstr[0] = { op_assign, dst_low, 1, {src_low}, true};
+		}
+		else_bounds;
+
+	case OP_unpcklps:
+		//kevin - to test
+		if_bounds(1,2){
+			// dsts[0][128:0] <- srcs[0][63:32] srcs[1][63:32] srcs[0][31:0] srcs[1][31:0]
+			operand_t dst = cinstr -> dsts[0];
+			operand_t src1 = cinstr -> srcs[0];
+			operand_t src2 = cinstr -> srcs[1];
+			rinstr = new rinstr_t[4];
+			// 32 bit sections of dst
+			operand_t dst0 = { dst.type, 4, dst.value + dst.width - 4, NULL };
+			operand_t dst1 = { dst.type, 4, dst.value + dst.width - 8, NULL };
+			operand_t dst2 = { dst.type, 4, dst.value + dst.width - 12, NULL };
+			operand_t dst3 = { dst.type, 4, dst.value + dst.width - 16, NULL };
+			operand_t src1_low = { src1.type, 4, src1.value + src1.width - 4, NULL };
+			operand_t src2_low = { src2.type, 4, src2.value + src2.width - 4, NULL };
+			operand_t src1_high = { src1.type, 4, src1.value + src1.width - 8, NULL };
+			operand_t src2_high = { src2.type, 4, src2.value + src2.width - 8, NULL };
+			rinstr[0] = { op_assign, dst0, 1, { src2_low }, true };
+			rinstr[1] = { op_assign, dst1, 1, { src1_low }, true };
+			rinstr[2] = { op_assign, dst2, 1, { src2_high }, true };
+			rinstr[3] = { op_assign, dst3, 1, { src1_high }, true };
+		}
+		else_bounds;
+
+	case OP_unpckhps:
+		//kevin - to test
+		if_bounds(1,2){
+			// dsts[0][128:0] <- srcs[0][127:96] srcs[1][127:96] srcs[0][95:64] srcs[1][95:64]
+			operand_t dst = cinstr -> dsts[0];
+			operand_t src1 = cinstr -> srcs[0];
+			operand_t src2 = cinstr -> srcs[1];
+			rinstr = new rinstr_t[4];
+			// 32 bit sections of dst
+			operand_t dst0 = { dst.type, 4, dst.value + dst.width - 4, NULL };
+			operand_t dst1 = { dst.type, 4, dst.value + dst.width - 8, NULL };
+			operand_t dst2 = { dst.type, 4, dst.value + dst.width - 12, NULL };
+			operand_t dst3 = { dst.type, 4, dst.value + dst.width - 16, NULL };
+			operand_t src1_low = { src1.type, 4, src1.value + src1.width - 12, NULL };
+			operand_t src2_low = { src2.type, 4, src2.value + src2.width - 12, NULL };
+			operand_t src1_high = { src1.type, 4, src1.value + src1.width - 16, NULL };
+			operand_t src2_high = { src2.type, 4, src2.value + src2.width - 16, NULL };
+			rinstr[0] = { op_assign, dst0, 1, { src2_low }, true };
+			rinstr[1] = { op_assign, dst1, 1, { src1_low }, true };
+			rinstr[2] = { op_assign, dst2, 1, { src2_high }, true };
+			rinstr[3] = { op_assign, dst3, 1, { src1_high }, true };
+		}
+		else_bounds;
+
 	case OP_pmuldq:
 		// Kevin - to test
-		if_bounds(2,1){
+		if_bounds(1,2){
 			// If destination larger than 128 bit, should keep upper bits unchanged
 			// dsts[0][63:0] <- srcs[0][31:0] * srcs[1][31:0]
 			// dsts[0][127:64] <- srcs[0][95:64] * srcs[1][95:64]
@@ -1457,6 +1660,13 @@ Return
 bool is_instr_handled(uint32_t opcode){
 
 	switch (opcode){
+	case OP_addps:
+	case OP_mulps:
+	case OP_shufps:
+	case OP_movhps:
+	case OP_movlps:
+	case OP_unpcklps:
+	case OP_unpckhps:
 	case OP_movaps:
 	case OP_xorps:
 	case OP_movss:
@@ -1476,6 +1686,7 @@ bool is_instr_handled(uint32_t opcode){
 	case OP_cvttsd2si:
 	case OP_imul:
 	case OP_mul:
+	case OP_mulss:
 	case OP_idiv:
 	case OP_cdq:
 	case OP_xchg:
@@ -1484,6 +1695,7 @@ bool is_instr_handled(uint32_t opcode){
 	case OP_pxor:
 	case OP_psubd:
 	case OP_add:
+	case OP_addss:
 	case OP_and:
 	case OP_or:
 	case OP_andpd:
